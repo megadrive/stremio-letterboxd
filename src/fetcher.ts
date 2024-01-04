@@ -9,16 +9,19 @@ type Movie = {
   id: string;
 };
 export async function watchlist_fetcher(username: string): Promise<Movie[]> {
-  const html = await (
-    await fetch(`https://letterboxd.com/${username}/watchlist`)
-  ).text();
+  const json = await (
+    await fetch(
+      `https://media.algobook.info/scrape?url=https://letterboxd.com/${username}/watchlist`
+    )
+  ).json();
+  const html = json.data;
 
   console.log(`got html: ${html.length}`);
 
   const $ = cheerio(html);
 
-  const movies = $(".poster-list").children("a").data("original-title");
-  console.log(movies);
+  const movies = $(".poster-list poster");
+  console.log(movies.data("film-name"));
 
   return [];
 }
