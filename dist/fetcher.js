@@ -10,11 +10,15 @@ const util_1 = require("util");
 const cheerio_1 = require("cheerio");
 const nameToImdb = (0, util_1.promisify)(name_to_imdb_1.default);
 const Watchlist_URL = (username) => `https://letterboxd.com/${username}/watchlist`;
-nameToImdb("south park").then((r) => console.log(r));
+async function get_imdb_id(film_name) {
+    const id = await nameToImdb(film_name);
+    return {
+        id,
+        name: film_name,
+    };
+}
 async function names_to_imdb_id(film_names) {
-    return Promise.all(film_names.map((film) => {
-        return nameToImdb(film);
-    }));
+    return Promise.all(film_names.map(get_imdb_id));
 }
 async function watchlist_fetcher(username) {
     const rawHtml = await (await (0, cross_fetch_1.default)(Watchlist_URL(username))).text();

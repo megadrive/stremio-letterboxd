@@ -12,14 +12,16 @@ type Movie = {
   id: string;
 };
 
-nameToImdb("south park").then((r: any) => console.log(r));
+async function get_imdb_id(film_name: string): Promise<Movie> {
+  const id = await nameToImdb(film_name);
+  return {
+    id,
+    name: film_name,
+  };
+}
 
 async function names_to_imdb_id(film_names: string[]): Promise<Movie[]> {
-  return Promise.all(
-    film_names.map((film) => {
-      return nameToImdb(film);
-    })
-  );
+  return Promise.all(film_names.map(get_imdb_id));
 }
 
 export async function watchlist_fetcher(username: string): Promise<Movie[]> {
