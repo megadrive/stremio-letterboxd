@@ -1,6 +1,4 @@
 import manifest from "./manifest";
-import fetch from "cross-fetch";
-import { parseStringPromise as parseString } from "xml2js";
 import cors from "cors";
 import express from "express";
 import { watchlist_fetcher } from "./fetcher";
@@ -16,8 +14,8 @@ app.get("/manifest.json", function (req, res, next) {
 
 app.get("/:username/manifest.json", async function (req, res, next) {
   try {
-    await watchlist_fetcher(req.params.username);
-    return res.json({ ok: true });
+    const films = await watchlist_fetcher(req.params.username);
+    return res.json(films);
   } catch (e) {
     return res.json({ error: e });
   }

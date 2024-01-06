@@ -9,14 +9,25 @@ const name_to_imdb_1 = __importDefault(require("name-to-imdb"));
 const util_1 = require("util");
 const cheerio_1 = require("cheerio");
 const nameToImdb = (0, util_1.promisify)(name_to_imdb_1.default);
+const Watchlist_URL = (username) => `https://letterboxd.com/${username}/watchlist`;
+nameToImdb("south park").then((r) => console.log(r));
+async function names_to_imdb_id(film_names) {
+    return Promise.all(film_names.map((film) => {
+        return nameToImdb(film);
+    }));
+}
 async function watchlist_fetcher(username) {
-    const json = await (await (0, cross_fetch_1.default)(`https://media.algobook.info/scrape?url=https://letterboxd.com/${username}/watchlist`)).json();
-    const html = json.data;
-    console.log(`got html: ${html.length}`);
-    const $ = (0, cheerio_1.load)(html);
-    const movies = $(".poster-list poster");
-    console.log(movies.data("film-name"));
-    return [];
+    const rawHtml = await (await (0, cross_fetch_1.default)(Watchlist_URL(username))).text();
+    const $ = (0, cheerio_1.load)(rawHtml);
+    const filmSlugs = $(".poster")
+        .map(function () {
+        return $(this).data().filmSlug;
+    })
+        .toArray();
+    const films = filmSlugs.map((slug) => slug.replace(/-/g, " "));
+    const finished_result = await names_to_imdb_id(films);
+    console.log(finished_result);
+    return finished_result;
 }
 exports.watchlist_fetcher = watchlist_fetcher;
 //# sourceMappingURL=fetcher.js.map

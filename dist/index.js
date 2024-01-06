@@ -15,8 +15,8 @@ app.get("/manifest.json", function (req, res, next) {
 });
 app.get("/:username/manifest.json", async function (req, res, next) {
     try {
-        await (0, fetcher_1.watchlist_fetcher)(req.params.username);
-        return res.json({ ok: true });
+        const films = await (0, fetcher_1.watchlist_fetcher)(req.params.username);
+        return res.json(films);
     }
     catch (e) {
         return res.json({ error: e });

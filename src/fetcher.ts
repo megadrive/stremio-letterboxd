@@ -4,24 +4,39 @@ import { promisify } from "util";
 import { load as cheerio } from "cheerio";
 const nameToImdb = promisify(name_to_imdb);
 
+const Watchlist_URL = (username: string) =>
+  `https://letterboxd.com/${username}/watchlist`;
+
 type Movie = {
   name: string;
   id: string;
 };
+
+nameToImdb("south park").then((r: any) => console.log(r));
+
+async function names_to_imdb_id(film_names: string[]): Promise<Movie[]> {
+  return Promise.all(
+    film_names.map((film) => {
+      return nameToImdb(film);
+    })
+  );
+}
+
 export async function watchlist_fetcher(username: string): Promise<Movie[]> {
-  const json = await (
-    await fetch(
-      `https://media.algobook.info/scrape?url=https://letterboxd.com/${username}/watchlist`
-    )
-  ).json();
-  const html = json.data;
+  const rawHtml = await (await fetch(Watchlist_URL(username))).text();
+  const $ = cheerio(rawHtml);
 
-  console.log(`got html: ${html.length}`);
+  const filmSlugs = $(".poster")
+    .map(function () {
+      return $(this).data().filmSlug;
+    })
+    .toArray() as string[];
 
-  const $ = cheerio(html);
+  const films = filmSlugs.map((slug) => slug.replace(/-/g, " "));
 
-  const movies = $(".poster-list poster");
-  console.log(movies.data("film-name"));
+  const finished_result = await names_to_imdb_id(films);
 
-  return [];
+  console.log(finished_result);
+
+  return finished_result;
 }
