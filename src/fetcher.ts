@@ -36,7 +36,7 @@ async function get_tmdb_info(imdb_id: string) {
 async function get_imdb_id(film_name: string): Promise<Movie> {
   const id = await nameToImdb(film_name);
   const data = await get_tmdb_info(id);
-  const poster = "http://image.tmdb.org/t/p/w150/" + data.poster_path;
+  const poster = "https://image.tmdb.org/t/p/w200/" + data.poster_path;
   const name = data.title;
   return {
     id,
