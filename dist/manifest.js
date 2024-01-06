@@ -6,7 +6,7 @@ const manifest = {
     name: "Letterboxd lists",
     description: "Addon to add Letterboxd lists as catalogs",
     types: ["movie"],
-    resources: [],
+    resources: ["catalog"],
     catalogs: [],
 };
 exports.default = manifest;
