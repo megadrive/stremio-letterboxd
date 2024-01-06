@@ -4,6 +4,7 @@ import { promisify } from "util";
 import { load as cheerio } from "cheerio";
 const nameToImdb = promisify(name_to_imdb);
 
+// TODO: Move cache to Redis.
 const cache = new Map<string, any>();
 
 const Watchlist_URL = (username: string) =>
@@ -18,6 +19,7 @@ type Movie = {
 
 async function get_tmdb_info(imdb_id: string) {
   if (cache.has(imdb_id)) {
+    console.log(`Serving cache for ${imdb_id}`);
     return cache.get(imdb_id);
   }
 
@@ -66,8 +68,8 @@ export async function watchlist_fetcher(
 
   const finished_result = await get_imdb_ids(films);
 
-  const meta = { metas: finished_result };
-  console.log(meta);
+  // TODO: Cache the user's list onto a database.
 
+  const meta = { metas: finished_result };
   return meta;
 }

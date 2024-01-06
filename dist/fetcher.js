@@ -13,6 +13,7 @@ const cache = new Map();
 const Watchlist_URL = (username) => `https://letterboxd.com/${username}/watchlist`;
 async function get_tmdb_info(imdb_id) {
     if (cache.has(imdb_id)) {
+        console.log("Serving cache.");
         return cache.get(imdb_id);
     }
     const { movie_results } = await (await (0, cross_fetch_1.default)(`https://api.themoviedb.org/3/find/${imdb_id}?api_key=${process.env.TMDB_API_TOKEN}&external_source=imdb_id`)).json();
@@ -23,7 +24,7 @@ async function get_tmdb_info(imdb_id) {
 async function get_imdb_id(film_name) {
     const id = await nameToImdb(film_name);
     const data = await get_tmdb_info(id);
-    const poster = "http://image.tmdb.org/t/p/w150/" + data.poster_path;
+    const poster = "https://image.tmdb.org/t/p/w200/" + data.poster_path;
     const name = data.title;
     return {
         id,
@@ -46,7 +47,6 @@ async function watchlist_fetcher(username) {
     const films = filmSlugs.map((slug) => slug.replace(/-/g, " "));
     const finished_result = await get_imdb_ids(films);
     const meta = { metas: finished_result };
-    console.log(meta);
     return meta;
 }
 exports.watchlist_fetcher = watchlist_fetcher;
