@@ -1,6 +1,8 @@
 import { config as dotenv } from "dotenv";
 dotenv();
 
+import { join } from "path";
+
 import manifest from "./manifest";
 import cors from "cors";
 import express from "express";
@@ -11,14 +13,18 @@ const PORT = 3030;
 
 app.use(cors());
 
-app.get("/manifest.json", function (req, res, next) {
-  return res.json(manifest);
+app.get("/", (req, res, next) => {
+  return res.redirect("/configure");
+});
+
+app.get("/configure", function (req, res, next) {
+  return res.sendFile(join(__dirname, "/static/index.html"));
 });
 
 // Create the catalog
 app.get("/:username/manifest.json", async function (req, res, next) {
   manifest.catalogs.push({
-    id: `com.letterboxd-watchlist-${req.params.username}`,
+    id: `com.github.megadrive.letterboxd-watchlist-${req.params.username}`,
     type: "movie",
     name: `Letterboxd - ${req.params.username}`,
   });
@@ -37,6 +43,4 @@ app.get("/:username/catalog/:type/:id?", async (req, res) => {
   return res.json(films);
 });
 
-app.listen(PORT, () =>
-  console.log(`Addon URL: http://localhost:${PORT}/manifest.json`)
-);
+app.listen(PORT, () => console.log(`Addon URL: http://localhost:${PORT}`));

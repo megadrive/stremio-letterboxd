@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev:copy-static": "copyfiles \"static/*\" dist",
     "prisma": "prisma",
-    "dev": "tsc && node ./dist/index.js",
+    "dev": "tsc && npm run dev:copy-static && node ./dist/index.js",
+    "start": "tsc && npm run dev:copy-static && node ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -22,6 +24,7 @@
     "@prisma/client": "^5.7.1",
     "@types/dotenv": "^8.2.0",
     "cheerio": "^1.0.0-rc.12",
+    "copyfiles": "^2.4.1",
     "cors": "^2.8.5",
     "cross-fetch": "^4.0.0",
     "dotenv": "^16.3.1",
