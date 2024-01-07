@@ -9,7 +9,7 @@ import express from "express";
 import { watchlist_fetcher } from "./fetcher";
 const app = express();
 
-const PORT = 3030;
+const PORT = process.env.PORT || 3030;
 
 app.use(cors());
 
