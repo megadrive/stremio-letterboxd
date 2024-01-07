@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
-    "@types/dotenv": "^8.2.0",
     "cheerio": "^1.0.0-rc.12",
     "copyfiles": "^2.4.1",
     "cors": "^2.8.5",
