@@ -25,10 +25,12 @@
       const installLinkEl = document.getElementById("stremio-install-link");
 
       function username_onchange(event) {
-        installLinkEl.innerText =
-          "http://localhost:3030/" +
+        const link =
+          "https://stremio-letterboxd-watchlist.up.railway.app/" +
           encodeURIComponent(event.target.value.trim()) +
           "/manifest.json";
+
+        installLinkEl.innerHTML = `<a href="${link}">Install</a>`;
       }
 
       usernameEl.onchange = username_onchange;
