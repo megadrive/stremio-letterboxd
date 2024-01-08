@@ -10,9 +10,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model CachedItem {
-  id          String   @id @default(cuid())
-  url         String
-  items       String
-  lastChecked DateTime @default(now())
+model LetterboxdUser {
+  id        String   @id
+  movies    Movie[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Movie {
+  id          String           @id
+  name        String
+  poster      String
+  description String           @default("")
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+  users       LetterboxdUser[]
 }

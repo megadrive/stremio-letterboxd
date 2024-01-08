@@ -26,7 +26,7 @@ app.get("/:username/manifest.json", async function (req, res, next) {
   manifest.catalogs.push({
     id: `com.github.megadrive.letterboxd-watchlist-${req.params.username}`,
     type: "movie",
-    name: `Letterboxd - ${req.params.username}`,
+    name: `${req.params.username} - Letterboxd Watchlist`,
   });
 
   return res.json(manifest);
@@ -36,11 +36,16 @@ app.get("/:username/manifest.json", async function (req, res, next) {
 app.get("/:username/catalog/:type/:id?", async (req, res) => {
   const { username, type, id } = req.params;
 
-  if (type !== "movie") return res.send("bad");
+  if (type !== "movie") return res.json({ metas: [] });
 
-  const films = await watchlist_fetcher(username);
+  try {
+    const films = await watchlist_fetcher(username);
 
-  return res.json(films);
+    return res.json(films);
+  } catch (error) {
+    // Return empty
+    return res.json({ metas: [] });
+  }
 });
 
-app.listen(PORT, () => console.log(`Addon URL: http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Listening on ${PORT}`));
