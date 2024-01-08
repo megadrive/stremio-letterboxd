@@ -39,7 +39,7 @@ app.get("/:username/catalog/:type/:id?", async (req, res) => {
   if (type !== "movie") return res.json({ metas: [] });
 
   try {
-    const films = await watchlist_fetcher(username);
+    const films = await watchlist_fetcher(decodeURIComponent(username));
 
     return res.json(films);
   } catch (error) {
