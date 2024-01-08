@@ -118,7 +118,7 @@ async function create_username_record(username: string, movies: Movie[]) {
     where: { id: username },
     include: { movies: { orderBy: { created_at: "desc" } } },
   });
-  if (cached_user && is_old(cached_user.updatedAt)) {
+  if (cached_user && !is_old(cached_user.updatedAt)) {
     return cached_user;
   }
 
