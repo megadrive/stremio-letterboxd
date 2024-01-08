@@ -17,7 +17,8 @@ type Movie = {
 };
 
 const ONE_HOUR = 3600000;
-const is_old = (datetime: Date) => Date.now() - datetime.getTime() > ONE_HOUR;
+const is_old = (datetime: Date, howOld = ONE_HOUR) =>
+  Date.now() - datetime.getTime() > howOld;
 
 async function get_tmdb_info(imdb_id: string) {
   console.log(`[${imdb_id}]: Getting database cache`);
@@ -27,7 +28,7 @@ async function get_tmdb_info(imdb_id: string) {
     },
   });
 
-  if (cached && !is_old(cached.updated_at)) {
+  if (cached && !is_old(cached.updated_at, ONE_HOUR * 24)) {
     console.log(`[${imdb_id}]: Serving database cache`);
     return cached;
   }
@@ -40,37 +41,6 @@ async function get_tmdb_info(imdb_id: string) {
   ).json();
 
   const { title, overview, poster_path } = movie_results[0];
-  /* TMDB Movie schema
-{
-  "movie_results": [
-    {
-      "adult": false,
-      "backdrop_path": "/44immBwzhDVyjn87b3x3l9mlhAD.jpg",
-      "id": 934433,
-      "title": "Scream VI",
-      "original_language": "en",
-      "original_title": "Scream VI",
-      "overview": "Following the latest Ghostface killings, the four survivors leave Woodsboro behind and start a fresh chapter.",
-      "poster_path": "/wDWwtvkRRlgTiUr6TyLSMX8FCuZ.jpg",
-      "media_type": "movie",
-      "genre_ids": [
-        27,
-        9648,
-        53
-      ],
-      "popularity": 853.917,
-      "release_date": "2023-03-08",
-      "video": false,
-      "vote_average": 7.388,
-      "vote_count": 708
-    }
-  ],
-  "person_results": [],
-  "tv_results": [],
-  "tv_episode_results": [],
-  "tv_season_results": []
-}
-  */
 
   const data = {
     id: imdb_id,
@@ -144,6 +114,14 @@ async function create_username_record(username: string, movies: Movie[]) {
   await Promise.all(movies.map(upsert));
 
   // create user and relations
+  const cached_user = await prisma.letterboxdUser.findUnique({
+    where: { id: username },
+    include: { movies: { orderBy: { created_at: "desc" } } },
+  });
+  if (cached_user && is_old(cached_user.updatedAt)) {
+    return cached_user;
+  }
+
   const user = await prisma.letterboxdUser.upsert({
     where: { id: username },
     create: {
