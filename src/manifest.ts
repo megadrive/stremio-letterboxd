@@ -1,6 +1,6 @@
-const manifest: {
-  [key: string]: any;
-} = {
+import { Manifest } from "stremio-addon-sdk";
+
+const manifest: Manifest = {
   id: "github.megadrive.stremio.letterboxd",
   version: "0.0.1",
   name: "",
