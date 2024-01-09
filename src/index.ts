@@ -23,17 +23,22 @@ app.get("/configure", function (req, res, next) {
 
 // Create the catalog
 app.get("/:username/manifest.json", async function (req, res, next) {
-  manifest.catalogs.push({
-    id: `com.github.megadrive.letterboxd-watchlist-${req.params.username}`,
-    type: "movie",
-    name: `${req.params.username} - Letterboxd Watchlist`,
-  });
+  manifest.id = `com.github.megadrive.letterboxd-watchlist-${req.params.username}`;
+  manifest.name = `Letterboxd Watchlist - ${req.params.username}`;
+  manifest.catalogs = [
+    {
+      id: req.params.username,
+      type: "movie",
+      name: `${req.params.username} - Letterboxd Watchlist`,
+    },
+  ];
 
   return res.json(manifest);
 });
 
 // Serve the meta items
 app.get("/:username/catalog/:type/:id?", async (req, res) => {
+  console.log(req.url);
   const { username, type, id } = req.params;
 
   if (type !== "movie") return res.json({ metas: [] });

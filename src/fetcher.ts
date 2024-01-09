@@ -13,7 +13,7 @@ type Movie = {
   type: "movie";
   poster: string;
   id: string;
-  description: string;
+  description?: string;
 };
 
 const ONE_HOUR = 3600000;
@@ -30,6 +30,7 @@ async function get_tmdb_info(imdb_id: string) {
 
   if (cached && !is_old(cached.updated_at, ONE_HOUR * 24)) {
     console.log(`[${imdb_id}]: Serving database cache`);
+    console.log(cached);
     return cached;
   }
 
@@ -40,7 +41,13 @@ async function get_tmdb_info(imdb_id: string) {
     )
   ).json();
 
-  const { title, overview, poster_path } = movie_results[0];
+  if (!movie_results || !movie_results[0]) {
+    throw Error(`[${imdb_id}]: No results from TMBD.`);
+  }
+
+  const title = movie_results[0].title;
+  const overview = movie_results[0].overview;
+  const poster_path = movie_results[0].poster_path;
 
   const data = {
     id: imdb_id,
@@ -69,17 +76,29 @@ async function get_tmdb_info(imdb_id: string) {
 
 async function get_imdb_id(film_name: string): Promise<Movie> {
   const id = await nameToImdb(film_name);
-  if (!id) throw Error("No IMDB ID found.");
-  const data = await get_tmdb_info(id);
-  const poster = `https://images.metahub.space/poster/small/${data.id}/img`;
-  const name = data.name;
-  return {
-    id,
-    type: "movie",
-    name,
-    poster,
-    description: data.description,
-  };
+  if (!id) throw Error(`No IMDB ID found: ${film_name}`);
+  try {
+    const data = await get_tmdb_info(id);
+    if (!data) throw Error(`[${film_name}]: no data found`);
+    const poster = `https://images.metahub.space/poster/small/${data.id}/img`;
+    const name = data.name;
+    return {
+      id,
+      type: "movie",
+      name,
+      poster,
+      description: data.description,
+    };
+  } catch (error) {
+    console.log("Error getting IMDB ID:", error);
+    return {
+      id: "",
+      type: "movie",
+      name: "",
+      poster: "",
+      description: "",
+    };
+  }
 }
 
 async function get_imdb_ids(film_names: string[]): Promise<Movie[]> {
@@ -161,11 +180,9 @@ export async function watchlist_fetcher(
 ): Promise<{ metas: Movie[] }> {
   try {
     const cached_user_movies = await get_cached_user(username);
-    const purged_movies = cached_user_movies.movies.map(
-      ({ id, name, description, poster }) => {
-        return { id, name, description, poster, type: "movie" };
-      }
-    ) as Movie[];
+    const purged_movies = cached_user_movies.movies.map((movie) => {
+      return { ...movie, type: "movie" };
+    }) as Movie[];
     console.log(`[${username}]: serving cached`);
     return { metas: purged_movies };
   } catch (error) {
@@ -184,7 +201,10 @@ export async function watchlist_fetcher(
 
     const films = filmSlugs.map((slug) => slug.replace(/-/g, " "));
 
-    const films_with_data = await get_imdb_ids(films);
+    // Only return stuff with an ID
+    const films_with_data = (await get_imdb_ids(films)).filter((movie) => {
+      return movie.id.length > 0;
+    });
 
     // TODO: Cache the user's list onto a database.
     await create_username_record(username, films_with_data);
@@ -192,6 +212,7 @@ export async function watchlist_fetcher(
     const meta = { metas: films_with_data };
     return meta;
   } catch (error) {
+    console.log(error);
     return { metas: [] };
   }
 }
