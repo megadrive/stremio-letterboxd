@@ -18,6 +18,10 @@ app.get("/", (req, res, next) => {
   return res.redirect("/configure");
 });
 
+app.get("/logo.png", (req, res) => {
+  return res.sendFile(join(__dirname, "/static/logo.png"));
+});
+
 app.get("/configure", function (req, res, next) {
   return res.sendFile(join(__dirname, "/static/index.html"));
 });
