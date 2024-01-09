@@ -7,7 +7,7 @@ import manifest from "./manifest";
 import cors from "cors";
 import express from "express";
 import { watchlist_fetcher } from "./fetcher";
-import { Manifest } from "stremio-addon-sdk";
+import { type Manifest } from "stremio-addon-sdk";
 const app = express();
 
 const PORT = process.env.PORT || 3030;
@@ -45,7 +45,7 @@ app.get("/:username/manifest.json", async function (req, res, next) {
 
 // Serve the meta items
 app.get("/:username/catalog/:type/:id?", async (req, res) => {
-  console.log(req.url);
+  // We would use {id} if we had more than one list.
   const { username, type, id } = req.params;
 
   if (type !== "movie") return res.json({ metas: [] });

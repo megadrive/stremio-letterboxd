@@ -12,17 +12,16 @@ datasource db {
 
 model LetterboxdUser {
   id        String   @id
-  movies    Movie[]
+  movie_ids String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Movie {
-  id          String           @id
+  id          String   @id
   name        String
   poster      String
-  description String           @default("")
-  created_at  DateTime         @default(now())
-  updated_at  DateTime         @updatedAt
-  users       LetterboxdUser[]
+  description String   @default("")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 }

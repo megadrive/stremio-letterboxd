@@ -135,7 +135,6 @@ async function create_username_record(username: string, movies: Movie[]) {
   // create user and relations
   const cached_user = await prisma.letterboxdUser.findUnique({
     where: { id: username },
-    include: { movies: { orderBy: { created_at: "desc" } } },
   });
   if (cached_user && !is_old(cached_user.updatedAt)) {
     return cached_user;
@@ -145,19 +144,11 @@ async function create_username_record(username: string, movies: Movie[]) {
     where: { id: username },
     create: {
       id: username,
-      movies: {
-        connect: movies.map((movie) => {
-          return { id: movie.id };
-        }),
-      },
+      movie_ids: JSON.stringify(movies.map((movie) => movie.id)),
     },
     update: {
       id: username,
-      movies: {
-        connect: movies.map((movie) => {
-          return { id: movie.id };
-        }),
-      },
+      movie_ids: JSON.stringify(movies.map((movie) => movie.id)),
     },
   });
 
@@ -167,12 +158,20 @@ async function create_username_record(username: string, movies: Movie[]) {
 async function get_cached_user(username: string) {
   const user = await prisma.letterboxdUser.findUnique({
     where: { id: username },
-    include: { movies: true },
   });
 
   if (!user) throw Error("no user found");
+  const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
 
-  return user;
+  const db_movies = await prisma.movie.findMany({
+    where: { id: { in: parsed_movie_ids } },
+  });
+
+  const movies = parsed_movie_ids.map((id) =>
+    db_movies.find((movie) => movie.id === id)
+  );
+
+  return { ...user, movies };
 }
 
 export async function watchlist_fetcher(
