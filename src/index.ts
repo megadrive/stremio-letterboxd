@@ -8,6 +8,7 @@ import cors from "cors";
 import express from "express";
 import { watchlist_fetcher } from "./fetcher";
 import { type Manifest } from "stremio-addon-sdk";
+import { is_prod } from "./consts";
 const app = express();
 
 const PORT = process.env.PORT || 3030;
@@ -29,14 +30,20 @@ app.get("/configure", function (req, res, next) {
 // Create the catalog
 app.get("/:username/manifest.json", async function (req, res, next) {
   const cloned_manifest = JSON.parse(JSON.stringify(manifest)) as Manifest;
-  cloned_manifest.id = `com.github.megadrive.letterboxd-watchlist-${req.params.username}`;
-  cloned_manifest.name = `Letterboxd Watchlist - ${req.params.username}`;
+  cloned_manifest.id = `${
+    !is_prod ? "dev." : ""
+  }com.github.megadrive.letterboxd-watchlist-${req.params.username}`;
+  cloned_manifest.name = `${!is_prod ? "Dev - " : ""}Letterboxd Watchlist - ${
+    req.params.username
+  }`;
   cloned_manifest.description = `Provides ${req.params.username}'s watchlist as a catalog.`;
   cloned_manifest.catalogs = [
     {
       id: req.params.username,
       type: "movie",
-      name: `${req.params.username} - Letterboxd Watchlist`,
+      name: `${!is_prod ? "dev - " : ""}${
+        req.params.username
+      } - Letterboxd Watchlist`,
     },
   ];
 

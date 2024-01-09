@@ -1,7 +1,7 @@
 import { Manifest } from "stremio-addon-sdk";
 
 const manifest: Manifest & {
-  behaviorHints: { configurable: boolean; configurationRequired: boolean };
+  behaviorHints?: { configurable?: boolean; configurationRequired?: boolean };
 } = {
   id: "github.megadrive.stremio.letterboxd",
   version: "0.0.1",
@@ -11,10 +11,6 @@ const manifest: Manifest & {
   types: ["movie"],
   resources: ["catalog"],
   catalogs: [],
-  behaviorHints: {
-    configurable: true,
-    configurationRequired: true,
-  },
 };
 
 export default manifest;
