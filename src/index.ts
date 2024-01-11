@@ -9,6 +9,7 @@ import express from "express";
 import { watchlist_fetcher } from "./fetcher";
 import { type Manifest } from "stremio-addon-sdk";
 import { is_prod } from "./consts";
+import { does_letterboxd_user_exist } from "./util";
 const app = express();
 
 const PORT = process.env.PORT || 3030;
@@ -58,6 +59,9 @@ app.get("/:username/catalog/:type/:id?", async (req, res) => {
   if (type !== "movie") return res.json({ metas: [] });
 
   try {
+    if (!does_letterboxd_user_exist(decodeURIComponent(username))) {
+      throw Error(`[${username}]: doesn't exist`);
+    }
     const films = await watchlist_fetcher(decodeURIComponent(username));
 
     return res.json(films);
@@ -65,6 +69,14 @@ app.get("/:username/catalog/:type/:id?", async (req, res) => {
     // Return empty
     return res.json({ metas: [] });
   }
+});
+
+app.post("/generate/:username", (req, res) => {
+  return res.send(
+    "https://stremio-letterboxd-watchlist.up.railway.app/" +
+      encodeURIComponent(req.params.username) +
+      "/manifest.json"
+  );
 });
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));

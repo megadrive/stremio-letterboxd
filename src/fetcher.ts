@@ -4,10 +4,8 @@ import { promisify } from "util";
 import { load as cheerio } from "cheerio";
 import { prisma } from "./prisma";
 import { config } from "./consts";
+import { Watchlist_URL, does_letterboxd_user_exist } from "./util";
 const nameToImdb = promisify(name_to_imdb);
-
-const Watchlist_URL = (username: string) =>
-  `https://letterboxd.com/${username}/watchlist`;
 
 type Movie = {
   name: string;
@@ -205,6 +203,8 @@ export async function watchlist_fetcher(
   }
 
   try {
+    if (!does_letterboxd_user_exist(username))
+      throw Error(`[${username}}: Letterboxd user does not exist.`);
     const rawHtml = await (await fetch(Watchlist_URL(username))).text();
     const $ = cheerio(rawHtml);
 
