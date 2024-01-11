@@ -15,6 +15,11 @@ type Movie = {
   description?: string;
 };
 
+type IFilm = {
+  slug: string;
+  year?: string | number;
+};
+
 /**
  * Check if a date is older than the time given.
  * @param datetime Date to check against
@@ -109,8 +114,10 @@ async function get_imdb_id(film_name: string): Promise<Movie> {
   }
 }
 
-async function get_imdb_ids(film_names: string[]): Promise<Movie[]> {
-  return Promise.all(film_names.map(get_imdb_id));
+async function get_imdb_ids(films: IFilm[]): Promise<Movie[]> {
+  return Promise.all(
+    films.map((film) => `${film.slug} ${film.year}`).map(get_imdb_id)
+  );
 }
 
 async function create_username_record(username: string, movies: Movie[]) {
@@ -210,11 +217,28 @@ export async function watchlist_fetcher(
 
     const filmSlugs = $(".poster")
       .map(function () {
-        return $(this).data().filmSlug;
+        const slug = $(this).data().filmSlug as string;
+        return slug.replace(/-/g, " ");
       })
-      .toArray() as string[];
+      .toArray();
 
-    const films = filmSlugs.map((slug) => slug.replace(/-/g, " "));
+    const films = await Promise.all(
+      filmSlugs.map(async (slug) => {
+        const filmPage = await (
+          await fetch(`https://letterboxd.com/film/${slug}`)
+        ).text();
+        const $$ = cheerio(filmPage);
+        const yearHref = $$("#featured-film-header a").prop("href");
+        const year = yearHref
+          ?.split("/")
+          .filter((y) => y.length)
+          .at(-1);
+
+        console.log(year);
+
+        return { slug, year };
+      })
+    );
 
     // Only return stuff with an ID
     const films_with_data = (await get_imdb_ids(films)).filter((movie) => {
