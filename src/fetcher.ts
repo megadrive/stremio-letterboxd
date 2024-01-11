@@ -3,6 +3,7 @@ import name_to_imdb from "name-to-imdb";
 import { promisify } from "util";
 import { load as cheerio } from "cheerio";
 import { prisma } from "./prisma";
+import { config } from "./consts";
 const nameToImdb = promisify(name_to_imdb);
 
 const Watchlist_URL = (username: string) =>
@@ -16,9 +17,18 @@ type Movie = {
   description?: string;
 };
 
-const ONE_HOUR = 3600000;
-const is_old = (datetime: Date, howOld = ONE_HOUR) =>
-  Date.now() - datetime.getTime() > howOld;
+/**
+ * Check if a date is older than the time given.
+ * @param datetime Date to check against
+ * @param howOld How old in MS to be considered stale.
+ */
+const is_old = (datetime: Date, howOld: number): boolean => {
+  const rv = Date.now() - datetime.getTime() > howOld;
+  console.log(
+    `[is_old]: ${Date.now() - datetime.getTime()} > ${howOld} = ${rv}`
+  );
+  return rv;
+};
 
 async function get_tmdb_info(imdb_id: string) {
   console.log(`[${imdb_id}]: Getting database cache`);
@@ -28,7 +38,7 @@ async function get_tmdb_info(imdb_id: string) {
     },
   });
 
-  if (cached && !is_old(cached.updated_at, ONE_HOUR * 24)) {
+  if (cached && !is_old(cached.updated_at, config.cache_tmdb_stale_time * 24)) {
     console.log(`[${imdb_id}]: Serving database cache`);
     console.log(cached);
     return cached;
@@ -136,7 +146,10 @@ async function create_username_record(username: string, movies: Movie[]) {
   const cached_user = await prisma.letterboxdUser.findUnique({
     where: { id: username },
   });
-  if (cached_user && !is_old(cached_user.updatedAt)) {
+  if (
+    cached_user &&
+    !is_old(cached_user.updatedAt, config.cache_user_stale_time)
+  ) {
     return cached_user;
   }
 
@@ -161,6 +174,9 @@ async function get_cached_user(username: string) {
   });
 
   if (!user) throw Error("no user found");
+  if (is_old(user.updatedAt, config.cache_user_stale_time))
+    throw Error(`[${username}]: stale movie data`);
+
   const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
 
   const db_movies = await prisma.movie.findMany({
@@ -176,14 +192,14 @@ async function get_cached_user(username: string) {
 
 export async function watchlist_fetcher(
   username: string
-): Promise<{ metas: Movie[] }> {
+): Promise<{ source?: "fresh" | "cache"; metas: Movie[] }> {
   try {
     const cached_user_movies = await get_cached_user(username);
     const purged_movies = cached_user_movies.movies.map((movie) => {
       return { ...movie, type: "movie" };
     }) as Movie[];
     console.log(`[${username}]: serving cached`);
-    return { metas: purged_movies };
+    return { source: "cache", metas: purged_movies };
   } catch (error) {
     console.warn(`[${username}]: No user or old data, continuing..`);
   }
@@ -208,8 +224,7 @@ export async function watchlist_fetcher(
     // TODO: Cache the user's list onto a database.
     await create_username_record(username, films_with_data);
 
-    const meta = { metas: films_with_data };
-    return meta;
+    return { source: "fresh", metas: films_with_data };
   } catch (error) {
     console.log(error);
     return { metas: [] };
