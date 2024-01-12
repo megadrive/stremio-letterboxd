@@ -13,6 +13,7 @@ type Movie = {
   poster: string;
   id: string;
   description?: string;
+  releaseInfo?: string;
 };
 
 type IFilm = {
@@ -60,12 +61,14 @@ async function get_tmdb_info(imdb_id: string) {
   const title = movie_results[0].title;
   const overview = movie_results[0].overview;
   const poster_path = movie_results[0].poster_path;
+  const release_date = String(movie_results[0].release_date?.split("-")[0]);
 
   const data = {
     id: imdb_id,
     name: title,
     poster: poster_path,
     description: overview,
+    releaseInfo: release_date,
   };
 
   const upserted = await prisma.movie.upsert({
@@ -75,6 +78,7 @@ async function get_tmdb_info(imdb_id: string) {
       name: data.name,
       poster: data.poster,
       description: data.description,
+      releaseInfo: data.releaseInfo,
     },
     update: {
       name: data.name,
@@ -100,6 +104,7 @@ async function get_imdb_id(film_name: string): Promise<Movie> {
       name,
       poster,
       description: data.description,
+      releaseInfo: data.releaseInfo,
     };
   } catch (error) {
     console.log("Error getting IMDB ID:", error);
@@ -239,7 +244,6 @@ export async function watchlist_fetcher(
       return movie.id.length > 0;
     });
 
-    // TODO: Cache the user's list onto a database.
     await create_username_record(username, films_with_data);
 
     return { source: "fresh", metas: films_with_data };
