@@ -43,7 +43,6 @@ async function get_tmdb_info(imdb_id: string) {
 
   if (cached && !is_old(cached.updated_at, config.cache_tmdb_stale_time * 24)) {
     console.log(`[${imdb_id}]: Serving database cache`);
-    console.log(cached);
     return cached;
   }
 
@@ -228,13 +227,8 @@ export async function watchlist_fetcher(
           await fetch(`https://letterboxd.com/film/${slug}`)
         ).text();
         const $$ = cheerio(filmPage);
-        const yearHref = $$("#featured-film-header a").prop("href");
-        const year = yearHref
-          ?.split("/")
-          .filter((y) => y.length)
-          .at(-1);
-
-        console.log(year);
+        const year = $$("small.number", "#featured-film-header").text();
+        console.log({ slug, year });
 
         return { slug, year };
       })
