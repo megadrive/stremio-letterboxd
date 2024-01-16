@@ -49,9 +49,12 @@ async function get_imdb_id(film_name: string) {
     name: film_name,
     type: "movie",
   });
-  if (!id) throw Error(`No IMDB ID found: ${film_name}`);
+  if (!id) {
+    console.warn(`No IMDB ID found: ${film_name}`);
+    return undefined;
+  }
   const data = await get_meta_info(id);
-  if (!data) throw Error(`[${film_name}]: no data found`);
+  if (!data) console.warn(`[${film_name}]: no data found`);
   return data;
 }
 
@@ -97,6 +100,7 @@ async function create_username_record(
     return cached_user;
   }
 
+  movies = movies.filter(Boolean);
   const user = await prisma.letterboxdUser.upsert({
     where: { id: username },
     create: {
@@ -125,7 +129,9 @@ async function get_cached_user(username: string) {
   console.log(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
   const movie_info = await get_meta_many(parsed_movie_ids);
   console.log(
-    `[${username}]: got metadata -> ${movie_info.map((m) => m.imdb_db)}`
+    `[${username}]: got metadata -> ${movie_info.map((m) =>
+      m ? m.imdb_db : undefined
+    )}`
   );
 
   return { ...user, movies: movie_info };
@@ -172,9 +178,10 @@ export async function watchlist_fetcher(
     );
 
     // Only return the meta from the request
-    const films_with_data = (await get_imdb_ids(filmSlugs_and_years)).map(
-      (film) => film.meta
-    );
+    let films_with_data;
+    films_with_data = (await get_imdb_ids(filmSlugs_and_years))
+      .filter((f) => !!f)
+      .map((film) => film.meta);
 
     /* async */ create_username_record(username, films_with_data)
       .then((user) =>
