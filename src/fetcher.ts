@@ -45,7 +45,10 @@ async function get_meta_info(imdb_id: string) {
 
 /** Gets many IMDB ID from films */
 async function get_imdb_id(film_name: string) {
-  const id = await nameToImdb(film_name);
+  const id = await nameToImdb({
+    name: film_name,
+    type: "movie",
+  });
   if (!id) throw Error(`No IMDB ID found: ${film_name}`);
   const data = await get_meta_info(id);
   if (!data) throw Error(`[${film_name}]: no data found`);
@@ -168,12 +171,20 @@ export async function watchlist_fetcher(
       })
     );
 
-    // Only return stuff with an ID
+    // Only return the meta from the request
     const films_with_data = (await get_imdb_ids(filmSlugs_and_years)).map(
       (film) => film.meta
     );
 
-    await create_username_record(username, films_with_data);
+    /* async */ create_username_record(username, films_with_data)
+      .then((user) =>
+        console.log(
+          `[${username}]: updated user @ ${user.updatedAt} with ${
+            JSON.parse(user.movie_ids).length
+          } movies.`
+        )
+      )
+      .catch((err) => console.error(err));
 
     return { source: "fresh", metas: films_with_data };
   } catch (error) {
