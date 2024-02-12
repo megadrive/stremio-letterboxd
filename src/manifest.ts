@@ -1,4 +1,4 @@
-import { Manifest } from "stremio-addon-sdk";
+import type { Manifest } from "stremio-addon-sdk";
 
 const manifest: Manifest & {
   behaviorHints?: { configurable?: boolean; configurationRequired?: boolean };
