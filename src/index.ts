@@ -3,14 +3,25 @@ dotenv();
 
 import { join } from "path";
 
-import manifest from "./manifest";
+import manifest from "./manifest.js";
 import cors from "cors";
 import express from "express";
-import { watchlist_fetcher } from "./fetcher";
+import { watchlist_fetcher } from "./fetcher.js";
 import { type Manifest } from "stremio-addon-sdk";
-import { is_prod } from "./consts";
-import { does_letterboxd_user_exist } from "./util";
+import { is_prod } from "./consts.js";
+import { does_letterboxd_user_exist } from "./util.js";
 const app = express();
+
+import { worker } from "./worker.js";
+import { prisma } from "./prisma.js";
+
+async function start_worker() {
+  worker.queueListsFromDatabase(true);
+}
+
+worker.add("https://letterboxd.com/almosteffective/watchlist");
+
+start_worker();
 
 const PORT = process.env.PORT || 3030;
 
@@ -29,7 +40,7 @@ app.get("/configure", function (req, res, next) {
 });
 
 // Create the catalog
-app.get("/:username/manifest.json", async function (req, res, next) {
+app.get("/:username/manifest.json", async function (req, res) {
   const cloned_manifest = JSON.parse(JSON.stringify(manifest)) as Manifest;
   cloned_manifest.id = `${
     !is_prod ? "dev." : ""
@@ -72,8 +83,9 @@ app.get("/:username/catalog/:type/:id?", async (req, res) => {
 });
 
 app.post("/generate/:username", (req, res) => {
+  const { protocol, hostname } = req;
   return res.send(
-    "https://stremio-letterboxd-watchlist.up.railway.app/" +
+    `${protocol}://${hostname}/` +
       encodeURIComponent(req.params.username) +
       "/manifest.json"
   );

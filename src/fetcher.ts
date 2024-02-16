@@ -2,9 +2,9 @@ import fetch from "cross-fetch";
 import name_to_imdb from "name-to-imdb";
 import { promisify } from "util";
 import { load as cheerio } from "cheerio";
-import { prisma } from "./prisma";
-import { config } from "./consts";
-import { Watchlist_URL, does_letterboxd_user_exist } from "./util";
+import { prisma } from "./prisma.js";
+import { config } from "./consts.js";
+import { Watchlist_URL, does_letterboxd_user_exist } from "./util.js";
 const nameToImdb = promisify(name_to_imdb);
 
 // type Movie = {
