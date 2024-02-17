@@ -1,3 +1,4 @@
+/*
 import UserAgent from "user-agents";
 import { prisma } from "./prisma.js";
 import { load as cheerio } from "cheerio";
@@ -14,7 +15,7 @@ const queue = new (await import("p-queue")).default({
 
 type WorkItem = {
   type: "watchlist" | "list";
-  /** username or username/list */
+  // username or username/list *
   slug: string;
 };
 
@@ -88,7 +89,7 @@ class Worker {
     };
   }
 
-  /** Add a URL to begin tracking. */
+  //* Add a URL to begin tracking. *
   add(
     url: string,
     options: Parameters<(typeof queue)["add"]>[1] = { priority: 1000 }
@@ -161,7 +162,7 @@ class Worker {
     return rv;
   }
 
-  /** Get film data, this does some calls to external APIs, so can take a while */
+  //** Get film data, this does some calls to external APIs, so can take a while
   private async getFilms(
     $: ReturnType<typeof cheerio>,
     selector: string = ".poster"
@@ -286,3 +287,4 @@ class Worker {
 }
 
 export const worker = new Worker();
+*/
