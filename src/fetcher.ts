@@ -61,7 +61,9 @@ async function get_imdb_id(film_name: string) {
 /** Gets an IMDB ID from a film */
 async function get_imdb_ids(films: IFilm[]) {
   return Promise.all(
-    films.map((film) => `${film.slug} ${film.year}`).map(get_imdb_id)
+    films
+      .map((film) => `${film.slug} ${film.year ? film.year : ""}`)
+      .map(get_imdb_id)
   );
 }
 
@@ -137,6 +139,38 @@ async function get_cached_user(username: string) {
   return { ...user, movies: movie_info };
 }
 
+async function get_letterboxd_film_data(
+  letterboxd_slug: string
+): Promise<null | {
+  name: string;
+  year: string;
+  poster: string;
+}> {
+  // https://letterboxd.com/ajax/poster/film/wait-until-dark/std/125x187/?k=851e7b94
+  try {
+    const res = await fetch(
+      `https://letterboxd.com/ajax/poster/film/${letterboxd_slug}/std/125x187/?k=`
+    );
+    if (!res.ok) {
+      throw Error(`[${letterboxd_slug}]: Couldn't get Letterboxd info.`);
+    }
+    const rawHtml = await res.text();
+    const $ = cheerio(rawHtml);
+    const year = $("div").data("filmReleaseYear") as string;
+    const name = $("div").data("filmName") as string;
+    let poster = $("img").prop("srcset") as string;
+    if (poster) {
+      poster = poster.replace(/-250-/g, "-400-").replace(/-375-/g, "-600-");
+    }
+
+    return { name, year, poster };
+  } catch (error) {
+    console.log(error);
+  }
+
+  return null;
+}
+
 /** fetch a Letterboxd user's watchlist */
 export async function watchlist_fetcher(
   username: string
@@ -156,22 +190,24 @@ export async function watchlist_fetcher(
     const rawHtml = await (await fetch(Watchlist_URL(username))).text();
     const $ = cheerio(rawHtml);
 
-    const pages = $(".paginate-page").length;
+    const pages = +$(".paginate-page").last().text();
+    console.log(`[${username}] has ${pages} pages on their watchlist`);
 
     const filmData: Awaited<ReturnType<typeof watchlist_fetcher>> = {
       source: "fresh",
       metas: [],
     };
 
-    for (let i = 0; pages > i; i++) {
-      console.log(`getting page ${i} for ${username}`);
-      const rawHtml = await (await fetch(Watchlist_URL(username, i))).text();
+    for (let page = 0; pages > page; page++) {
+      console.log(`getting page ${page} for ${username}`);
+      const rawHtml = await (await fetch(Watchlist_URL(username, page))).text();
       const $$ = cheerio(rawHtml);
 
       // Get the film slugs from Letterboxd
       const filmSlugs = $$(".poster")
         .map(function () {
           const slug = $$(this).data().filmSlug as string;
+          if (!slug || typeof slug !== "string") return slug;
           return slug.replace(/-/g, " ");
         })
         .toArray();
@@ -181,14 +217,19 @@ export async function watchlist_fetcher(
       // Attempt to get the year of release from the detail page
       const filmSlugs_and_years = await Promise.all(
         filmSlugs.map(async (slug) => {
-          const filmPage = await (
-            await fetch(`https://letterboxd.com/film/${slug}`)
-          ).text();
-          const $$$ = cheerio(filmPage);
-          const year = $$$("small.number", "#featured-film-header").text();
-          console.log({ slug, year });
+          //   const filmPage = await (
+          //     await fetch(`https://letterboxd.com/film/${slug}`)
+          //   ).text();
+          //   const $$$ = cheerio(filmPage);
+          //   const year = $$$("small.number", "#featured-film-header").text();
+          //   console.log({ slug, year });
 
-          return { slug, year };
+          //   return { slug, year };
+          const filmInfo = await get_letterboxd_film_data(slug);
+          return {
+            ...filmInfo,
+            slug,
+          };
         })
       );
 
@@ -205,7 +246,7 @@ export async function watchlist_fetcher(
       filmData.metas = [...filmData.metas, ...films_with_data];
     }
 
-    /* async */ create_username_record(username, filmData)
+    /* async */ create_username_record(username, filmData.metas)
       .then((user) =>
         console.log(
           `[${username}]: updated user @ ${user.updatedAt} with ${
