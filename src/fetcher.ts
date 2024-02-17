@@ -152,38 +152,60 @@ export async function watchlist_fetcher(
   try {
     if (!does_letterboxd_user_exist(username))
       throw Error(`[${username}}: Letterboxd user does not exist.`);
+
     const rawHtml = await (await fetch(Watchlist_URL(username))).text();
     const $ = cheerio(rawHtml);
 
-    // Get the film slugs from Letterboxd
-    const filmSlugs = $(".poster")
-      .map(function () {
-        const slug = $(this).data().filmSlug as string;
-        return slug.replace(/-/g, " ");
-      })
-      .toArray();
+    const pages = $(".paginate-page").length;
 
-    // Attempt to get the year of release from the detail page
-    const filmSlugs_and_years = await Promise.all(
-      filmSlugs.map(async (slug) => {
-        const filmPage = await (
-          await fetch(`https://letterboxd.com/film/${slug}`)
-        ).text();
-        const $$ = cheerio(filmPage);
-        const year = $$("small.number", "#featured-film-header").text();
-        console.log({ slug, year });
+    const filmData: Awaited<ReturnType<typeof watchlist_fetcher>> = {
+      source: "fresh",
+      metas: [],
+    };
 
-        return { slug, year };
-      })
-    );
+    for (let i = 0; pages > i; i++) {
+      console.log(`getting page ${i} for ${username}`);
+      const rawHtml = await (await fetch(Watchlist_URL(username, i))).text();
+      const $$ = cheerio(rawHtml);
 
-    // Only return the meta from the request
-    let films_with_data;
-    films_with_data = (await get_imdb_ids(filmSlugs_and_years))
-      .filter((f) => !!f)
-      .map((film) => film.meta);
+      // Get the film slugs from Letterboxd
+      const filmSlugs = $$(".poster")
+        .map(function () {
+          const slug = $$(this).data().filmSlug as string;
+          return slug.replace(/-/g, " ");
+        })
+        .toArray();
 
-    /* async */ create_username_record(username, films_with_data)
+      console.log(filmSlugs);
+
+      // Attempt to get the year of release from the detail page
+      const filmSlugs_and_years = await Promise.all(
+        filmSlugs.map(async (slug) => {
+          const filmPage = await (
+            await fetch(`https://letterboxd.com/film/${slug}`)
+          ).text();
+          const $$$ = cheerio(filmPage);
+          const year = $$$("small.number", "#featured-film-header").text();
+          console.log({ slug, year });
+
+          return { slug, year };
+        })
+      );
+
+      console.log(filmSlugs_and_years);
+
+      // Only return the meta from the request
+      let films_with_data;
+      films_with_data = (await get_imdb_ids(filmSlugs_and_years))
+        .filter((f) => !!f)
+        .map((film) => film.meta);
+
+      console.log(films_with_data);
+
+      filmData.metas = [...filmData.metas, ...films_with_data];
+    }
+
+    /* async */ create_username_record(username, filmData)
       .then((user) =>
         console.log(
           `[${username}]: updated user @ ${user.updatedAt} with ${
@@ -193,7 +215,7 @@ export async function watchlist_fetcher(
       )
       .catch((err) => console.error(err));
 
-    return { source: "fresh", metas: films_with_data };
+    return filmData;
   } catch (error) {
     console.log(error);
     return { metas: [] };

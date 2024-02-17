@@ -12,17 +12,6 @@ import { is_prod } from "./consts.js";
 import { does_letterboxd_user_exist } from "./util.js";
 const app = express();
 
-import { worker } from "./worker.js";
-import { prisma } from "./prisma.js";
-
-async function start_worker() {
-  worker.queueListsFromDatabase(true);
-}
-
-worker.add("https://letterboxd.com/almosteffective/watchlist");
-
-start_worker();
-
 const PORT = process.env.PORT || 3030;
 
 app.use(cors());
@@ -78,6 +67,7 @@ app.get("/:username/catalog/:type/:id?", async (req, res) => {
     return res.json(films);
   } catch (error) {
     // Return empty
+    console.error(error);
     return res.json({ metas: [] });
   }
 });
