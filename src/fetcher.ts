@@ -198,7 +198,7 @@ export async function watchlist_fetcher(
       metas: [],
     };
 
-    for (let page = 0; pages > page; page++) {
+    for (let page = 0; pages >= page; page++) {
       console.log(`getting page ${page} for ${username}`);
       const rawHtml = await (await fetch(Watchlist_URL(username, page))).text();
       const $$ = cheerio(rawHtml);
