@@ -17,22 +17,11 @@ model LetterboxdUser {
   updatedAt DateTime @updatedAt
 }
 
-model List {
-  id        String @id @default(cuid())
-  movie_ids String
-  slug      String // :username/:type/:list_id?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Movie {
-  id              String   @id @default(cuid())
-  letterboxd_slug String   @unique
-  imdb_id         String   @unique
-  name            String
-  poster          String
-  description     String   @default("")
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id          String   @id
+  name        String
+  poster      String
+  description String   @default("")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 }
