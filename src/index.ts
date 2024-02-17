@@ -1,7 +1,7 @@
 import { config as dotenv } from "dotenv";
 dotenv();
 
-import { join } from "path";
+import path, { join } from "path";
 
 import manifest from "./manifest.js";
 import cors from "cors";
@@ -11,6 +11,8 @@ import { type Manifest } from "stremio-addon-sdk";
 import { is_prod } from "./consts.js";
 import { does_letterboxd_user_exist } from "./util.js";
 const app = express();
+
+const __dirname = path.resolve(path.dirname(""));
 
 const PORT = process.env.PORT || 3030;
 
