@@ -9,7 +9,7 @@ import express from "express";
 import { watchlist_fetcher } from "./fetcher.js";
 import { type Manifest } from "stremio-addon-sdk";
 import { is_prod } from "./consts.js";
-import { does_letterboxd_user_exist } from "./util.js";
+import { doesLetterboxdUserExist } from "./util.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -61,7 +61,7 @@ app.get("/:username/catalog/:type/:id?", async (req, res) => {
   if (type !== "movie") return res.json({ metas: [] });
 
   try {
-    if (!does_letterboxd_user_exist(decodeURIComponent(username))) {
+    if (!doesLetterboxdUserExist(decodeURIComponent(username))) {
       throw Error(`[${username}]: doesn't exist`);
     }
     const films = await watchlist_fetcher(decodeURIComponent(username));

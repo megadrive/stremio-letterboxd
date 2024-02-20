@@ -1,10 +1,14 @@
-import fetch from "cross-fetch";
+import { addonFetch as fetch } from "./lib/fetch.js";
 import name_to_imdb from "name-to-imdb";
 import { promisify } from "util";
 import { load as cheerio } from "cheerio";
 import { prisma } from "./prisma.js";
 import { config } from "./consts.js";
-import { Watchlist_URL, does_letterboxd_user_exist } from "./util.js";
+import {
+  generateWatchlistURL,
+  doesLetterboxdUserExist,
+  isOld,
+} from "./util.js";
 const nameToImdb = promisify(name_to_imdb);
 
 // type Movie = {
@@ -21,19 +25,6 @@ type IFilm = {
   name?: string;
   year?: string;
   poster?: string;
-};
-
-/**
- * Check if a date is older than the time given.
- * @param datetime Date to check against
- * @param howOld How old in MS to be considered stale.
- */
-const is_old = (datetime: Date, howOld: number): boolean => {
-  const rv = Date.now() - datetime.getTime() > howOld;
-  console.log(
-    `[is_old]: ${Date.now() - datetime.getTime()} > ${howOld} = ${rv}`
-  );
-  return rv;
 };
 
 async function get_meta_info(imdb_id: string) {
@@ -111,7 +102,7 @@ async function create_username_record(
   });
   if (
     cached_user &&
-    !is_old(cached_user.updatedAt, config.cache_user_stale_time)
+    !isOld(cached_user.updatedAt, config.cache_user_stale_time)
   ) {
     return cached_user;
   }
@@ -138,7 +129,7 @@ async function get_cached_user(username: string) {
   });
 
   if (!user) throw Error("no user found");
-  if (is_old(user.updatedAt, config.cache_user_stale_time))
+  if (isOld(user.updatedAt, config.cache_user_stale_time))
     throw Error(`[${username}]: stale user data`);
 
   const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
@@ -201,10 +192,10 @@ export async function watchlist_fetcher(
   }
 
   try {
-    if (!does_letterboxd_user_exist(username))
+    if (!doesLetterboxdUserExist(username))
       throw Error(`[${username}}: Letterboxd user does not exist.`);
 
-    const rawHtml = await (await fetch(Watchlist_URL(username))).text();
+    const rawHtml = await (await fetch(generateWatchlistURL(username))).text();
     const $ = cheerio(rawHtml);
 
     const pages = +$(".paginate-page").last().text();
@@ -217,7 +208,9 @@ export async function watchlist_fetcher(
 
     for (let page = 1; page < pages; page++) {
       console.log(`getting page ${page} for ${username}`);
-      const rawHtml = await (await fetch(Watchlist_URL(username, page))).text();
+      const rawHtml = await (
+        await fetch(generateWatchlistURL(username, page))
+      ).text();
       const $$ = cheerio(rawHtml);
 
       // Get the film slugs from Letterboxd
