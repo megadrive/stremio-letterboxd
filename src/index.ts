@@ -6,10 +6,10 @@ import path, { join } from "path";
 import manifest from "./manifest.js";
 import cors from "cors";
 import express from "express";
-import { watchlist_fetcher } from "./fetcher.js";
+import { fetchWatchlist } from "./fetcher.js";
 import { type Manifest } from "stremio-addon-sdk";
-import { is_prod } from "./consts.js";
-import { does_letterboxd_user_exist } from "./util.js";
+import { doesLetterboxdUserExist } from "./util.js";
+import { env } from "./env.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -18,15 +18,15 @@ const PORT = process.env.PORT || 3030;
 
 app.use(cors());
 
-app.get("/", (req, res, next) => {
+app.get("/", (_req, res) => {
   return res.redirect("/configure");
 });
 
-app.get("/logo.png", (req, res) => {
+app.get("/logo.png", (_req, res) => {
   return res.sendFile(join(__dirname, "/static/logo.png"));
 });
 
-app.get("/configure", function (req, res, next) {
+app.get("/configure", function (_req, res, next) {
   return res.sendFile(join(__dirname, "/static/index.html"));
 });
 
@@ -34,17 +34,17 @@ app.get("/configure", function (req, res, next) {
 app.get("/:username/manifest.json", async function (req, res) {
   const cloned_manifest = JSON.parse(JSON.stringify(manifest)) as Manifest;
   cloned_manifest.id = `${
-    !is_prod ? "dev." : ""
+    !env.isProduction ? "dev." : ""
   }com.github.megadrive.letterboxd-watchlist-${req.params.username}`;
-  cloned_manifest.name = `${!is_prod ? "Dev - " : ""}Letterboxd Watchlist - ${
-    req.params.username
-  }`;
+  cloned_manifest.name = `${
+    !env.isProduction ? "Dev - " : ""
+  }Letterboxd Watchlist - ${req.params.username}`;
   cloned_manifest.description = `Provides ${req.params.username}'s watchlist as a catalog.`;
   cloned_manifest.catalogs = [
     {
       id: req.params.username,
       type: "movie",
-      name: `${!is_prod ? "dev - " : ""}${
+      name: `${!env.isProduction ? "dev - " : ""}${
         req.params.username
       } - Letterboxd Watchlist`,
     },
@@ -54,17 +54,18 @@ app.get("/:username/manifest.json", async function (req, res) {
 });
 
 // Serve the meta items
-app.get("/:username/catalog/:type/:id?", async (req, res) => {
+app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
-  const { username, type, id } = req.params;
+  const { username, type, id, extra } = req.params;
+  console.log({ extra });
 
   if (type !== "movie") return res.json({ metas: [] });
 
   try {
-    if (!does_letterboxd_user_exist(decodeURIComponent(username))) {
+    if (!doesLetterboxdUserExist(decodeURIComponent(username))) {
       throw Error(`[${username}]: doesn't exist`);
     }
-    const films = await watchlist_fetcher(decodeURIComponent(username));
+    const films = await fetchWatchlist(decodeURIComponent(username));
 
     return res.json(films);
   } catch (error) {
