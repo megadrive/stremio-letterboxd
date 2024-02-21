@@ -3,7 +3,7 @@ import name_to_imdb from "name-to-imdb";
 import { promisify } from "util";
 import { load as cheerio } from "cheerio";
 import { prisma } from "./prisma.js";
-import { config } from "./consts.js";
+import { CinemetaMovieResponseLive, config } from "./consts.js";
 import {
   generateWatchlistURL,
   doesLetterboxdUserExist,
@@ -27,23 +27,8 @@ type IFilm = {
   poster?: string;
 };
 
-async function get_meta_info(imdb_id: string) {
-  console.log(`[${imdb_id}]: Getting Cinemeta meta information`);
-  const meta = await (
-    await fetch(`https://v3-cinemeta.strem.io/meta/movie/${imdb_id}.json`)
-  ).json();
-
-  return meta;
-}
-
 /** Gets an IMDB ID from a film */
-async function get_imdb_id(film: IFilm): Promise<
-  | {
-      [key: string]: any;
-      letterboxd: keyof IFilm;
-    }
-  | undefined
-> {
+async function getImdbID(film: IFilm) {
   const query = `${film.slug} ${
     film.year && !/(19|2[0-9])[0-9]{2,}/.test(film.slug) ? film.year : ""
   }`;
@@ -56,41 +41,49 @@ async function get_imdb_id(film: IFilm): Promise<
     console.warn(`No IMDB ID found: ${query}`);
     return undefined;
   }
-  const data = await get_meta_info(id);
+  const data = await getCinemetaInfo(id);
   if (!data) {
     console.warn(`[${query}]: no data found`);
     return data;
   }
   return {
     ...data,
-    meta: { ...data.meta, letterboxd: film },
+    meta: { ...data, letterboxd: film },
   };
 }
 
 /** Gets many IMDB ID from films */
-async function get_imdb_ids(films: IFilm[]) {
-  return Promise.all(films.map(get_imdb_id));
+async function getImdbIDs(films: IFilm[]) {
+  console.log(`Getting ${films.length} IMDB IDs.`);
+  return Promise.all(films.map(getImdbID));
 }
 
 /** Gets Meta information for a single IMDB ID from Cinemeta */
-async function get_meta_single(imdb_id: `tt${number}` | string) {
+async function getCinemetaInfo(imdbId: `tt${number}` | string) {
+  console.log(`[cinemeta] Getting meta for ${imdbId}`);
   const res = await fetch(
-    `https://v3-cinemeta.strem.io/meta/movie/${imdb_id}.json`
+    // `https://v3-cinemeta.strem.io/meta/movie/${imdbId}.json`
+    `https://cinemeta-live.strem.io/meta/movie/${imdbId}.json`
   );
   if (res.ok) {
-    const rv = await res.json();
-    return rv.meta;
+    const { meta } = (await res.json()) as CinemetaMovieResponseLive;
+    return {
+      id: meta.id,
+      type: meta.type,
+      name: meta.name,
+      poster: meta.poster,
+    };
   } else {
-    throw Error(`[${imdb_id}] failed to get Cinemeta`);
+    throw Error(`[${imdbId}] failed to get Cinemeta`);
   }
 }
 
 /** Get Meta information for many IMDB IDs from Cinemeta */
-async function get_meta_many(imdb_ids: `tt${number}`[] | string[]) {
-  return Promise.all(imdb_ids.map(get_meta_single));
+async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
+  return Promise.all(imdb_ids.map(getCinemetaInfo));
 }
 
-async function create_username_record(
+async function upsertLetterboxdUserWithMovies(
   username: string,
   movies: { [key: string]: any }
 ) {
@@ -123,7 +116,7 @@ async function create_username_record(
   return user;
 }
 
-async function get_cached_user(username: string) {
+async function getDBCachedUser(username: string) {
   const user = await prisma.letterboxdUser.findUnique({
     where: { id: username },
   });
@@ -134,28 +127,25 @@ async function get_cached_user(username: string) {
 
   const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
   console.log(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
-  const movie_info = await get_meta_many(parsed_movie_ids);
+  const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
   console.log(
     `[${username}]: got metadata -> ${movie_info.map((m) =>
-      m ? m.imdb_db : undefined
+      m ? m.id : undefined
     )}`
   );
 
   return { ...user, movies: movie_info };
 }
 
-async function get_letterboxd_film_data(
-  letterboxd_slug: string
+async function getFilmDataFromLetterboxd(
+  letterboxdSlug: string
 ): Promise<IFilm | undefined> {
   // https://letterboxd.com/ajax/poster/film/wait-until-dark/std/125x187/?k=851e7b94
   try {
-    const res = await fetch(
-      `https://letterboxd.com/ajax/poster/film/${letterboxd_slug}/std/125x187/?k=`
-    );
+    const url = `https://letterboxd.com/ajax/poster/film/${letterboxdSlug}/std/125x187/?k=`;
+    const res = await fetch(url);
     if (!res.ok) {
-      throw Error(
-        `[${letterboxd_slug}]: Couldn't get Letterboxd info: ${`https://letterboxd.com/ajax/poster/film/${letterboxd_slug}/std/125x187/?k=`}`
-      );
+      throw Error(`[${letterboxdSlug}]: Couldn't get Letterboxd info: ${url}`);
     }
     const rawHtml = await res.text();
     const $ = cheerio(rawHtml);
@@ -176,17 +166,107 @@ async function get_letterboxd_film_data(
   return undefined;
 }
 
-/** fetch a Letterboxd user's watchlist */
-export async function watchlist_fetcher(
+/** Fetch a page from a Letterboxd user's watchlist */
+async function fetchWatchlistPage(
+  username: Parameters<typeof fetchWatchlist>[0],
+  options: Parameters<typeof fetchWatchlist>[1] & { page: number } = {
+    preferLetterboxdPosters: false,
+    page: 1,
+  }
+) {
+  console.log(`[${username}] getting page ${options.page}`);
+  const rawHtml = await (
+    await fetch(generateWatchlistURL(username, options.page))
+  ).text();
+  const $$ = cheerio(rawHtml);
+
+  // Get the film slugs from Letterboxd
+  const filmSlugs = $$(".poster")
+    .map(function () {
+      const slug = $$(this).data().filmSlug as string;
+      if (!slug || typeof slug !== "string") return slug;
+      return slug.replace(/-/g, " ");
+    })
+    .toArray();
+
+  console.log(`[${username}] got ${filmSlugs.length} films`);
+
+  // Attempt to get the year of release from the detail page
+  const filmSlugs_and_years = await Promise.all(
+    filmSlugs.map(async (slug) => {
+      const filmInfo = await getFilmDataFromLetterboxd(slug.replace(/ /g, "-"));
+      return {
+        ...filmInfo,
+        slug,
+      };
+    })
+  );
+
+  console.log(
+    `[${username}] got ${filmSlugs_and_years.length} data from letterboxd`
+  );
+
+  // Only return the meta from the request
+  let films_with_data;
+  films_with_data = (await getImdbIDs(filmSlugs_and_years))
+    .map((film) => {
+      if (!film) return undefined;
+      return film.meta;
+    })
+    .filter((f) => !!f);
+
+  console.log(`[${username}] got ${films_with_data.length} imdb IDs`);
+
+  return films_with_data;
+}
+
+const replaceMetaWithLetterboxdPosters = (
+  metas: Awaited<ReturnType<typeof fetchWatchlistPage>>
+) => {
+  return metas.map((meta) => {
+    console.log(`replacing letterboxd posters`);
+    if (!meta) {
+      console.log("no meta");
+      return meta;
+    }
+    if (!meta.letterboxd.poster) {
+      console.log("no poster", meta.letterboxd.poster);
+      return meta;
+    }
+    const newMeta = {
+      ...meta,
+      poster: meta.letterboxd.poster,
+    };
+
+    return newMeta;
+  });
+};
+
+/**
+ * fetch a Letterboxd user's watchlist
+ * @TODO Make this return early with the first page, then spawn a child process to grab the rest.
+ */
+export async function fetchWatchlist(
   username: string,
   options: {
-    prefer_letterboxd_posters?: boolean;
-  } = { prefer_letterboxd_posters: true }
-): Promise<{ source?: "fresh" | "cache"; metas: any }> {
+    preferLetterboxdPosters?: boolean;
+  } = { preferLetterboxdPosters: true }
+): Promise<{
+  source?: "fresh" | "cache";
+  metas: Awaited<ReturnType<typeof fetchWatchlistPage>>;
+}> {
   try {
-    const cached_user_movies = await get_cached_user(username);
+    let cachedUser = await getDBCachedUser(username);
     console.log(`[${username}]: serving cached`);
-    return { source: "cache", metas: cached_user_movies.movies };
+    if (options.preferLetterboxdPosters) {
+      // @ts-ignore next-line
+      cachedUser = replaceMetaWithLetterboxdPosters(
+        // @ts-ignore next-line
+        cachedUser.movies
+      );
+    }
+    // @ts-ignore next-line
+    return { source: "cache", metas: cachedUser.movies };
   } catch (error) {
     console.warn(`[${username}]: No user or old data, continuing..`);
   }
@@ -201,64 +281,30 @@ export async function watchlist_fetcher(
     const pages = +$(".paginate-page").last().text();
     console.log(`[${username}] has ${pages} pages on their watchlist`);
 
-    const filmData: Awaited<ReturnType<typeof watchlist_fetcher>> = {
+    // grab the first page
+    const filmsFromWatchlist = await fetchWatchlistPage(username);
+
+    // full data will go in here
+    const metaToReturn: Awaited<ReturnType<typeof fetchWatchlist>> = {
       source: "fresh",
-      metas: [],
+      metas: filmsFromWatchlist,
     };
 
-    for (let page = 1; page < pages; page++) {
-      console.log(`getting page ${page} for ${username}`);
-      const rawHtml = await (
-        await fetch(generateWatchlistURL(username, page))
-      ).text();
-      const $$ = cheerio(rawHtml);
-
-      // Get the film slugs from Letterboxd
-      const filmSlugs = $$(".poster")
-        .map(function () {
-          const slug = $$(this).data().filmSlug as string;
-          if (!slug || typeof slug !== "string") return slug;
-          return slug.replace(/-/g, " ");
-        })
-        .toArray();
-
-      // Attempt to get the year of release from the detail page
-      const filmSlugs_and_years = await Promise.all(
-        filmSlugs.map(async (slug) => {
-          const filmInfo = await get_letterboxd_film_data(
-            slug.replace(/ /g, "-")
-          );
-          return {
-            ...filmInfo,
-            slug,
-          };
-        })
-      );
-
-      // Only return the meta from the request
-      let films_with_data;
-      films_with_data = (await get_imdb_ids(filmSlugs_and_years))
-        .map((film) => {
-          if (film) return film.meta;
-        })
-        .filter((f) => !!f);
-
-      // @TODO: Revisit this, not caching and some posters are wrong due to incorrect slugs.
-      // Leave the world behind 2023 for instance.
-      if (false && options.prefer_letterboxd_posters) {
-        films_with_data = films_with_data.map((film: any) => {
-          return {
-            ...film,
-            // letterboxd: undefined, //remove it from the data in case stremio rejects it
-            poster: film.letterboxd.poster,
-          };
-        });
-      }
-
-      filmData.metas = [...filmData.metas, ...films_with_data];
+    // get rest of pages, pull this into another function later
+    for (let page = 2; page <= pages; page++) {
+      let newPage = await fetchWatchlistPage(username, { page });
+      metaToReturn.metas = [...metaToReturn.metas, ...newPage];
     }
 
-    /* async */ create_username_record(username, filmData.metas)
+    // if we/the user prefer letterboxd posters, use those instead
+    console.log(
+      `[${username}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
+    );
+    if (options.preferLetterboxdPosters) {
+      metaToReturn.metas = replaceMetaWithLetterboxdPosters(metaToReturn.metas);
+    }
+
+    /* async */ upsertLetterboxdUserWithMovies(username, metaToReturn.metas)
       .then((user) =>
         console.log(
           `[${username}]: updated user @ ${user.updatedAt} with ${
@@ -268,7 +314,10 @@ export async function watchlist_fetcher(
       )
       .catch((err) => console.error(err));
 
-    return filmData;
+    return {
+      source: "fresh",
+      metas: metaToReturn.metas,
+    };
   } catch (error) {
     console.error(error);
     return { metas: [] };
