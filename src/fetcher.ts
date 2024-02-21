@@ -18,7 +18,9 @@ const nameToImdb = promisify(name_to_imdb);
 
 type IFilm = {
   slug: string;
-  year?: string | number;
+  name?: string;
+  year?: string;
+  poster?: string;
 };
 
 /**
@@ -43,28 +45,40 @@ async function get_meta_info(imdb_id: string) {
   return meta;
 }
 
-/** Gets many IMDB ID from films */
-async function get_imdb_id(film_name: string) {
+/** Gets an IMDB ID from a film */
+async function get_imdb_id(film: IFilm): Promise<
+  | {
+      [key: string]: any;
+      letterboxd: keyof IFilm;
+    }
+  | undefined
+> {
+  const query = `${film.slug} ${
+    film.year && !/(19|2[0-9])[0-9]{2,}/.test(film.slug) ? film.year : ""
+  }`;
+
   const id = await nameToImdb({
-    name: film_name,
+    name: query,
     type: "movie",
   });
   if (!id) {
-    console.warn(`No IMDB ID found: ${film_name}`);
+    console.warn(`No IMDB ID found: ${query}`);
     return undefined;
   }
   const data = await get_meta_info(id);
-  if (!data) console.warn(`[${film_name}]: no data found`);
-  return data;
+  if (!data) {
+    console.warn(`[${query}]: no data found`);
+    return data;
+  }
+  return {
+    ...data,
+    meta: { ...data.meta, letterboxd: film },
+  };
 }
 
-/** Gets an IMDB ID from a film */
+/** Gets many IMDB ID from films */
 async function get_imdb_ids(films: IFilm[]) {
-  return Promise.all(
-    films
-      .map((film) => `${film.slug} ${film.year ? film.year : ""}`)
-      .map(get_imdb_id)
-  );
+  return Promise.all(films.map(get_imdb_id));
 }
 
 /** Gets Meta information for a single IMDB ID from Cinemeta */
@@ -141,21 +155,21 @@ async function get_cached_user(username: string) {
 
 async function get_letterboxd_film_data(
   letterboxd_slug: string
-): Promise<null | {
-  name: string;
-  year: string;
-  poster: string;
-}> {
+): Promise<IFilm | undefined> {
   // https://letterboxd.com/ajax/poster/film/wait-until-dark/std/125x187/?k=851e7b94
   try {
     const res = await fetch(
       `https://letterboxd.com/ajax/poster/film/${letterboxd_slug}/std/125x187/?k=`
     );
     if (!res.ok) {
-      throw Error(`[${letterboxd_slug}]: Couldn't get Letterboxd info.`);
+      throw Error(
+        `[${letterboxd_slug}]: Couldn't get Letterboxd info: ${`https://letterboxd.com/ajax/poster/film/${letterboxd_slug}/std/125x187/?k=`}`
+      );
     }
     const rawHtml = await res.text();
     const $ = cheerio(rawHtml);
+
+    const slug = $("div").data("filmSlug") as string;
     const year = $("div").data("filmReleaseYear") as string;
     const name = $("div").data("filmName") as string;
     let poster = $("img").prop("srcset") as string;
@@ -163,17 +177,20 @@ async function get_letterboxd_film_data(
       poster = poster.replace(/-250-/g, "-400-").replace(/-375-/g, "-600-");
     }
 
-    return { name, year, poster };
+    return { slug, name, year, poster };
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 
-  return null;
+  return undefined;
 }
 
 /** fetch a Letterboxd user's watchlist */
 export async function watchlist_fetcher(
-  username: string
+  username: string,
+  options: {
+    prefer_letterboxd_posters?: boolean;
+  } = { prefer_letterboxd_posters: true }
 ): Promise<{ source?: "fresh" | "cache"; metas: any }> {
   try {
     const cached_user_movies = await get_cached_user(username);
@@ -198,7 +215,7 @@ export async function watchlist_fetcher(
       metas: [],
     };
 
-    for (let page = 0; pages >= page; page++) {
+    for (let page = 1; page < pages; page++) {
       console.log(`getting page ${page} for ${username}`);
       const rawHtml = await (await fetch(Watchlist_URL(username, page))).text();
       const $$ = cheerio(rawHtml);
@@ -212,20 +229,12 @@ export async function watchlist_fetcher(
         })
         .toArray();
 
-      console.log(filmSlugs);
-
       // Attempt to get the year of release from the detail page
       const filmSlugs_and_years = await Promise.all(
         filmSlugs.map(async (slug) => {
-          //   const filmPage = await (
-          //     await fetch(`https://letterboxd.com/film/${slug}`)
-          //   ).text();
-          //   const $$$ = cheerio(filmPage);
-          //   const year = $$$("small.number", "#featured-film-header").text();
-          //   console.log({ slug, year });
-
-          //   return { slug, year };
-          const filmInfo = await get_letterboxd_film_data(slug);
+          const filmInfo = await get_letterboxd_film_data(
+            slug.replace(/ /g, "-")
+          );
           return {
             ...filmInfo,
             slug,
@@ -233,15 +242,25 @@ export async function watchlist_fetcher(
         })
       );
 
-      console.log(filmSlugs_and_years);
-
       // Only return the meta from the request
       let films_with_data;
       films_with_data = (await get_imdb_ids(filmSlugs_and_years))
-        .filter((f) => !!f)
-        .map((film) => film.meta);
+        .map((film) => {
+          if (film) return film.meta;
+        })
+        .filter((f) => !!f);
 
-      console.log(films_with_data);
+      // @TODO: Revisit this, not caching and some posters are wrong due to incorrect slugs.
+      // Leave the world behind 2023 for instance.
+      if (false && options.prefer_letterboxd_posters) {
+        films_with_data = films_with_data.map((film: any) => {
+          return {
+            ...film,
+            // letterboxd: undefined, //remove it from the data in case stremio rejects it
+            poster: film.letterboxd.poster,
+          };
+        });
+      }
 
       filmData.metas = [...filmData.metas, ...films_with_data];
     }
@@ -258,7 +277,7 @@ export async function watchlist_fetcher(
 
     return filmData;
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return { metas: [] };
   }
 }
