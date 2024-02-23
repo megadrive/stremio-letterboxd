@@ -10,6 +10,7 @@ import { fetchWatchlist } from "./fetcher.js";
 import { type Manifest } from "stremio-addon-sdk";
 import { doesLetterboxdUserExist } from "./util.js";
 import { env } from "./env.js";
+import { prisma } from "./prisma.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -66,7 +67,9 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       throw Error(`[${username}]: doesn't exist`);
     }
     const films = await fetchWatchlist(decodeURIComponent(username));
+    films.source = undefined; // make sure it can be cached.
 
+    res.appendHeader("Cache-Control", "max-age: 3600");
     return res.json(films);
   } catch (error) {
     // Return empty
@@ -82,6 +85,11 @@ app.post("/generate/:username", (req, res) => {
       encodeURIComponent(req.params.username) +
       "/manifest.json"
   );
+});
+
+app.get("/poster/:poster_url", async (req, res) => {
+  res.appendHeader("Referer", "https://letterboxd.com/");
+  res.redirect(req.params.poster_url);
 });
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
