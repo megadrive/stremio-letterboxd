@@ -217,7 +217,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
 
     for (const id of imdb_ids) {
       const found = rv.findIndex((film) => film.id === id);
-      if (found) {
+      if (found >= 0) {
         sorted.push(rv[found]);
       }
     }

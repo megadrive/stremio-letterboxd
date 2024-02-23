@@ -60,7 +60,9 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   const { username, type, id, extra } = req.params;
   console.log({ extra });
 
-  if (type !== "movie") return res.json({ metas: [] });
+  if (type !== "movie") {
+    return res.status(304).json({ metas: [] });
+  }
 
   try {
     if (!doesLetterboxdUserExist(decodeURIComponent(username))) {
@@ -69,7 +71,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     const films = await fetchWatchlist(decodeURIComponent(username));
     films.source = undefined; // make sure it can be cached.
 
-    res.appendHeader("Cache-Control", "max-age: 3600");
+    if (env.isProduction) res.appendHeader("Cache-Control", "max-age: 3600");
     return res.json(films);
   } catch (error) {
     // Return empty
