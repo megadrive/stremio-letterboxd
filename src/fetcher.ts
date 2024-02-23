@@ -13,6 +13,7 @@ import {
   doesLetterboxdUserExist,
   isOld,
 } from "./util.js";
+import { fileURLToPath } from "url";
 const nameToImdb = promisify(name_to_imdb);
 
 // type Movie = {
@@ -35,16 +36,24 @@ type IFilm = {
 async function getImdbID(film: IFilm) {
   const query = `${film.slug} ${
     film.year && !/(19|2[0-9])[0-9]{2,}/.test(film.slug) ? film.year : ""
-  }`;
+  }`.replace(/ +/g, " ");
 
-  const id = await nameToImdb({
+  let id = await nameToImdb({
     name: query,
     type: "movie",
   });
   console.log(`Found ${id} from ${query}`);
   if (!id) {
     console.warn(`No IMDB ID found: ${query}`);
-    return undefined;
+    console.log(`Trying for a short`);
+    id = await nameToImdb({
+      name: query,
+      type: "short",
+    });
+    if (!id) {
+      return undefined;
+    }
+    console.log(`Found ${id} from ${query} as a short`);
   }
 
   return id;
@@ -99,7 +108,10 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
   const cached = await prisma.cinemeta.findMany({
     where: {
       id: {
-        in: imdb_ids,
+        in: imdb_ids.filter((id) => !!id) as Exclude<
+          typeof imdb_ids,
+          null[] | undefined[]
+        >,
       },
     },
   });
@@ -139,10 +151,15 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
 
       const fetchChunk = async (
         chunk: string[]
-      ): Promise<CinemetaMovieResponseLive["meta"][]> => {
+      ): Promise<CinemetaMovieResponseLive["meta"][] | null[]> => {
         try {
           // TODO: There is a null happening here when using thisisalexei's watchlist. Why? Idk.
           const res = await fetch(
+            `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
+              ","
+            )}.json`
+          );
+          console.log(
             `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
               ","
             )}.json`
@@ -153,7 +170,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
           }
 
           const json = (await res.json()) as {
-            metasDetailed: CinemetaMovieResponseLive["meta"][];
+            metasDetailed: CinemetaMovieResponseLive["meta"][] | null[];
           };
           return json.metasDetailed;
         } catch (error) {
@@ -164,9 +181,13 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
 
       for (let chunk of chunks) {
         console.log(`[cinemeta] getting chunk ${rv.length}`);
-        console.log(chunk);
-        rv.push(...(await fetchChunk(chunk)));
+        const res = await fetchChunk(chunk);
+        const filtered = res.filter((meta) => {
+          return !!meta;
+        }) as CinemetaMovieResponseLive["meta"][];
+        rv.push(...filtered);
       }
+
       return [
         ...rv.reduce<CinemetaMovieResponseLive["meta"][]>((acc, curr) => {
           acc.push(curr);
@@ -331,6 +352,7 @@ async function fetchWatchlistPage(
     .map(function () {
       const slug = $$(this).data().filmSlug as string;
       if (!slug || typeof slug !== "string") return slug;
+      console.log("filmSlugs", { slug });
       return slug.replace(/-/g, " ");
     })
     .toArray();
@@ -339,13 +361,18 @@ async function fetchWatchlistPage(
 
   // Attempt to get the year of release from the detail page
   const filmSlugs_and_years = await Promise.all(
-    filmSlugs.map(async (slug) => {
-      const filmInfo = await getFilmDataFromLetterboxd(slug.replace(/ /g, "-"));
-      return {
-        ...filmInfo,
-        slug,
-      };
-    })
+    filmSlugs
+      .filter((slug) => !!slug)
+      .map(async (slug) => {
+        console.log("getfilmdata", { slug });
+        const filmInfo = await getFilmDataFromLetterboxd(
+          typeof slug === "string" ? slug.replace(/ /g, "-") : `${slug}`
+        );
+        return {
+          ...filmInfo,
+          slug,
+        };
+      })
   );
 
   console.log(
