@@ -14,6 +14,7 @@ import {
   isOld,
 } from "./util.js";
 import { fileURLToPath } from "url";
+import { applyOverride } from "./lib/overrides.js";
 const nameToImdb = promisify(name_to_imdb);
 
 // type Movie = {
@@ -37,6 +38,12 @@ async function getImdbID(film: IFilm) {
   const query = `${film.slug} ${
     film.year && !/(19|2[0-9])[0-9]{2,}/.test(film.slug) ? film.year : ""
   }`.replace(/ +/g, " ");
+
+  // attempt override for early exit
+  const override = applyOverride(query);
+  if (override) {
+    return override;
+  }
 
   let id = await nameToImdb({
     name: query,
