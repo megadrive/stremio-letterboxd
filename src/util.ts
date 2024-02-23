@@ -19,8 +19,8 @@ export async function doesLetterboxdUserExist(username: string) {
  */
 export const isOld = (datetime: Date, howOld: number): boolean => {
   const rv = Date.now() - datetime.getTime() > howOld;
-  console.log(
-    `[is_old]: ${Date.now() - datetime.getTime()} > ${howOld} = ${rv}`
-  );
+  // console.log(
+  //   `[is_old]: ${Date.now() - datetime.getTime()} > ${howOld} = ${rv}`
+  // );
   return rv;
 };

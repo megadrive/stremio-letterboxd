@@ -103,7 +103,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       },
     },
   });
-  console.log({ cached });
+  console.log(cached.map((c) => JSON.parse(c.info).name));
   rv = [...cached.map((c) => parseCinemetaInfo(JSON.parse(c.info)))];
 
   // get non-cached ids
@@ -141,6 +141,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
         chunk: string[]
       ): Promise<CinemetaMovieResponseLive["meta"][]> => {
         try {
+          // TODO: There is a null happening here when using thisisalexei's watchlist. Why? Idk.
           const res = await fetch(
             `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
               ","
@@ -163,6 +164,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
 
       for (let chunk of chunks) {
         console.log(`[cinemeta] getting chunk ${rv.length}`);
+        console.log(chunk);
         rv.push(...(await fetchChunk(chunk)));
       }
       return [
