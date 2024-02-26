@@ -91,6 +91,11 @@ async function getImdbIDs(films: IFilm[]) {
       continue;
     }
 
+    if (matches[0].name !== query) {
+      console.log(`Couldn't find ${query}`);
+      continue;
+    }
+
     let topMatch = matches[0];
 
     if (matches[0].name.toLowerCase() === query.toLowerCase()) {
