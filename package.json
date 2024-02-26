@@ -33,6 +33,7 @@
     "dotenv": "^16.3.1",
     "envalid": "^8.0.0",
     "express": "^4.18.2",
+    "minisearch": "^6.3.0",
     "name-to-imdb": "^3.0.4",
     "p-queue": "^8.0.1",
     "user-agents": "^1.1.109"

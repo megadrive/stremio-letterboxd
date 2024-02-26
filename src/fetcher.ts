@@ -13,7 +13,7 @@ import {
   doesLetterboxdUserExist,
   isOld,
 } from "./util.js";
-import { fileURLToPath } from "url";
+import { findMovie } from "./lib/cinemeta.js";
 import { applyOverride } from "./lib/overrides.js";
 const nameToImdb = promisify(name_to_imdb);
 
@@ -81,8 +81,46 @@ function parseCinemetaInfo(
 
 /** Gets many IMDB ID from films */
 async function getImdbIDs(films: IFilm[]) {
-  console.log(`Getting ${films.length} IMDB IDs.`);
-  return Promise.all(films.map(getImdbID));
+  const IDs = [];
+  for (const film of films) {
+    const query = `${film.name}`;
+    const matches = findMovie(query);
+
+    if (matches.length === 0) {
+      console.log(`Couldn't find ${query}`);
+      continue;
+    }
+
+    let topMatch = matches[0];
+
+    if (matches[0].name.toLowerCase() === query.toLowerCase()) {
+      console.log(`Found ${query}, checking for duplicates.`);
+      // do we have multiples with the exact same name? use year
+      // this is also _so_ not the best way to do this lol
+      let dupe = false;
+      for (let x = 1; x < matches.length; x++) {
+        if (matches[0].name.toLowerCase() === matches[x].name.toLowerCase()) {
+          console.log(`Found a dupe, search more specifically.`);
+          console.log(matches[0], matches[x]);
+          dupe = true;
+        }
+      }
+
+      if (dupe) {
+        const moreSpecific = findMovie(`${query} ${film.year}`, {
+          boost: { year: 2 },
+        });
+        moreSpecific.sort((a, b) => b.score - a.score);
+        topMatch = moreSpecific[0];
+      }
+    }
+
+    IDs.push(topMatch.imdb_id);
+  }
+  return IDs;
+
+  // console.log(`Getting ${films.length} IMDB IDs.`);
+  // return Promise.all(films.map(getImdbID));
 }
 
 /** Gets Meta information for a single IMDB ID from Cinemeta */
@@ -122,7 +160,6 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       },
     },
   });
-  console.log(cached.map((c) => JSON.parse(c.info).name));
   rv = [...cached.map((c) => parseCinemetaInfo(JSON.parse(c.info)))];
 
   // get non-cached ids
