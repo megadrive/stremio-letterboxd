@@ -35,6 +35,11 @@ app.get("/configure", function (_req, res, next) {
   // return res.sendFile(join(__dirname, "/static/index.html"));
 });
 
+app.get("/manifest.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.end(manifest);
+});
+
 // Create the catalog
 app.get("/:username/manifest.json", async function (req, res) {
   const cloned_manifest = JSON.parse(
