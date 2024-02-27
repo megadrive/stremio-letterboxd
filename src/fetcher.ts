@@ -1,6 +1,6 @@
-import { addonFetch as fetch } from "./lib/fetch.js";
-import name_to_imdb from "name-to-imdb";
-import { promisify } from "util";
+import { addonFetch } from "./lib/fetch.js";
+// import name_to_imdb from "name-to-imdb";
+// import { promisify } from "util";
 import { load as cheerio } from "cheerio";
 import { prisma } from "./prisma.js";
 import {
@@ -14,8 +14,8 @@ import {
   isOld,
 } from "./util.js";
 import { findMovie } from "./lib/cinemeta.js";
-import { applyOverride } from "./lib/overrides.js";
-const nameToImdb = promisify(name_to_imdb);
+// import { applyOverride } from "./lib/overrides.js";
+// const nameToImdb = promisify(name_to_imdb);
 
 // type Movie = {
 //   name: string;
@@ -34,37 +34,37 @@ type IFilm = {
 };
 
 /** Gets an IMDB ID from a film */
-async function getImdbID(film: IFilm) {
-  const query = `${film.slug} ${
-    film.year && !/(19|2[0-9])[0-9]{2,}/.test(film.slug) ? film.year : ""
-  }`.replace(/ +/g, " ");
+// async function getImdbID(film: IFilm) {
+//   const query = `${film.slug} ${
+//     film.year && !/(19|2[0-9])[0-9]{2,}/.test(film.slug) ? film.year : ""
+//   }`.replace(/ +/g, " ");
 
-  // attempt override for early exit
-  const override = applyOverride(query);
-  if (override) {
-    return override;
-  }
+//   // attempt override for early exit
+//   const override = applyOverride(query);
+//   if (override) {
+//     return override;
+//   }
 
-  let id = await nameToImdb({
-    name: query,
-    type: "movie",
-  });
-  console.log(`Found ${id} from ${query}`);
-  if (!id) {
-    console.warn(`No IMDB ID found: ${query}`);
-    console.log(`Trying for a short`);
-    id = await nameToImdb({
-      name: query,
-      type: "short",
-    });
-    if (!id) {
-      return undefined;
-    }
-    console.log(`Found ${id} from ${query} as a short`);
-  }
+//   let id = await nameToImdb({
+//     name: query,
+//     type: "movie",
+//   });
+//   console.info(`Found ${id} from ${query}`);
+//   if (!id) {
+//     console.warn(`No IMDB ID found: ${query}`);
+//     console.info(`Trying for a short`);
+//     id = await nameToImdb({
+//       name: query,
+//       type: "short",
+//     });
+//     if (!id) {
+//       return undefined;
+//     }
+//     console.info(`Found ${id} from ${query} as a short`);
+//   }
 
-  return id;
-}
+//   return id;
+// }
 
 /** Parse a Cinemeta API response into a Streamio Meta Preview object. */
 function parseCinemetaInfo(
@@ -87,26 +87,25 @@ async function getImdbIDs(films: IFilm[]) {
     const matches = findMovie(query);
 
     if (matches.length === 0) {
-      console.log(`Couldn't find ${query}`);
+      console.warn(`Couldn't find ${query}`);
       continue;
     }
 
     if (matches[0].name !== query) {
-      console.log(`Couldn't find ${query}`);
+      console.warn(`Couldn't find ${query}`);
       continue;
     }
 
     let topMatch = matches[0];
 
     if (matches[0].name.toLowerCase() === query.toLowerCase()) {
-      console.log(`Found ${query}, checking for duplicates.`);
+      console.info(`Found ${query}, checking for duplicates.`);
       // do we have multiples with the exact same name? use year
       // this is also _so_ not the best way to do this lol
       let dupe = false;
       for (let x = 1; x < matches.length; x++) {
         if (matches[0].name.toLowerCase() === matches[x].name.toLowerCase()) {
-          console.log(`Found a dupe, search more specifically.`);
-          console.log(matches[0], matches[x]);
+          console.info(`Found a dupe, search more specifically.`);
           dupe = true;
         }
       }
@@ -129,28 +128,28 @@ async function getImdbIDs(films: IFilm[]) {
 }
 
 /** Gets Meta information for a single IMDB ID from Cinemeta */
-async function getCinemetaInfo(
-  imdbId: `tt${number}` | string
-): Promise<StremioMetaPreview> {
-  console.log(`[cinemeta] Getting meta for ${imdbId}`);
+// async function getCinemetaInfo(
+//   imdbId: `tt${number}` | string
+// ): Promise<StremioMetaPreview> {
+//   console.info(`[cinemeta] Getting meta for ${imdbId}`);
 
-  const res = await fetch(
-    // `https://v3-cinemeta.strem.io/meta/movie/${imdbId}.json`
-    `https://cinemeta-live.strem.io/meta/movie/${imdbId}.json`
-  );
-  if (res.ok) {
-    const { meta } = (await res.json()) as CinemetaMovieResponseLive;
+//   const res = await addonFetch(
+//     // `https://v3-cinemeta.strem.io/meta/movie/${imdbId}.json`
+//     `https://cinemeta-live.strem.io/meta/movie/${imdbId}.json`
+//   );
+//   if (res.ok) {
+//     const { meta } = (await res.json()) as CinemetaMovieResponseLive;
 
-    return {
-      id: meta.id,
-      type: meta.type,
-      name: meta.name,
-      poster: meta.poster,
-    };
-  } else {
-    throw Error(`[${imdbId}] failed to get Cinemeta`);
-  }
-}
+//     return {
+//       id: meta.id,
+//       type: meta.type,
+//       name: meta.name,
+//       poster: meta.poster,
+//     };
+//   } else {
+//     throw Error(`[${imdbId}] failed to get Cinemeta`);
+//   }
+// }
 
 /** Get Meta information for many IMDB IDs from Cinemeta */
 async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
@@ -178,7 +177,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
     ...cached.filter((c) => isOld(c.updatedAt, 86400000)).map((c) => c.id),
   ];
 
-  console.log(
+  console.info(
     `[cinemeta] need to fetch ${toFetch.length} metas, ${
       imdb_ids.length - toFetch.length
     } are in cache`
@@ -203,12 +202,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       ): Promise<CinemetaMovieResponseLive["meta"][] | null[]> => {
         try {
           // TODO: There is a null happening here when using thisisalexei's watchlist. Why? Idk.
-          const res = await fetch(
-            `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
-              ","
-            )}.json`
-          );
-          console.log(
+          const res = await addonFetch(
             `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
               ","
             )}.json`
@@ -229,7 +223,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       };
 
       for (let chunk of chunks) {
-        console.log(`[cinemeta] getting chunk ${rv.length}`);
+        console.info(`[cinemeta] getting chunk ${rv.length}`);
         const res = await fetchChunk(chunk);
         const filtered = res.filter((meta) => {
           return !!meta;
@@ -274,7 +268,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
         });
       })
     )
-      .then(() => console.log("[cinemeta] updated cache"))
+      .then(() => console.info("[cinemeta] updated cache"))
       .catch((error) => {
         console.error("Failed to cache Cinemeta data.");
         console.error(error);
@@ -302,7 +296,7 @@ async function upsertLetterboxdUserWithMovies(
   username: string,
   movies: { [key: string]: any }
 ) {
-  console.log(`Caching ${username} to database.`);
+  console.info(`Caching ${username} to database.`);
 
   // create user
   const cached_user = await prisma.letterboxdUser.findUnique({
@@ -341,10 +335,20 @@ async function getDBCachedUser(username: string) {
     throw Error(`[${username}]: stale user data`);
 
   const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
-  console.log(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
-  const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
+  console.info(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
+  // const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
+  const movie_info: StremioMetaPreview[] = [];
+  for (const imdbid of parsed_movie_ids) {
+    const found = findMovie(imdbid);
+    movie_info.push({
+      id: found[0].imdb_id,
+      name: found[0].name,
+      type: "movie",
+      poster: found[0].poster,
+    });
+  }
 
-  console.log(
+  console.info(
     `[${username}]: got metadata ${movie_info.length} -> ${movie_info.map((m) =>
       m ? m.name : undefined
     )}`
@@ -359,7 +363,7 @@ async function getFilmDataFromLetterboxd(
   // https://letterboxd.com/ajax/poster/film/wait-until-dark/std/125x187/?k=851e7b94
   try {
     const url = `https://letterboxd.com/ajax/poster/film/${letterboxdSlug}/std/125x187/?k=`;
-    const res = await fetch(url);
+    const res = await addonFetch(url);
     if (!res.ok) {
       throw Error(`[${letterboxdSlug}]: Couldn't get Letterboxd info: ${url}`);
     }
@@ -390,9 +394,9 @@ async function fetchWatchlistPage(
     page: 1,
   }
 ) {
-  console.log(`[${username}] getting page ${options.page}`);
+  console.info(`[${username}] getting page ${options.page}`);
   const rawHtml = await (
-    await fetch(generateWatchlistURL(username, options.page))
+    await addonFetch(generateWatchlistURL(username, options.page))
   ).text();
   const $$ = cheerio(rawHtml);
 
@@ -401,19 +405,17 @@ async function fetchWatchlistPage(
     .map(function () {
       const slug = $$(this).data().filmSlug as string;
       if (!slug || typeof slug !== "string") return slug;
-      console.log("filmSlugs", { slug });
       return slug.replace(/-/g, " ");
     })
     .toArray();
 
-  console.log(`[${username}] got ${filmSlugs.length} films`);
+  console.info(`[${username}] got ${filmSlugs.length} films`);
 
   // Attempt to get the year of release from the detail page
   const filmSlugs_and_years = await Promise.all(
     filmSlugs
       .filter((slug) => !!slug)
       .map(async (slug) => {
-        console.log("getfilmdata", { slug });
         const filmInfo = await getFilmDataFromLetterboxd(
           typeof slug === "string" ? slug.replace(/ /g, "-") : `${slug}`
         );
@@ -424,14 +426,14 @@ async function fetchWatchlistPage(
       })
   );
 
-  console.log(
+  console.info(
     `[${username}] got ${filmSlugs_and_years.length} data from letterboxd`
   );
 
   const imdbIds = await getImdbIDs(filmSlugs_and_years);
   const films_with_metadata = await getCinemetaInfoMany(imdbIds);
 
-  console.log(`[${username}] got ${films_with_metadata.length} imdb IDs`);
+  console.info(`[${username}] got ${films_with_metadata.length} imdb IDs`);
 
   return films_with_metadata;
 }
@@ -466,14 +468,70 @@ export async function fetchWatchlist(
   username: string,
   options: {
     preferLetterboxdPosters?: boolean;
-  } = { preferLetterboxdPosters: true }
+  } = { preferLetterboxdPosters: false }
 ): Promise<{
   source?: "fresh" | "cache";
   metas: Awaited<ReturnType<typeof fetchWatchlistPage>>;
 }> {
+  const fetchFreshData = async () => {
+    try {
+      if (!doesLetterboxdUserExist(username))
+        throw Error(`[${username}}: Letterboxd user does not exist.`);
+
+      const rawHtml = await (
+        await addonFetch(generateWatchlistURL(username))
+      ).text();
+      const $ = cheerio(rawHtml);
+
+      const pages = +$(".paginate-page").last().text();
+      console.info(`[${username}] has ${pages} pages on their watchlist`);
+
+      // grab the first page
+      const filmsFromWatchlist = await fetchWatchlistPage(username, {
+        preferLetterboxdPosters: false,
+      });
+
+      // full data will go in here
+      const metaToReturn: Awaited<ReturnType<typeof fetchWatchlist>> = {
+        metas: filmsFromWatchlist,
+      };
+
+      for (let page = 2; page <= pages; page++) {
+        let newPage = await fetchWatchlistPage(username, { page });
+        metaToReturn.metas = [...metaToReturn.metas, ...newPage];
+      }
+
+      // if we/the user prefer letterboxd posters, use those instead
+      console.info(
+        `[${username}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
+      );
+      // if (options.preferLetterboxdPosters) {
+      //   metaToReturn.metas = replaceMetaWithLetterboxdPosters(metaToReturn.metas);
+      // }
+
+      /* async */ upsertLetterboxdUserWithMovies(username, metaToReturn.metas)
+        .then((user) =>
+          console.info(
+            `[${username}]: updated user @ ${user.updatedAt} with ${
+              JSON.parse(user.movie_ids).length
+            } movies.`
+          )
+        )
+        .catch((err) => console.error(err));
+
+      return {
+        metas: metaToReturn.metas,
+      };
+    } catch (error) {
+      console.error(error);
+      return { metas: [] };
+    }
+  };
+
+  // if we have a cached user, serve that and update in the background for _-sPeEd-_
   try {
     let cachedUser = await getDBCachedUser(username);
-    console.log(`[${username}]: serving cached`);
+    console.info(`[${username}]: serving cached`);
     if (options.preferLetterboxdPosters) {
       // @ts-ignore next-line
       cachedUser = replaceMetaWithLetterboxdPosters(
@@ -481,75 +539,24 @@ export async function fetchWatchlist(
         cachedUser.movies
       );
     }
+
+    /* async */ fetchFreshData()
+      .then((data) => {
+        console.info(`Fetched fresh data -> ${data.metas.length} films`);
+      })
+      .catch((error) => {
+        console.error("couldnt fetch fresh data after serving cached data");
+        console.error(error);
+      });
+
     // @ts-ignore next-line
     return { metas: cachedUser.movies };
   } catch (error) {
     console.warn(`[${username}]: No user or old data, continuing..`);
   }
 
-  try {
-    if (!doesLetterboxdUserExist(username))
-      throw Error(`[${username}}: Letterboxd user does not exist.`);
+  // if we don't then fetch fresh
+  const freshData = await fetchFreshData();
 
-    const rawHtml = await (await fetch(generateWatchlistURL(username))).text();
-    const $ = cheerio(rawHtml);
-
-    const pages = +$(".paginate-page").last().text();
-    console.log(`[${username}] has ${pages} pages on their watchlist`);
-
-    // grab the first page
-    const filmsFromWatchlist = await fetchWatchlistPage(username, {
-      preferLetterboxdPosters: false,
-    });
-
-    // full data will go in here
-    const metaToReturn: Awaited<ReturnType<typeof fetchWatchlist>> = {
-      metas: filmsFromWatchlist,
-    };
-
-    // return {
-    //   ...metaToReturn,
-    //   // @ts-ignore
-    //   metas: metaToReturn.metas.map((m) => {
-    //     if (!m) return m;
-    //     return {
-    //       id: m.id,
-    //       type: m.type,
-    //       name: m.name,
-    //       poster: m.poster,
-    //     };
-    //   }),
-    // };
-
-    // get rest of pages, pull this into another function later
-    for (let page = 2; page <= pages; page++) {
-      let newPage = await fetchWatchlistPage(username, { page });
-      metaToReturn.metas = [...metaToReturn.metas, ...newPage];
-    }
-
-    // if we/the user prefer letterboxd posters, use those instead
-    console.log(
-      `[${username}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
-    );
-    // if (options.preferLetterboxdPosters) {
-    //   metaToReturn.metas = replaceMetaWithLetterboxdPosters(metaToReturn.metas);
-    // }
-
-    /* async */ upsertLetterboxdUserWithMovies(username, metaToReturn.metas)
-      .then((user) =>
-        console.log(
-          `[${username}]: updated user @ ${user.updatedAt} with ${
-            JSON.parse(user.movie_ids).length
-          } movies.`
-        )
-      )
-      .catch((err) => console.error(err));
-
-    return {
-      metas: metaToReturn.metas,
-    };
-  } catch (error) {
-    console.error(error);
-    return { metas: [] };
-  }
+  return freshData;
 }

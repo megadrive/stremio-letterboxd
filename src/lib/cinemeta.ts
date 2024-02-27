@@ -62,6 +62,7 @@ const minisearch = new MiniSearch({
   idField: "imdb_id",
   fields: ["imdb_id", "name", "year"],
   storeFields: ["name", "imdb_id"],
+  searchOptions: { boost: { imdb_id: 3 } },
 });
 
 (async () => {
