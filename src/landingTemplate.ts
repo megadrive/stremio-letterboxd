@@ -249,7 +249,7 @@ function landingTemplate(manifest: ManifestExpanded) {
 				const formData = new FormData(mainForm)
 				const config = Object.fromEntries(formData)
 				if(formData.get('username').length === 0) {
-					installLink.href = "almosteffective"
+					installLink.href = 'stremio://' + window.location.host + '/' + encodeURIComponent(formData.get("username")) + '/manifest.json'
 					document.getElementById('mobileLink').value = installLink.href
 					return;
 				}
