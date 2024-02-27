@@ -3,14 +3,14 @@ dotenv();
 
 import path, { join } from "path";
 
-import manifest from "./manifest.js";
+import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
 import { fetchWatchlist } from "./fetcher.js";
-import { type Manifest } from "stremio-addon-sdk";
 import { doesLetterboxdUserExist } from "./util.js";
 import { env } from "./env.js";
 import { prisma } from "./prisma.js";
+import landingTemplate from "./landingTemplate.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -28,12 +28,18 @@ app.get("/logo.png", (_req, res) => {
 });
 
 app.get("/configure", function (_req, res, next) {
-  return res.sendFile(join(__dirname, "/static/index.html"));
+  const landingPage = landingTemplate(manifest);
+  res.setHeader("Content-Type", "text/html");
+  res.end(landingPage);
+
+  // return res.sendFile(join(__dirname, "/static/index.html"));
 });
 
 // Create the catalog
 app.get("/:username/manifest.json", async function (req, res) {
-  const cloned_manifest = JSON.parse(JSON.stringify(manifest)) as Manifest;
+  const cloned_manifest = JSON.parse(
+    JSON.stringify(manifest)
+  ) as ManifestExpanded;
   cloned_manifest.id = `${
     !env.isProduction ? "dev." : ""
   }com.github.megadrive.letterboxd-watchlist-${req.params.username}`;
