@@ -199,7 +199,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
 
       const fetchChunk = async (
         chunk: string[]
-      ): Promise<CinemetaMovieResponseLive["meta"][] | null[]> => {
+      ): Promise<typeof rv | null[]> => {
         try {
           // TODO: There is a null happening here when using thisisalexei's watchlist. Why? Idk.
           const res = await addonFetch(
@@ -294,7 +294,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
 
 async function upsertLetterboxdUserWithMovies(
   username: string,
-  movies: { [key: string]: any }
+  movies: StremioMetaPreview[]
 ) {
   console.info(`Caching ${username} to database.`);
 
@@ -314,17 +314,18 @@ async function upsertLetterboxdUserWithMovies(
     where: { id: username },
     create: {
       id: username,
-      movie_ids: JSON.stringify(movies.map((movie: any) => movie.imdb_id)),
+      movie_ids: JSON.stringify(movies.map((movie) => movie.id)),
     },
     update: {
       id: username,
-      movie_ids: JSON.stringify(movies.map((movie: any) => movie.imdb_id)),
+      movie_ids: JSON.stringify(movies.map((movie) => movie.id)),
     },
   });
 
   return user;
 }
 
+/** Gets a cached user from the DB. Throws if no user or if the data is old. */
 async function getDBCachedUser(username: string) {
   const user = await prisma.letterboxdUser.findUnique({
     where: { id: username },
@@ -334,12 +335,15 @@ async function getDBCachedUser(username: string) {
   if (isOld(user.updatedAt, config.cache_user_stale_time))
     throw Error(`[${username}]: stale user data`);
 
+  console.log(user);
+
   const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
   console.info(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
   // const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
   const movie_info: StremioMetaPreview[] = [];
   for (const imdbid of parsed_movie_ids) {
     const found = findMovie(imdbid);
+    console.log({ found });
     movie_info.push({
       id: found[0].imdb_id,
       name: found[0].name,
@@ -531,18 +535,23 @@ export async function fetchWatchlist(
   // if we have a cached user, serve that and update in the background for _-sPeEd-_
   try {
     let cachedUser = await getDBCachedUser(username);
-    console.info(`[${username}]: serving cached`);
-    if (options.preferLetterboxdPosters) {
-      // @ts-ignore next-line
-      cachedUser = replaceMetaWithLetterboxdPosters(
-        // @ts-ignore next-line
-        cachedUser.movies
-      );
-    }
+    console.info(`[${username}]: ${cachedUser ? "got" : "couldnt get"} cached`);
+    // if (options.preferLetterboxdPosters) {
+    //   cachedUser = replaceMetaWithLetterboxdPosters(
+    //     cachedUser.movies
+    //   );
+    // }
+
+    const cached_movies = await getCinemetaInfoMany(
+      JSON.parse(cachedUser.movie_ids)
+    );
 
     /* async */ fetchFreshData()
       .then((data) => {
         console.info(`Fetched fresh data -> ${data.metas.length} films`);
+        if (!cachedUser) return data;
+
+        return;
       })
       .catch((error) => {
         console.error("couldnt fetch fresh data after serving cached data");
@@ -550,9 +559,10 @@ export async function fetchWatchlist(
       });
 
     // @ts-ignore next-line
-    return { metas: cachedUser.movies };
+    return { metas: cached_movies };
   } catch (error) {
     console.warn(`[${username}]: No user or old data, continuing..`);
+    console.error(error);
   }
 
   // if we don't then fetch fresh
