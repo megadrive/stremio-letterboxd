@@ -37,7 +37,7 @@ app.get("/configure", function (_req, res, next) {
 
 app.get("/manifest.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
-  res.end(manifest);
+  res.json(manifest);
 });
 
 // Create the catalog
