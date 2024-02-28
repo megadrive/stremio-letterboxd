@@ -9,7 +9,6 @@ import express from "express";
 import { fetchWatchlist } from "./fetcher.js";
 import { doesLetterboxdUserExist } from "./util.js";
 import { env } from "./env.js";
-import { prisma } from "./prisma.js";
 import landingTemplate from "./landingTemplate.js";
 const app = express();
 
@@ -27,12 +26,15 @@ app.get("/logo.png", (_req, res) => {
   return res.sendFile(join(__dirname, "/static/logo.png"));
 });
 
-app.get("/configure", function (_req, res, next) {
+app.get("/:username?/configure", function (req, res, next) {
+  const { username } = req.params;
+  const cloned_manifest = Object.assign({}, manifest);
+  if (cloned_manifest.config && cloned_manifest.config[0]) {
+    cloned_manifest.config[0].default = username;
+  }
   const landingPage = landingTemplate(manifest);
   res.setHeader("Content-Type", "text/html");
   res.end(landingPage);
-
-  // return res.sendFile(join(__dirname, "/static/index.html"));
 });
 
 app.get("/manifest.json", (req, res) => {
