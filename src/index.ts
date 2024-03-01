@@ -7,9 +7,11 @@ import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
 import { fetchWatchlist } from "./fetcher.js";
-import { doesLetterboxdUserExist } from "./util.js";
+import { IDUtil, doesLetterboxdListExist } from "./util.js";
 import { env } from "./env.js";
 import landingTemplate from "./landingTemplate.js";
+import { LetterboxdUsernameOrListRegex } from "./consts.js";
+import { parseLetterboxdURLToID } from "./util.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -43,24 +45,28 @@ app.get("/manifest.json", (req, res) => {
 });
 
 // Create the catalog
-app.get("/:username/manifest.json", async function (req, res) {
+app.get("/:id/manifest.json", async function (req, res) {
+  const idInfo = IDUtil.split(req.params.id);
+  const name = `${!env.isProduction ? "Dev - " : ""}Letterboxd - ${
+    idInfo.username
+  } - ${idInfo.listName}`;
+
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
   ) as ManifestExpanded;
   cloned_manifest.id = `${
     !env.isProduction ? "dev." : ""
-  }com.github.megadrive.letterboxd-watchlist-${req.params.username}`;
-  cloned_manifest.name = `${
-    !env.isProduction ? "Dev - " : ""
-  }Letterboxd Watchlist - ${req.params.username}`;
-  cloned_manifest.description = `Provides ${req.params.username}'s watchlist as a catalog.`;
+  }com.github.megadrive.letterboxd-watchlist-${req.params.id.replace(
+    /\|/,
+    "-"
+  )}`;
+  cloned_manifest.name = name;
+  cloned_manifest.description = `Provides ${idInfo.username}'s ${idInfo.listName}${idInfo.type} as a catalog.`;
   cloned_manifest.catalogs = [
     {
-      id: req.params.username,
+      id: `${req.params.id}`,
       type: "movie",
-      name: `${!env.isProduction ? "dev - " : ""}${
-        req.params.username
-      } - Letterboxd Watchlist`,
+      name,
     },
   ];
 
@@ -78,9 +84,15 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   }
 
   try {
-    if (!doesLetterboxdUserExist(decodeURIComponent(username))) {
+    if (!LetterboxdUsernameOrListRegex.test(username)) {
+      throw Error(`[${username}] invalid id`);
+    }
+    if (
+      (await doesLetterboxdListExist(decodeURIComponent(username))) === false
+    ) {
       throw Error(`[${username}]: doesn't exist`);
     }
+
     const films = await fetchWatchlist(decodeURIComponent(username));
     films.source = undefined; // make sure it can be cached.
 
@@ -93,18 +105,38 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   }
 });
 
-app.post("/generate/:username", (req, res) => {
-  const { protocol, hostname } = req;
-  return res.send(
-    `${protocol}://${hostname}/` +
-      encodeURIComponent(req.params.username) +
-      "/manifest.json"
-  );
+/**
+ * Unused.
+ */
+app.get("/generate/:url", (req, res) => {
+  const id = parseLetterboxdURLToID(decodeURIComponent(req.params.url));
+
+  res.send(id);
 });
 
+/**
+ * Redirects a Letterboxd poster, setting the Referer header.
+ */
 app.get("/poster/:poster_url", async (req, res) => {
   res.appendHeader("Referer", "https://letterboxd.com/");
   res.redirect(req.params.poster_url);
+});
+
+/**
+ * Checks username or list validity on Letterboxd.
+ * Expects :id to be in the format `username(|listid)?`
+ */
+app.get("/check/:id", async (req, res) => {
+  const [username, listId] = req.params.id.split("|");
+  const url = `https://letterboxd.com/${username}${
+    listId ? `/list/${listId}` : ""
+  }`;
+  const fres = await fetch(url, {
+    headers: {
+      Referer: "https://letterboxd.com/",
+    },
+  });
+  res.status(fres.ok ? 200 : 404).end("");
 });
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));

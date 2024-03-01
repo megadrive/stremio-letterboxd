@@ -9,6 +9,12 @@ export const config = {
   cache_tmdb_stale_time: ONE_HOUR * 24,
 };
 
+export const LetterboxdRegex =
+  /https:\/\/(www\.)?letterboxd\.com\/([A-Za-z0-9_]+)(\/list\/([A-Za-z0-9\-_]+))?/gi;
+
+export const LetterboxdUsernameOrListRegex =
+  /([A-Za-z0-9_])(\/([A-Za-z0-9\-_]+))?/i;
+
 export type StremioMeta = {
   id: string;
   type: "movie" | "series" | "channel" | "tv";
