@@ -62,19 +62,20 @@ const minisearch = new MiniSearch({
   idField: "imdb_id",
   fields: ["imdb_id", "name", "year"],
   storeFields: ["name", "imdb_id"],
-  searchOptions: { boost: { imdb_id: 3 } },
+  searchOptions: {
+    fuzzy: 0.3,
+  },
 });
 
 (async () => {
   const data = await getCinemeta();
   minisearch.addAll(data);
+  console.log(`Added ${minisearch.documentCount} to search`);
 })();
 
 export const findMovie = (
   query: string,
-  options: Parameters<typeof minisearch.search>[1] = {
-    boost: { name: 2, year: 1 },
-  }
+  options?: Parameters<typeof minisearch.search>[1]
 ) => {
   const results = minisearch.search(query, options);
 

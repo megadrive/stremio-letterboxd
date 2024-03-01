@@ -28,11 +28,11 @@ app.get("/logo.png", (_req, res) => {
   return res.sendFile(join(__dirname, "/static/logo.png"));
 });
 
-app.get("/:username?/configure", function (req, res, next) {
-  const { username } = req.params;
+app.get("/:id?/configure", function (req, res, next) {
+  const { id } = req.params;
   const cloned_manifest = Object.assign({}, manifest);
   if (cloned_manifest.config && cloned_manifest.config[0]) {
-    cloned_manifest.config[0].default = username;
+    cloned_manifest.config[0].default = id;
   }
   const landingPage = landingTemplate(manifest);
   res.setHeader("Content-Type", "text/html");
@@ -47,9 +47,9 @@ app.get("/manifest.json", (req, res) => {
 // Create the catalog
 app.get("/:id/manifest.json", async function (req, res) {
   const idInfo = IDUtil.split(req.params.id);
-  const name = `${!env.isProduction ? "Dev - " : ""}Letterboxd - ${
-    idInfo.username
-  } - ${idInfo.listName}`;
+  const name = `${!env.isProduction ? "Dev - " : ""}${idInfo.username} - ${
+    idInfo.listName
+  } - Letterboxd`;
 
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)

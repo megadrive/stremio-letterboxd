@@ -73,14 +73,18 @@ async function getImdbIDs(films: IFilm[]) {
   const IDs = [];
   for (const film of films) {
     const query = `${film.name}`;
-    const matches = findMovie(query);
+    const matches = findMovie(query, { fuzzy: true });
 
     if (matches.length === 0) {
       console.warn(`Couldn't find ${query}`);
       continue;
     }
 
-    if (matches[0].name !== query) {
+    const strip = (str: string) => str.replace(/[^A-Za-z]/g, "").toLowerCase();
+    if (strip(matches[0].name) !== strip(query)) {
+      console.info({
+        query,
+      });
       console.warn(`Couldn't find ${query}`);
       continue;
     }
@@ -88,24 +92,24 @@ async function getImdbIDs(films: IFilm[]) {
     let topMatch = matches[0];
 
     if (matches[0].name.toLowerCase() === query.toLowerCase()) {
-      console.info(`Found ${query}, checking for duplicates.`);
+      console.info(`Found ${query}, not checking for duplicates.`);
       // do we have multiples with the exact same name? use year
       // this is also _so_ not the best way to do this lol
-      let dupe = false;
-      for (let x = 1; x < matches.length; x++) {
-        if (matches[0].name.toLowerCase() === matches[x].name.toLowerCase()) {
-          console.info(`Found a dupe, search more specifically.`);
-          dupe = true;
-        }
-      }
+      // let dupe = false;
+      // for (let x = 1; x < matches.length; x++) {
+      //   if (matches[0].name.toLowerCase() === matches[x].name.toLowerCase()) {
+      //     console.info(`Found a dupe, search more specifically.`);
+      //     dupe = true;
+      //   }
+      // }
 
-      if (dupe) {
-        const moreSpecific = findMovie(`${query} ${film.year}`, {
-          boost: { year: 2 },
-        });
-        moreSpecific.sort((a, b) => b.score - a.score);
-        topMatch = moreSpecific[0];
-      }
+      // if (dupe) {
+      //   const moreSpecific = findMovie(`${matches[0].name} ${film.year}`, {
+      //     boost: { year: 2 },
+      //   });
+      //   moreSpecific.sort((a, b) => b.score - a.score);
+      //   topMatch = moreSpecific[0];
+      // }
     }
 
     IDs.push(topMatch.imdb_id);
