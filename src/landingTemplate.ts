@@ -238,23 +238,39 @@ function landingTemplate(manifest: ManifestExpanded) {
 			}
 
 			// disallow certain keypresses
-			document.querySelector('input[name="username"]').addEventListener('keydown', event => {
-				const allowedKeys = /[a-z0-9_]/i;
-				if(!allowedKeys.test(event.key)) {
-					event.preventDefault();
-				}
-			})
+			// document.querySelector('input[name="username"]').addEventListener('keydown', event => {
+			// 	const allowedKeys = /[a-z0-9_]/i;
+			// 	if(!allowedKeys.test(event.key)) {
+			// 		event.preventDefault();
+			// 	}
+			// })
+
+			const parseLetterboxdURLToID = (url) => {
+				const LetterboxdRegex = /https:\\/\\/(www\\.)?letterboxd\\.com\\/([A-Za-z0-9_]+)(\\/list\\/([A-Za-z0-9\\-_]+))?/gi;
+
+				const match = LetterboxdRegex.exec(url);
+				if (!match) return "";
+				const username = match[2];
+				const listid = match[4];
+				let rv = username;
+				if(listid) rv += '|'+listid;
+
+				return rv;
+			};
+
 			
 			const updateLink = () => {
 				const formData = new FormData(mainForm)
+				if(formData.get("letterboxdUrl").length === 0) return;
 				const config = Object.fromEntries(formData)
-				if(formData.get('username').length === 0) {
-					installLink.href = 'stremio://' + window.location.host + '/' + encodeURIComponent(formData.get("username")) + '/manifest.json'
+				const id = parseLetterboxdURLToID(formData.get("letterboxdUrl"));
+				if(formData.get('letterboxdUrl').length === 0) {
+					installLink.href = 'stremio://' + window.location.host + '/' + id + '/manifest.json'
 					document.getElementById('mobileLink').value = installLink.href
 					return;
 				}
 				// installLink.href = 'stremio://' + window.location.host + '/' + encodeURIComponent(JSON.stringify(config)) + '/manifest.json'
-				installLink.href = 'stremio://' + window.location.host + '/' + encodeURIComponent(formData.get("username")) + '/manifest.json'
+				installLink.href = 'stremio://' + window.location.host + '/' + id + '/manifest.json'
 				document.getElementById('mobileLink').value = installLink.href
 			}
 			mainForm.onchange = updateLink

@@ -27,8 +27,8 @@ const manifest: ManifestExpanded = {
   },
   config: [
     {
-      title: "Your Letterboxd username",
-      key: "username",
+      title: "A user's Letterboxd URL or a List URL",
+      key: "letterboxdUrl",
       type: "text",
       special: "anonymous",
       required: true,

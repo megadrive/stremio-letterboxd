@@ -29,13 +29,6 @@ export async function doesLetterboxdListExist(id: string) {
 export const parseLetterboxdURLToID = (url: string) => {
   console.log(`testing ${url}`);
   const match = LetterboxdRegex.exec(url);
-  // [
-  //   "https://letterboxd.com/fcbarcelona/list/movies-everyone-should-watch-at-least-once",
-  //   null,
-  //   "fcbarcelona",
-  //   "/list/movies-everyone-should-watch-at-least-once",
-  //   "movies-everyone-should-watch-at-least-once",
-  // ];
   if (!match) return "";
   const username = match[2];
   const listid = match[4];
