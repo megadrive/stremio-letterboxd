@@ -5,7 +5,6 @@ import {
   type CinemetaMovieResponseLive,
   type StremioMetaPreview,
   config,
-  LetterboxdRegex,
   LetterboxdUsernameOrListRegex,
 } from "./consts.js";
 import {
