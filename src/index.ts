@@ -80,6 +80,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   console.log({ extra });
 
   if (type !== "movie") {
+    console.warn(`Wrong type: ${type}, giving nothing.`);
     return res.status(304).json({ metas: [] });
   }
 
@@ -97,6 +98,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     films.source = undefined; // make sure it can be cached.
 
     if (env.isProduction) res.appendHeader("Cache-Control", "max-age: 3600");
+    console.info(`[${username}] serving ${films.metas.length}`);
     return res.json(films);
   } catch (error) {
     // Return empty

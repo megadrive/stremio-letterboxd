@@ -72,6 +72,7 @@ function parseCinemetaInfo(
 async function getImdbIDs(films: IFilm[]) {
   const IDs = [];
   for (const film of films) {
+    if (!film.name) continue;
     const query = `${film.name}`;
     const matches = findMovie(query, { fuzzy: true });
 
@@ -80,7 +81,8 @@ async function getImdbIDs(films: IFilm[]) {
       continue;
     }
 
-    const strip = (str: string) => str.replace(/[^A-Za-z]/g, "").toLowerCase();
+    const strip = (str: string) =>
+      str ? str.replace(/[^A-Za-z0-9]/g, "").toLowerCase() : "";
     if (strip(matches[0].name) !== strip(query)) {
       console.info({
         query,
@@ -91,25 +93,25 @@ async function getImdbIDs(films: IFilm[]) {
 
     let topMatch = matches[0];
 
-    if (matches[0].name.toLowerCase() === query.toLowerCase()) {
-      console.info(`Found ${query}, not checking for duplicates.`);
-      // do we have multiples with the exact same name? use year
-      // this is also _so_ not the best way to do this lol
-      // let dupe = false;
-      // for (let x = 1; x < matches.length; x++) {
-      //   if (matches[0].name.toLowerCase() === matches[x].name.toLowerCase()) {
-      //     console.info(`Found a dupe, search more specifically.`);
-      //     dupe = true;
-      //   }
-      // }
-
-      // if (dupe) {
-      //   const moreSpecific = findMovie(`${matches[0].name} ${film.year}`, {
-      //     boost: { year: 2 },
-      //   });
-      //   moreSpecific.sort((a, b) => b.score - a.score);
-      //   topMatch = moreSpecific[0];
-      // }
+    if (matches[0] && matches[0].name.toLowerCase() === query.toLowerCase()) {
+      console.info(
+        `Found ${query} with duplicates; attempting to get more specific`
+      );
+      const doesDupeExist = matches.some((el) => {
+        return el && el.name === matches[0].name;
+      });
+      if (doesDupeExist) {
+        console.log(`Dupe exists.`);
+        const moreSpecificMatch = findMovie(`${film.name} ${film.year}`);
+        if (
+          moreSpecificMatch[0].name.toLowerCase() ===
+            `${film.name}`.toLowerCase() &&
+          Number(moreSpecificMatch[0].year) === Number(film.year)
+        ) {
+          console.info(`[${query}] Found a more specific match.`);
+          topMatch = moreSpecificMatch[0];
+        }
+      }
     }
 
     IDs.push(topMatch.imdb_id);
@@ -328,15 +330,12 @@ async function getDBCachedUser(username: string) {
   if (isOld(user.updatedAt, config.cache_user_stale_time))
     throw Error(`[${username}]: stale user data`);
 
-  console.log(user);
-
   const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
   console.info(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
   // const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
   const movie_info: StremioMetaPreview[] = [];
   for (const imdbid of parsed_movie_ids) {
     const found = findMovie(imdbid);
-    console.log({ found });
     movie_info.push({
       id: found[0].imdb_id,
       name: found[0].name,

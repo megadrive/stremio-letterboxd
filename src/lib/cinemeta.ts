@@ -60,8 +60,8 @@ const getCinemeta = async (): Promise<CinemetaV1Result["result"]> => {
 
 const minisearch = new MiniSearch({
   idField: "imdb_id",
-  fields: ["imdb_id", "name", "year"],
-  storeFields: ["name", "imdb_id"],
+  fields: ["name", "year"],
+  storeFields: ["name", "imdb_id", "year"],
   searchOptions: {
     fuzzy: 0.3,
   },
@@ -77,7 +77,15 @@ export const findMovie = (
   query: string,
   options?: Parameters<typeof minisearch.search>[1]
 ) => {
-  const results = minisearch.search(query, options);
+  try {
+    console.info(`[minisearch] finding ${query}`);
+    const results = minisearch.search(query, options);
+    console.info(`[minisearch] finding ${query} -> ${results.length} results.`);
 
-  return results;
+    return results;
+  } catch (error) {
+    console.error(`[minisearch] Couldn't find ${query}`);
+    console.error(error);
+    return [];
+  }
 };
