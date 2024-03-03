@@ -62,7 +62,9 @@ app.get("/:id/manifest.json", async function (req, res) {
       ? `${idInfo.username} - Watchlist`
       : `${idInfo.username}'s list: ${idInfo.listName}`
   }`;
-  cloned_manifest.description = `Provides ${idInfo.username}'s ${idInfo.listName}${idInfo.type} as a catalog.`;
+  cloned_manifest.description = `Provides ${idInfo.username}'s ${
+    idInfo.listName
+  } ${idInfo.type !== "watchlist" ? "list " : ""}as a catalog.`;
   cloned_manifest.catalogs = [
     {
       id: req.params.id,
@@ -112,6 +114,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
 
 /**
  * Unused.
+ * @deprecated
  */
 app.get("/generate/:url", (req, res) => {
   const id = parseLetterboxdURLToID(decodeURIComponent(req.params.url));
@@ -121,6 +124,8 @@ app.get("/generate/:url", (req, res) => {
 
 /**
  * Redirects a Letterboxd poster, setting the Referer header.
+ *
+ * @todo will be used when letterboxd posters later
  */
 app.get("/poster/:poster_url", async (req, res) => {
   res.appendHeader("Referer", "https://letterboxd.com/");
@@ -130,6 +135,8 @@ app.get("/poster/:poster_url", async (req, res) => {
 /**
  * Checks username or list validity on Letterboxd.
  * Expects :id to be in the format `username(|listid)?`
+ *
+ * @todo may be used later when verifying urls on /configure
  */
 app.get("/check/:id", async (req, res) => {
   const [username, listId] = req.params.id.split("|");

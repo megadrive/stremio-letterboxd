@@ -12,10 +12,11 @@ export const config = {
 };
 
 export const LetterboxdRegex =
-  /https:\/\/(www\.)?letterboxd\.com\/([A-Za-z0-9_]+)(\/list\/([A-Za-z0-9\-_]+))?/gi;
+  /https:\/\/(www\.)?letterboxd\.com\/([A-Za-z0-9_]+)(?:\/watchlist)?(\/list\/([A-Za-z0-9\-_]+))?/gi;
+// /https:\/\/(www\.)?letterboxd\.com\/([A-Za-z0-9_]+)(\/list\/([A-Za-z0-9\-_]+))?/gi; // keep this here in case above breaks everything
 
 export const LetterboxdUsernameOrListRegex =
-  /([A-Za-z0-9_])(\/([A-Za-z0-9\-_]+))?/i;
+  /([A-Za-z0-9_])(|([A-Za-z0-9\-_]+))?/i;
 
 export type StremioMeta = {
   id: string;
