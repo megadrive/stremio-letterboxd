@@ -49,23 +49,25 @@ app.get("/:id/manifest.json", async function (req, res) {
   const idInfo = IDUtil.split(req.params.id);
   const name = `${!env.isProduction ? "Dev - " : ""}${idInfo.username} - ${
     idInfo.listName
-  } - Letterboxd`;
+  }`;
 
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
   ) as ManifestExpanded;
   cloned_manifest.id = `${
     !env.isProduction ? "dev." : ""
-  }com.github.megadrive.letterboxd-watchlist-${req.params.id.replace(
-    /\|/,
-    "-"
-  )}`;
-  cloned_manifest.name = name;
+  }com.github.megadrive.letterboxd-watchlist`;
+  cloned_manifest.name = `Letterboxd - ${
+    idInfo.type === "watchlist"
+      ? `${idInfo.username} - Watchlist`
+      : `${idInfo.username}'s list: ${idInfo.listName}`
+  }`;
   cloned_manifest.description = `Provides ${idInfo.username}'s ${idInfo.listName}${idInfo.type} as a catalog.`;
   cloned_manifest.catalogs = [
     {
-      id: `${req.params.id}`,
-      type: "movie",
+      id: req.params.id,
+      /** @ts-ignore next-line */
+      type: "letterboxd",
       name,
     },
   ];
@@ -79,7 +81,8 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   const { username, type, id, extra } = req.params;
   console.log({ extra });
 
-  if (type !== "movie") {
+  // We still keep movie here for legacy purposes, so current users don't break.
+  if (type !== "movie" && type !== "letterboxd") {
     console.warn(`Wrong type: ${type}, giving nothing.`);
     return res.status(304).json({ metas: [] });
   }
