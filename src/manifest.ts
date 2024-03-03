@@ -16,10 +16,11 @@ export type ManifestExpanded = Manifest & {
 const manifest: ManifestExpanded = {
   id: "github.megadrive.stremio.letterboxd",
   version: "1.0.0",
-  name: "Letterboxd Watchlist",
+  name: "Letterboxd",
   logo: "https://stremio-letterboxd-watchlist.up.railway.app/logo.png",
   description: "Addon to add Letterboxd lists as catalogs",
-  types: ["movie"],
+  /** @ts-ignore */
+  types: ["letterboxd"],
   resources: ["catalog"],
   catalogs: [],
   behaviorHints: {
