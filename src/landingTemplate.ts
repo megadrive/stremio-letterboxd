@@ -311,20 +311,40 @@ function landingTemplate(manifest: ManifestExpanded) {
 
 			${formHTML}
 			
-			<div class="form-element">
+			<div class="form-element" style="display:none">
 				<div class="label-to-top">Copy this URL if using mobile
 				<input type="text" id="mobileLink" style="width: 100%; height: 2rem;" />
 				</div>
 			</div>
 
 
-			<a id="installLink" class="install-link" href="#">
-			<button name="Install">INSTALL</button>
-			</a>
+			<div style="display:grid; gap: 1rem; grid-template-columns: 1fr 1fr">
+				<a id="installLink" class="install-link" href="#">
+					<button name="Install">INSTALL</button>
+				</a>
+				<button id="copyToClipboard">COPY TO CLIPBOARD</button>
+			</div>
+
 			${contactHTML}
 		</div>
 		<script>
 			${script}
+
+			const clippy = document.getElementById("copyToClipboard")
+			clippy.addEventListener("click", function (event){
+				event.preventDefault();
+
+				const oldText = clippy.innerText;
+				clippy.innerText = "Copied!"
+				setTimeout(() => {
+					clippy.innerText = oldText;
+				}, 4000)
+				navigator.clipboard.writeText(installLink.href).then(() => {
+					console.info("write to clipboard")
+				}).catch((error) => {
+					console.error(error)
+				})
+			}) 
 
 			if (typeof updateLink === 'function')
 			updateLink()
