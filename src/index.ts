@@ -7,7 +7,7 @@ import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
 import { fetchWatchlist } from "./fetcher.js";
-import { IDUtil, doesLetterboxdListExist } from "./util.js";
+import { IDUtil, PrependWithDev, doesLetterboxdListExist } from "./util.js";
 import { env } from "./env.js";
 import landingTemplate from "./landingTemplate.js";
 import { LetterboxdUsernameOrListRegex } from "./consts.js";
@@ -54,9 +54,11 @@ app.get("/:id/manifest.json", async function (req, res) {
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
   ) as ManifestExpanded;
-  cloned_manifest.id = `${
-    !env.isProduction ? "dev." : ""
-  }com.github.megadrive.letterboxd-watchlist`;
+  cloned_manifest.id = PrependWithDev(
+    `com.github.megadrive.letterboxd-watchlist-${idInfo.username}${
+      idInfo.listId ? `|${idInfo.listId}` : ""
+    }`
+  );
   cloned_manifest.name = `Letterboxd - ${
     idInfo.type === "watchlist"
       ? `${idInfo.username} - Watchlist`
@@ -102,7 +104,11 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     const films = await fetchWatchlist(decodeURIComponent(username));
     films.source = undefined; // make sure it can be cached.
 
-    if (env.isProduction) res.appendHeader("Cache-Control", "max-age: 3600");
+    if (true || env.isProduction)
+      res.appendHeader(
+        "Cache-Control",
+        "stale-while-revalidate=3600, max-age: 86400"
+      );
     console.info(`[${username}] serving ${films.metas.length}`);
     return res.json(films);
   } catch (error) {

@@ -1,4 +1,5 @@
 import { LetterboxdRegex } from "./consts.js";
+import { env } from "./env.js";
 
 export const generateURL = (id: string, page: number = 1) => {
   const separator = "|";
@@ -80,3 +81,6 @@ export const IDUtil = {
     return { username, listId, listName, type: listId ? "list" : "watchlist" };
   },
 };
+
+export const PrependWithDev = (s: string, seperator: string = ".") =>
+  !env.isProduction ? `dev${seperator}${s}` : "s";
