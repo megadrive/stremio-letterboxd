@@ -6,6 +6,7 @@ import {
   type StremioMetaPreview,
   config,
   LetterboxdUsernameOrListRegex,
+  StremioMeta,
 } from "./consts.js";
 import {
   generateURL,
@@ -56,16 +57,15 @@ type IFilm = {
 // }
 
 /** Parse a Cinemeta API response into a Streamio Meta Preview object. */
-function parseCinemetaInfo(
-  meta: CinemetaMovieResponseLive["meta"]
-): StremioMetaPreview {
-  const { id, name, poster } = meta;
-  return {
-    id,
-    name,
-    type: "movie",
-    poster,
-  };
+function parseCinemetaInfo(meta: CinemetaMovieResponseLive["meta"]) {
+  return meta;
+  // const { id, name, poster } = meta;
+  // return {
+  //   id,
+  //   name,
+  //   type: "movie",
+  //   poster,
+  // };
 }
 
 /** Gets many IMDB ID from films */
@@ -153,7 +153,7 @@ async function getImdbIDs(films: string[]) {
 
 /** Get Meta information for many IMDB IDs from Cinemeta */
 async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
-  let rv: StremioMetaPreview[] = [];
+  let rv: StremioMeta[] = [];
   const cached = await prisma.cinemeta.findMany({
     where: {
       id: {
@@ -241,14 +241,15 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
 
     rv = [
       ...rv,
-      ...fetched.map((film): StremioMetaPreview => {
-        return {
-          id: film.id,
-          name: film.name,
-          poster: film.poster,
-          type: "movie",
-        };
-      }),
+      ...fetched,
+      // ...fetched.map((film): StremioMetaPreview => {
+      //   return {
+      //     id: film.id,
+      //     name: film.name,
+      //     poster: film.poster,
+      //     type: "movie",
+      //   };
+      // }),
     ];
 
     // cache the data

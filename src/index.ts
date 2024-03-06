@@ -112,7 +112,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     const films = await fetchWatchlist(decodeURIComponent(username));
     films.source = undefined; // make sure it can be cached.
 
-    if (env.isProduction) {
+    if (true || env.isProduction) {
       res.appendHeader(
         "Cache-Control",
         "stale-while-revalidate=3600, max-age=43200, public"

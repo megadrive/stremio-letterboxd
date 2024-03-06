@@ -34,7 +34,7 @@ export type StremioMeta = {
   imdbRating?: string;
   released?: string;
   /** @deprecated */
-  trailers?: { source: string; type: "Trailer" | "Clip" };
+  trailers?: { source: string; type: "Trailer" | "Clip" | string }[];
   links?: {
     name: string;
     category: string;
@@ -59,6 +59,7 @@ export type StremioMeta = {
   website?: string;
   behaviorHints?: Partial<{
     defaultVideoID: string;
+    hasScheduledVideos: boolean;
   }>;
 };
 
