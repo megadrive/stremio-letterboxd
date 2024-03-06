@@ -73,6 +73,12 @@ app.get("/:id/manifest.json", async function (req, res) {
       /** @ts-ignore next-line */
       type: "letterboxd",
       name,
+      extra: [
+        {
+          name: "skip",
+          isRequired: false,
+        },
+      ],
     },
   ];
 
@@ -106,12 +112,14 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     const films = await fetchWatchlist(decodeURIComponent(username));
     films.source = undefined; // make sure it can be cached.
 
-    if (true || env.isProduction)
+    if (env.isProduction) {
       res.appendHeader(
         "Cache-Control",
-        // "stale-while-revalidate=3600, max-age=86400"
-        "max-age=86400"
+        "stale-while-revalidate=3600, max-age=43200, public"
       );
+    } else {
+      res.appendHeader("Cache-Control", "no-cache, public");
+    }
     console.info(`[${username}] serving ${films.metas.length}`);
     console.timeEnd(`[${username}] catalog`);
     return res.json(films);
