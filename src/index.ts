@@ -85,6 +85,8 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   const { username, type, id, extra } = req.params;
   console.log({ extra });
 
+  console.time(`[${username}] catalog`);
+
   // We still keep movie here for legacy purposes, so current users don't break.
   if (type !== "movie" && type !== "letterboxd") {
     console.warn(`Wrong type: ${type}, giving nothing.`);
@@ -107,13 +109,16 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     if (true || env.isProduction)
       res.appendHeader(
         "Cache-Control",
-        "stale-while-revalidate=3600, max-age: 86400"
+        // "stale-while-revalidate=3600, max-age=86400"
+        "max-age=86400"
       );
     console.info(`[${username}] serving ${films.metas.length}`);
+    console.timeEnd(`[${username}] catalog`);
     return res.json(films);
   } catch (error) {
     // Return empty
     console.error(error);
+    console.timeEnd(`[${username}] catalog`);
     return res.json({ metas: [] });
   }
 });
