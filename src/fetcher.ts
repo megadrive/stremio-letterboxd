@@ -1,20 +1,20 @@
-import { addonFetch } from "./lib/fetch.js";
+import { addonFetch } from "@/lib/fetch.js";
 import { load as cheerio } from "cheerio";
-import { prisma } from "./prisma.js";
+import { prisma } from "@/prisma.js";
 import {
   type CinemetaMovieResponseLive,
   type StremioMetaPreview,
   config,
   LetterboxdUsernameOrListRegex,
   StremioMeta,
-} from "./consts.js";
+} from "@/consts.js";
 import {
   generateURL,
   doesLetterboxdListExist,
   isOld,
   formatTimeBetween,
-} from "./util.js";
-import { findMovie } from "./lib/cinemeta.js";
+} from "@/util.js";
+import { findMovie } from "@/lib/cinemeta.js";
 
 type IFilm = {
   slug: string;

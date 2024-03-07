@@ -1,8 +1,9 @@
 import { dirname, join, resolve } from "path";
-import { addonFetch, addonFetch as fetch } from "./fetch.js";
+import { addonFetch } from "@/lib/fetch.js";
 import { readFile, writeFile } from "fs/promises";
-import type { CinemetaMovieResponseLive } from "src/consts.js";
+import type { CinemetaMovieResponseLive } from "@/consts.js";
 import MiniSearch from "minisearch";
+import { prisma } from "@/prisma.js";
 
 const __dirname = resolve(dirname(""));
 const CINEMETA_FILEPATH = join(__dirname, "cinemeta-cache.json");
@@ -88,4 +89,35 @@ export const findMovie = (
     console.error(error);
     return [];
   }
+};
+
+export const fetchCachedIDs = async (
+  imdbIDs: string[]
+): Promise<{} | { id: string; meta: CinemetaMovieResponseLive }> => {
+  try {
+    const filteredIDs = imdbIDs.filter((id) => id.startsWith("tt"));
+    const cached = await prisma.cinemeta.findMany({
+      where: {
+        id: {
+          in: filteredIDs,
+        },
+      },
+    });
+
+    const withInfo = cached.map((cache) => {
+      return {
+        id: cache.id,
+        meta: JSON.parse(cache.info),
+      };
+    });
+
+    console.log(withInfo);
+
+    return withInfo;
+  } catch (error) {
+    console.error("Couldn't get cached Cinemeta data.");
+    console.error(error);
+  }
+
+  return {};
 };

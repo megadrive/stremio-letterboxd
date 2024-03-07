@@ -3,15 +3,15 @@ dotenv();
 
 import path, { join } from "path";
 
-import manifest, { type ManifestExpanded } from "./manifest.js";
+import manifest, { type ManifestExpanded } from "@/manifest.js";
 import cors from "cors";
 import express from "express";
-import { fetchWatchlist } from "./fetcher.js";
-import { IDUtil, PrependWithDev, doesLetterboxdListExist } from "./util.js";
-import { env } from "./env.js";
-import landingTemplate from "./landingTemplate.js";
-import { LetterboxdUsernameOrListRegex } from "./consts.js";
-import { parseLetterboxdURLToID } from "./util.js";
+import { fetchWatchlist } from "@/fetcher.js";
+import { IDUtil, PrependWithDev, doesLetterboxdListExist } from "@/util.js";
+import { env } from "@/env.js";
+import landingTemplate from "@/landingTemplate.js";
+import { LetterboxdUsernameOrListRegex } from "@/consts.js";
+import { parseLetterboxdURLToID } from "@/util.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
