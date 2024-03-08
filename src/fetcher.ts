@@ -1,20 +1,20 @@
-import { addonFetch } from "@/lib/fetch.js";
+import { addonFetch } from "./lib/fetch.js";
 import { load as cheerio } from "cheerio";
-import { prisma } from "@/prisma.js";
+import { prisma } from "./prisma.js";
 import {
   type CinemetaMovieResponseLive,
   type StremioMetaPreview,
   config,
   LetterboxdUsernameOrListRegex,
   StremioMeta,
-} from "@/consts.js";
+} from "./consts.js";
 import {
   generateURL,
   doesLetterboxdListExist,
   isOld,
   formatTimeBetween,
-} from "@/util.js";
-import { findMovie } from "@/lib/cinemeta.js";
+} from "./util.js";
+import { findMovie } from "./lib/cinemeta.js";
 
 type IFilm = {
   slug: string;
@@ -470,7 +470,7 @@ async function fetchWatchlistPage(
 
 /**
  * fetch a Letterboxd user's watchlist
- * @TODO Make this return early with the first page, then spawn a child process to grab the rest.
+ * .TODO Make this return early with the first page, then spawn a child process to grab the rest.
  */
 export async function fetchWatchlist(
   letterboxdId: string,
@@ -545,7 +545,7 @@ export async function fetchWatchlist(
       )
         .then((user) =>
           console.info(
-            `[${letterboxdId}]: updated user @ ${user.updatedAt} with ${
+            `[${letterboxdId}]: updated user . ${user.updatedAt} with ${
               JSON.parse(user.movie_ids).length
             } movies.`
           )

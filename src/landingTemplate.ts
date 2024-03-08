@@ -1,4 +1,4 @@
-import type { ManifestExpanded } from "@/manifest.js";
+import type { ManifestExpanded } from "./manifest.js";
 
 const STYLESHEET = `
 * {

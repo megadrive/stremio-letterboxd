@@ -1,4 +1,4 @@
-import { env } from "@/env.js";
+import { env } from "./env.js";
 
 const ONE_HOUR = 3600000;
 const THIRTY_SECONDS = 30000;

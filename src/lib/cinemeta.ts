@@ -1,9 +1,9 @@
 import { dirname, join, resolve } from "path";
-import { addonFetch } from "@/lib/fetch.js";
+import { addonFetch } from "../lib/fetch.js";
 import { readFile, writeFile } from "fs/promises";
-import type { CinemetaMovieResponseLive } from "@/consts.js";
+import type { CinemetaMovieResponseLive } from "../consts.js";
 import MiniSearch from "minisearch";
-import { prisma } from "@/prisma.js";
+import { prisma } from "../prisma.js";
 
 const __dirname = resolve(dirname(""));
 const CINEMETA_FILEPATH = join(__dirname, "cinemeta-cache.json");
