@@ -38,7 +38,7 @@ export const staticCache = {
       );
       if (!res.ok) continue;
       const meta = await res.json();
-      metas.push(meta.metasDetailed);
+      metas.push(meta.metasDetailed[0]);
     }
 
     // save to static file
