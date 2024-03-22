@@ -115,6 +115,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
 
     const sCache = staticCache.get(username);
     if (sCache && Date.now() - sCache.cacheTime < 1000 * 3600) {
+      console.info("serving static file");
       return res.status(200).json(sCache);
     }
 
