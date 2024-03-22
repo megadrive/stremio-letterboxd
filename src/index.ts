@@ -12,6 +12,7 @@ import { env } from "./env.js";
 import landingTemplate from "./landingTemplate.js";
 import { LetterboxdUsernameOrListRegex } from "./consts.js";
 import { parseLetterboxdURLToID } from "./util.js";
+import { staticCache } from "./lib/staticCache.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -19,6 +20,7 @@ const __dirname = path.resolve(path.dirname(""));
 const PORT = process.env.PORT || 3030;
 
 app.use(cors());
+app.use(express.static("static"));
 
 app.get("/", (_req, res) => {
   return res.redirect("/configure");
@@ -109,17 +111,18 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       throw Error(`[${username}]: doesn't exist`);
     }
 
+    if (env.isProduction) res.appendHeader("Cache-Control", "max-age: 3600");
+
+    const sCache = staticCache.get(username);
+    if (sCache && Date.now() - sCache.cacheTime < 1000 * 3600) {
+      return res.status(200).json(sCache);
+    }
+
     const films = await fetchWatchlist(decodeURIComponent(username));
     films.source = undefined; // make sure it can be cached.
 
-    if (true || env.isProduction) {
-      res.appendHeader(
-        "Cache-Control",
-        "stale-while-revalidate=3600, max-age=43200, public"
-      );
-    } else {
-      res.appendHeader("Cache-Control", "no-cache, public");
-    }
+    staticCache.save(username);
+
     console.info(`[${username}] serving ${films.metas.length}`);
     console.timeEnd(`[${username}] catalog`);
     return res.json(films);
