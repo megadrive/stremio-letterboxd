@@ -83,4 +83,4 @@ export const IDUtil = {
 };
 
 export const PrependWithDev = (s: string, seperator: string = ".") =>
-  !env.isProduction ? `dev${seperator}${s}` : "s";
+  !env.isProduction ? `dev${seperator}${s}` : s;
