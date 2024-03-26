@@ -24,7 +24,7 @@ type CinemetaV1Result = {
 };
 
 const parseCinemetaResponse = (s: string): CinemetaV1Result["result"] => {
-  return JSON.parse(s);
+  return JSON.parse(s) as CinemetaV1Result["result"];
 };
 
 const getCinemeta = async (): Promise<CinemetaV1Result["result"]> => {
@@ -43,7 +43,7 @@ const getCinemeta = async (): Promise<CinemetaV1Result["result"]> => {
   try {
     const res = await addonFetch(CINEMETA_URL);
     if (!res.ok) throw Error("Couldn't fetch Cinemeta.");
-    const fetched = await res.json();
+    const fetched = await res.json() as Record<string, any>;
 
     writeFile(CINEMETA_FILEPATH, JSON.stringify(fetched.result), {
       encoding: "utf8",

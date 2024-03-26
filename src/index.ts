@@ -26,10 +26,6 @@ app.get("/", (_req, res) => {
   return res.redirect("/configure");
 });
 
-app.get("/logo.png", (_req, res) => {
-  return res.sendFile(join(__dirname, "/static/logo.png"));
-});
-
 app.get("/:id?/configure", function (req, res, next) {
   const { id } = req.params;
   const cloned_manifest = Object.assign({}, manifest);
@@ -116,7 +112,8 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     const sCache = staticCache.get(username);
     if (sCache && Date.now() - sCache.cacheTime < 1000 * 3600) {
       console.info("serving static file");
-      return res.status(200).json(sCache);
+      res.setHeader("Content-Type", "application/json");
+      return res.redirect(`/lists/${username}.json`);
     }
 
     const films = await fetchWatchlist(decodeURIComponent(username));

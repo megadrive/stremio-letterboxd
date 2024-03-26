@@ -164,6 +164,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       },
     },
   });
+  // @ts-ignore
   rv = [...cached.map((c) => parseCinemetaInfo(JSON.parse(c.info)))];
 
   // get non-cached ids
@@ -225,9 +226,9 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       for (let chunk of chunks) {
         console.info(`[cinemeta] getting chunk ${rv.length}`);
         const res = await fetchChunk(chunk);
-        const filtered = res.filter((meta) => {
-          return !!meta;
-        }) as CinemetaMovieResponseLive["meta"][];
+        const filtered = res.filter(
+          Boolean
+        ) as CinemetaMovieResponseLive["meta"][];
         rv.push(...filtered);
       }
 
@@ -336,7 +337,7 @@ async function getDBCachedUser(username: string) {
   if (isOld(user.updatedAt, config.cache_user_stale_time))
     throw Error(`[${username}]: stale user data`);
 
-  const parsed_movie_ids: string[] = JSON.parse(user.movie_ids);
+  const parsed_movie_ids: string[] = JSON.parse(user.movie_ids) as string[];
   console.info(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
   // const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
   const movie_info: StremioMetaPreview[] = [];
@@ -546,7 +547,7 @@ export async function fetchWatchlist(
         .then((user) =>
           console.info(
             `[${letterboxdId}]: updated user . ${user.updatedAt} with ${
-              JSON.parse(user.movie_ids).length
+              (JSON.parse(user.movie_ids) as string[]).length
             } movies.`
           )
         )
@@ -575,7 +576,7 @@ export async function fetchWatchlist(
     // }
 
     const cached_movies = await getCinemetaInfoMany(
-      JSON.parse(cachedUser.movie_ids)
+      JSON.parse(cachedUser.movie_ids) as string[]
     );
 
     // if less than 1 page, just fetch a fresh set of data

@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from "fs";
 const __dirname = path.resolve(path.dirname(""));
 
 const generatePath = (id: string) =>
-  join(__dirname, "dist", "static", "list", id);
+  join(__dirname, "static", "lists", `${id}.json`);
 
 const writing = new Set<string>();
 
@@ -37,7 +37,7 @@ export const staticCache = {
         `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${movie}`
       );
       if (!res.ok) continue;
-      const meta = await res.json();
+      const meta = (await res.json()) as Record<string, any>;
       metas.push(meta.metasDetailed[0]);
     }
 
@@ -56,7 +56,7 @@ export const staticCache = {
   get: (id: string) => {
     try {
       const file = readFileSync(generatePath(id), { encoding: "utf8" });
-      const metas = JSON.parse(file);
+      const metas = JSON.parse(file) as Record<string, any>;
       return metas;
     } catch (error) {
       console.error(`[static_cache] Couldn't parse el JSON`);
