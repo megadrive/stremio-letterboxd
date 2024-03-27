@@ -7,7 +7,12 @@ import { readFile, writeFile } from "node:fs/promises";
 const __dirname = path.resolve(path.dirname(""));
 
 const generatePath = (id: string) =>
-  join(__dirname, "static", "lists", `${id.replace("|", "-")}.json`);
+  join(
+    __dirname,
+    "static",
+    "lists",
+    `${decodeURIComponent(id).replace(/(\||%7C)/g, "-")}.json`
+  );
 
 const writing = new Set<string>();
 
