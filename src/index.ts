@@ -109,7 +109,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
 
     if (env.isProduction) res.appendHeader("Cache-Control", "max-age: 3600");
 
-    const sCache = staticCache.get(username);
+    const sCache = await staticCache.get(username);
     if (sCache && Date.now() - sCache.cacheTime < 1000 * 3600) {
       console.info("serving static file");
       res.setHeader("Content-Type", "application/json");

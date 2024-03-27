@@ -2,12 +2,12 @@ import path, { join } from "path";
 import { prisma } from "../prisma.js";
 import { findMovie } from "./cinemeta.js";
 import { addonFetch } from "./fetch.js";
-import { readFileSync, writeFileSync } from "fs";
+import { readFile, writeFile } from "node:fs/promises";
 
 const __dirname = path.resolve(path.dirname(""));
 
 const generatePath = (id: string) =>
-  join(__dirname, "static", "lists", `${id}.json`);
+  join(__dirname, "static", "lists", `${id.replace("|", "-")}.json`);
 
 const writing = new Set<string>();
 
@@ -43,19 +43,24 @@ export const staticCache = {
 
     // save to static file
     writing.add(id);
-    writeFileSync(
-      generatePath(id),
-      JSON.stringify({ metas: metas, cacheTime: Date.now() }),
-      {
-        encoding: "utf8",
-        flag: "w+",
-      }
-    );
+    try {
+      await writeFile(
+        generatePath(id),
+        JSON.stringify({ metas: metas, cacheTime: Date.now() }),
+        {
+          encoding: "utf8",
+          flag: "w",
+        }
+      );
+    } catch (error) {
+      console.error(`Couldn't save staticCache ${id}`);
+      console.error(error);
+    }
     writing.delete(id);
   },
-  get: (id: string) => {
+  get: async (id: string) => {
     try {
-      const file = readFileSync(generatePath(id), { encoding: "utf8" });
+      const file = await readFile(generatePath(id), { encoding: "utf8" });
       const metas = JSON.parse(file) as Record<string, any>;
       return metas;
     } catch (error) {
