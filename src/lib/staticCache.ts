@@ -29,8 +29,13 @@ export const staticCache = {
         id,
       },
     });
-    if (!user) {
-      throw Error(`[static_cache] no user by id ${id}`);
+    try {
+      if (!user) {
+        throw Error(`[static_cache] no user by id ${id}`);
+      }
+    } catch {
+      console.warn("No user by that ID.");
+      return;
     }
 
     // get meta from movies
