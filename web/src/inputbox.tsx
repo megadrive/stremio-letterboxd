@@ -18,7 +18,7 @@ export default function Inputbox() {
     const matches = [...url.matchAll(rletterboxdUrl)];
     let [, , username, , type, listid] = matches[0];
     if (!type) type = "watchlist";
-    return `${username}|${listid ? listid : type}`;
+    return `${username}${listid ? `${`|${listid}`}` : ""}`;
   }
 
   function generateManifestURL() {
