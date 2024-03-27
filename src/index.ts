@@ -60,7 +60,7 @@ app.get("/:id/manifest.json", async function (req, res) {
   cloned_manifest.name = `Letterboxd - ${
     idInfo.type === "watchlist"
       ? `${idInfo.username} - Watchlist`
-      : `${idInfo.username}'s list: ${idInfo.listName}`
+      : `${idInfo.listName} - ${idInfo.username}`
   }`;
   cloned_manifest.description = `Provides ${idInfo.username}'s ${
     idInfo.listName
