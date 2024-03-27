@@ -21,7 +21,7 @@ export async function doesLetterboxdListExist(id: string) {
     const res = await fetch(generatedURL);
     if (res.ok) return true;
   } catch (error) {
-    console.error(`Couldn't determine if ${id} exists.`);
+    console.warn(`Couldn't determine if ${id} exists.`);
   }
 
   return false;

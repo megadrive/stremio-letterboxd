@@ -60,6 +60,7 @@ export const staticCache = {
       return metas;
     } catch (error) {
       console.error(`[static_cache] Couldn't parse el JSON`);
+      console.error(error);
       return null;
     }
   },

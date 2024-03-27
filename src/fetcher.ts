@@ -616,7 +616,6 @@ export async function fetchWatchlist(
     return { metas: cached_movies, source: "cache" };
   } catch (error) {
     console.warn(`[${letterboxdId}]: No user or old data, continuing..`);
-    console.error(error);
   }
 
   // if we don't then fetch fresh

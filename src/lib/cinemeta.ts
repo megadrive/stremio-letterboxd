@@ -43,7 +43,7 @@ const getCinemeta = async (): Promise<CinemetaV1Result["result"]> => {
   try {
     const res = await addonFetch(CINEMETA_URL);
     if (!res.ok) throw Error("Couldn't fetch Cinemeta.");
-    const fetched = await res.json() as Record<string, any>;
+    const fetched = (await res.json()) as Record<string, any>;
 
     writeFile(CINEMETA_FILEPATH, JSON.stringify(fetched.result), {
       encoding: "utf8",
@@ -110,8 +110,6 @@ export const fetchCachedIDs = async (
         meta: JSON.parse(cache.info),
       };
     });
-
-    console.log(withInfo);
 
     return withInfo;
   } catch (error) {
