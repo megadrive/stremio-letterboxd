@@ -12,31 +12,40 @@ export default function Inputbox() {
     }
   }
 
-  function convertToId(url: string) {
+  async function convertToId(url: string) {
     const rletterboxdUrl =
       /https:\/\/(www\.)?letterboxd\.com\/([A-Za-z0-9-_]+)(\/([A-Za-z0-9-_]+)\/([A-Za-z0-9-_]+))?/gi;
+    const rboxditUrl = /https:\/\/boxd\.it\/.+/gi;
+
+    if (rboxditUrl.test(url)) {
+      const realUrl = await (
+        await fetch(`/url/${encodeURIComponent(url)}`)
+      ).json();
+      url = realUrl;
+    }
+
     const matches = [...url.matchAll(rletterboxdUrl)];
     let [, , username, , type, listid] = matches[0];
     if (!type) type = "watchlist";
     return `${username}${listid ? `${`|${listid}`}` : ""}`;
   }
 
-  function generateManifestURL() {
-    const convertedId = convertToId(url);
+  async function generateManifestURL() {
+    const convertedId = await convertToId(url);
     const installUrl = new URL(window.location.href);
     return `stremio://${installUrl.host}/${convertedId}/manifest.json`;
   }
 
-  function copyToClipboard() {
+  async function copyToClipboard() {
     if (url.length) {
-      const manifestUrl = generateManifestURL();
+      const manifestUrl = await generateManifestURL();
       navigator.clipboard.writeText(manifestUrl).catch((_) => {});
     }
   }
 
-  function installAddon() {
+  async function installAddon() {
     if (url.length) {
-      const manifestUrl = generateManifestURL();
+      const manifestUrl = await generateManifestURL();
       window.location.href = manifestUrl;
     }
   }

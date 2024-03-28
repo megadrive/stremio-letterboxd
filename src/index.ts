@@ -145,6 +145,14 @@ app.get("/generate/:url", (req, res) => {
   res.send(id);
 });
 
+app.get("/url/:letterboxdUrl", async (req, res) => {
+  const { letterboxdUrl } = req.params;
+  console.log(letterboxdUrl);
+  if (!letterboxdUrl) return res.status(404).send();
+  const urlRes = await fetch(letterboxdUrl, { redirect: "follow" });
+  return res.status(200).json(urlRes.url);
+});
+
 /**
  * Redirects a Letterboxd poster, setting the Referer header.
  *
