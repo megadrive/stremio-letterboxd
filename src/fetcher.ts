@@ -14,7 +14,8 @@ import {
   isOld,
   formatTimeBetween,
 } from "./util.js";
-import { findMovie } from "./lib/cinemeta.js";
+// import { findMovie } from "./lib/cinemeta.js";
+import { find } from "./providers/imdbSuggests.js";
 
 type IFilm = {
   slug: string;
@@ -22,39 +23,6 @@ type IFilm = {
   year?: string;
   poster?: string;
 };
-
-/** Gets an IMDB ID from a film */
-// async function getImdbID(film: IFilm) {
-//   const query = `${film.slug} ${
-//     film.year && !/(19|2[0-9])[0-9]{2,}/.test(film.slug) ? film.year : ""
-//   }`.replace(/ +/g, " ");
-
-//   // attempt override for early exit
-//   const override = applyOverride(query);
-//   if (override) {
-//     return override;
-//   }
-
-//   let id = await nameToImdb({
-//     name: query,
-//     type: "movie",
-//   });
-//   console.info(`Found ${id} from ${query}`);
-//   if (!id) {
-//     console.warn(`No IMDB ID found: ${query}`);
-//     console.info(`Trying for a short`);
-//     id = await nameToImdb({
-//       name: query,
-//       type: "short",
-//     });
-//     if (!id) {
-//       return undefined;
-//     }
-//     console.info(`Found ${id} from ${query} as a short`);
-//   }
-
-//   return id;
-// }
 
 /** Parse a Cinemeta API response into a Streamio Meta Preview object. */
 function parseCinemetaInfo(meta: CinemetaMovieResponseLive["meta"]) {
@@ -70,86 +38,22 @@ function parseCinemetaInfo(meta: CinemetaMovieResponseLive["meta"]) {
 
 /** Gets many IMDB ID from films */
 async function getImdbIDs(films: string[]) {
-  const IDs = [];
+  const IDs: string[] = [];
   for (const film of films) {
     if (!film) continue;
-    const query = `${film}`;
-    const matches = findMovie(query, { fuzzy: true });
+    console.info(`finding ${film}`);
+    const results = await find(film);
 
-    if (matches.length === 0) {
-      console.warn(`Couldn't find ${query}`);
-      continue;
+    if (results.length === 0) continue;
+    for (const result of results) {
+      // @TODO: lol
+      IDs.push(result.imdb_id);
+      break;
     }
-
-    const strip = (str: string) =>
-      str ? str.replace(/[^A-Za-z0-9]/g, "").toLowerCase() : "";
-    if (strip(matches[0].name) !== strip(query)) {
-      console.info({
-        query,
-      });
-      console.warn(`Couldn't find ${query}`);
-      continue;
-    }
-
-    let topMatch = matches[0];
-
-    if (matches[0] && matches[0].name.toLowerCase() === query.toLowerCase()) {
-      console.info(
-        `Found ${query} with duplicates; attempting to get more specific`
-      );
-      const doesDupeExist = matches.some((el) => {
-        return el && el.name === matches[0].name;
-      });
-      if (doesDupeExist) {
-        console.log(`Dupe exists.`);
-        // getting year
-        const letterboxdData = await getFilmDataFromLetterboxd(film);
-        if (letterboxdData) {
-          const { name, year } = letterboxdData;
-          const moreSpecificMatch = findMovie(`${name} ${year}`);
-          if (
-            moreSpecificMatch[0].name.toLowerCase() ===
-              `${name}`.toLowerCase() &&
-            Number(moreSpecificMatch[0].year) === Number(year)
-          ) {
-            console.info(`[${query}] Found a more specific match.`);
-            topMatch = moreSpecificMatch[0];
-          }
-        }
-      }
-    }
-
-    IDs.push(topMatch.imdb_id);
   }
+
   return IDs;
-
-  // console.log(`Getting ${films.length} IMDB IDs.`);
-  // return Promise.all(films.map(getImdbID));
 }
-
-/** Gets Meta information for a single IMDB ID from Cinemeta */
-// async function getCinemetaInfo(
-//   imdbId: `tt${number}` | string
-// ): Promise<StremioMetaPreview> {
-//   console.info(`[cinemeta] Getting meta for ${imdbId}`);
-
-//   const res = await addonFetch(
-//     // `https://v3-cinemeta.strem.io/meta/movie/${imdbId}.json`
-//     `https://cinemeta-live.strem.io/meta/movie/${imdbId}.json`
-//   );
-//   if (res.ok) {
-//     const { meta } = (await res.json()) as CinemetaMovieResponseLive;
-
-//     return {
-//       id: meta.id,
-//       type: meta.type,
-//       name: meta.name,
-//       poster: meta.poster,
-//     };
-//   } else {
-//     throw Error(`[${imdbId}] failed to get Cinemeta`);
-//   }
-// }
 
 /** Get Meta information for many IMDB IDs from Cinemeta */
 async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
@@ -342,12 +246,12 @@ async function getDBCachedUser(username: string) {
   // const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
   const movie_info: StremioMetaPreview[] = [];
   for (const imdbid of parsed_movie_ids) {
-    const found = findMovie(imdbid);
+    const found = await find(imdbid);
     movie_info.push({
       id: found[0].imdb_id,
       name: found[0].name,
       type: "movie",
-      poster: found[0].poster,
+      poster: found[0].image,
     });
   }
 
