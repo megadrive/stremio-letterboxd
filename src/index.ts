@@ -104,7 +104,8 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     if (
       (await doesLetterboxdListExist(decodeURIComponent(username))) === false
     ) {
-      throw Error(`[${username}]: doesn't exist`);
+      console.warn(`[${username}]: doesn't exist`);
+      return res.status(404).send();
     }
 
     if (env.isProduction) res.appendHeader("Cache-Control", "max-age: 3600");
@@ -113,7 +114,9 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     if (sCache && Date.now() - sCache.cacheTime < 1000 * 3600) {
       console.info("serving static file");
       res.setHeader("Content-Type", "application/json");
-      return res.redirect(`/lists/${username}.json`);
+      return res.redirect(
+        `/lists/${decodeURIComponent(username).replace(/(\||%7C)/g, "-")}.json`
+      );
     }
 
     const films = await fetchWatchlist(decodeURIComponent(username));
