@@ -1,5 +1,7 @@
 ---
 import Inputbox from "../inputbox"
+import {Image} from 'astro:assets'
+import LogoImage from '../logo.png'
 ---
 
 <html lang="en">
@@ -12,7 +14,7 @@ import Inputbox from "../inputbox"
 	</head>
 	<body class="bg-tailwind text-white">
 		<div class="container mx-auto max-w-4xl">
-			<div class="text-center"><img src="https://stremio-letterboxd-watchlist.up.railway.app/logo.png" title="Letterboxd logo" alt="Letterboxd logo" class="mx-auto" /></div>
+			<div class="text-center"><Image src={LogoImage} title="Letterboxd logo" alt="Letterboxd logo" class="mx-auto" /></div>
 			<div class="text-center">Add Letterboxd lists as catalogs!</div>
 			<Inputbox client:load />
 		</div>
