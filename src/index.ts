@@ -149,8 +149,21 @@ app.get("/url/:letterboxdUrl", async (req, res) => {
   const { letterboxdUrl } = req.params;
   console.log(letterboxdUrl);
   if (!letterboxdUrl) return res.status(404).send();
-  const urlRes = await fetch(letterboxdUrl, { redirect: "follow" });
-  return res.status(200).json(urlRes.url);
+  try {
+    const urlRes = await fetch(letterboxdUrl, { redirect: "follow" });
+    // failure, bad boxd.it url returns the same url
+    if (
+      !urlRes.url.includes("letterboxd.com") ||
+      urlRes.url === letterboxdUrl
+    ) {
+      return res.status(404).send();
+    }
+    return res.status(200).json(urlRes.url);
+  } catch {
+    console.warn(`Couldn't parse Boxd.it URL ${letterboxdUrl}`);
+  }
+
+  return res.status(500).send();
 });
 
 /**
