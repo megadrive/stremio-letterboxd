@@ -15,7 +15,8 @@ import {
   formatTimeBetween,
 } from "./util.js";
 // import { findMovie } from "./lib/cinemeta.js";
-import { find } from "./providers/imdbSuggests.js";
+import { find } from "./providers/letterboxd.js";
+import { find as findImdb } from "./providers/imdbSuggests.js";
 
 type IFilm = {
   slug: string;
@@ -39,18 +40,13 @@ function parseCinemetaInfo(meta: CinemetaMovieResponseLive["meta"]) {
 /** Gets many IMDB ID from films */
 async function getImdbIDs(films: string[]) {
   const IDs: string[] = [];
-  for (const film of films) {
-    if (!film) continue;
-    console.info(`finding ${film}`);
-    const results = await find(film);
-
-    if (results.length === 0) continue;
-    for (const result of results) {
-      // @TODO: lol
-      IDs.push(result.imdb_id);
-      break;
+  const filmPromises = films.map((f) => find(f));
+  const results = await Promise.allSettled(filmPromises);
+  results.forEach((result) => {
+    if (result.status === "fulfilled" && result.value) {
+      IDs.push(result.value.imdb);
     }
-  }
+  });
 
   return IDs;
 }
@@ -246,7 +242,7 @@ async function getDBCachedUser(username: string) {
   // const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
   const movie_info: StremioMetaPreview[] = [];
   for (const imdbid of parsed_movie_ids) {
-    const found = await find(imdbid);
+    const found = await findImdb(imdbid);
     movie_info.push({
       id: found[0].imdb_id,
       name: found[0].name,
@@ -321,25 +317,6 @@ async function fetchWatchlistPage(
 
   console.info(`[${username}] got ${filmSlugs.length} films`);
 
-  // Attempt to get the year of release from the detail page
-  // const filmSlugs_and_years = await Promise.all(
-  //   filmSlugs
-  //     .filter((slug) => !!slug)
-  //     .map(async (slug) => {
-  //       const filmInfo = await getFilmDataFromLetterboxd(
-  //         typeof slug === "string" ? slug.replace(/ /g, "-") : `${slug}`
-  //       );
-  //       return {
-  //         ...filmInfo,
-  //         slug,
-  //       };
-  //     })
-  // );
-
-  // console.info(
-  //   `[${username}] got ${filmSlugs_and_years.length} data from letterboxd`
-  // );
-
   const imdbIds = await getImdbIDs(filmSlugs);
   const films_with_metadata = await getCinemetaInfoMany(imdbIds);
 
@@ -350,28 +327,6 @@ async function fetchWatchlistPage(
     page: options.page,
   };
 }
-
-// const replaceMetaWithLetterboxdPosters = (
-//   metas: Awaited<ReturnType<typeof fetchWatchlistPage>>
-// ) => {
-//   return metas.map((meta) => {
-//     console.log(`replacing letterboxd posters`);
-//     if (!meta) {
-//       console.log("no meta");
-//       return meta;
-//     }
-//     if (!meta.letterboxd?.poster) {
-//       console.log("no poster", meta.letterboxd);
-//       return meta;
-//     }
-//     const newMeta = {
-//       ...meta,
-//       poster: `/poster/${meta.letterboxd.poster}`,
-//     };
-
-//     return newMeta;
-//   });
-// };
 
 /**
  * fetch a Letterboxd user's watchlist
