@@ -124,12 +124,17 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       };
 
       for (let chunk of chunks) {
-        console.info(`[cinemeta] getting chunk ${rv.length}`);
-        const res = await fetchChunk(chunk);
-        const filtered = res.filter(
-          Boolean
-        ) as CinemetaMovieResponseLive["meta"][];
-        rv.push(...filtered);
+        try {
+          console.info(`[cinemeta] getting chunk ${rv.length}`);
+          const res = await fetchChunk(chunk);
+          const filtered = res.filter(
+            Boolean
+          ) as CinemetaMovieResponseLive["meta"][];
+          rv.push(...filtered);
+        } catch {
+          console.info(`Couldn't fetch chunk ${rv.length}`);
+          continue;
+        }
       }
 
       return [
