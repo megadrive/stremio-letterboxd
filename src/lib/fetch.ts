@@ -5,9 +5,9 @@ import { fetch } from "cross-fetch";
  */
 export const addonFetch = (
   url: Parameters<typeof fetch>[0],
-  init?: Parameters<typeof fetch>[1]
+  init: Parameters<typeof fetch>[1] = {}
 ): ReturnType<typeof fetch> => {
-  const headers = {
+  const headers: (typeof init)["headers"] = {
     "Content-Type": "application/json",
     "Cache-Control": "private, max-age=3600, must-revalidate",
   };

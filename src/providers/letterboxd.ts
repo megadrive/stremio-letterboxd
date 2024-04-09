@@ -7,7 +7,9 @@ export async function find(letterboxdSlug: string) {
       / /gi,
       "-"
     )}`;
-    const res = await addonFetch(url);
+    const res = await addonFetch(url, {
+      keepalive: false,
+    });
     if (!res.ok) {
       throw Error(`[${letterboxdSlug}]: Couldn't get Letterboxd info: ${url}`);
     }
