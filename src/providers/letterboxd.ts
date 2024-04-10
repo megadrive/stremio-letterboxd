@@ -1,7 +1,32 @@
 import { addonFetch } from "../lib/fetch.js";
 import { load as cheerio } from "cheerio";
+import { prisma } from "../prisma.js";
 
-export async function find(letterboxdSlug: string) {
+export async function find(
+  letterboxdSlug: string
+): Promise<{ letterboxd: string; imdb: string } | undefined> {
+  try {
+    const db = await prisma.letterboxdIMDb.findFirst({
+      where: { letterboxd: letterboxdSlug },
+    });
+    if (!db) {
+      throw "No record.";
+    }
+
+    // Early return if we have a record already.
+    return {
+      letterboxd: db.letterboxd,
+      imdb: db.imdb,
+    };
+  } catch (error) {
+    if (error instanceof String) {
+      console.warn(error);
+    } else {
+      console.error(`Couldn't query db for some reason`);
+      console.error(error);
+    }
+  }
+
   try {
     const url = `https://letterboxd.com/film/${letterboxdSlug.replace(
       / /gi,
@@ -25,7 +50,21 @@ export async function find(letterboxdSlug: string) {
 
     const id = match[0];
 
-    console.info({ letterboxd: letterboxdSlug, imdb: id });
+    prisma.letterboxdIMDb
+      .create({
+        data: {
+          letterboxd: letterboxdSlug,
+          imdb: id,
+        },
+      })
+      .then(() =>
+        console.info(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`)
+      )
+      .catch((err) => {
+        console.error(`Prisma error creating letterboxd->imdb:`);
+        console.error(err);
+      });
+
     return { letterboxd: letterboxdSlug, imdb: id };
   } catch (error) {
     console.error(error.message);

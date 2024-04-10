@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgres"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -31,4 +31,12 @@ model Movie {
   description String   @default("")
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
+}
+
+model LetterboxdIMDb {
+  letterboxd String @id
+  imdb       String @unique
+
+  @@unique([letterboxd, imdb])
+  @@index([letterboxd, imdb])
 }
