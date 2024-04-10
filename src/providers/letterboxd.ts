@@ -6,8 +6,9 @@ export async function find(
   letterboxdSlug: string
 ): Promise<{ letterboxd: string; imdb: string } | undefined> {
   try {
+    // template literal because prisma coerces strings to numbers
     const db = await prisma.letterboxdIMDb.findFirst({
-      where: { letterboxd: letterboxdSlug },
+      where: { letterboxd: `${letterboxdSlug}` },
     });
     if (!db) {
       throw "No record.";
