@@ -43,12 +43,17 @@ export const staticCache = {
     const metas: any[] = [];
 
     for (let movie of movies) {
-      const res = await addonFetch(
-        `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${movie}`
-      );
-      if (!res.ok) continue;
-      const meta = (await res.json()) as Record<string, any>;
-      metas.push(meta.metasDetailed[0]);
+      try {
+        const res = await addonFetch(
+          `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${movie}`
+        );
+        if (!res.ok) continue;
+        const meta = (await res.json()) as Record<string, any>;
+        metas.push(meta.metasDetailed[0]);
+      } catch {
+        console.warn(`Couldn't get Cinemeta for ${movie}, continuing.`);
+        continue;
+      }
     }
 
     // save to static file
