@@ -88,6 +88,18 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
   const { username, type, id, extra } = req.params;
   console.log({ extra });
+  const parsedExtras = (() => {
+    if (!extra) return undefined;
+
+    const rextras = /([A-Za-z]+)+=([A-Za-z0-9]+)/g;
+    const matched = [...extra.matchAll(rextras)];
+    const rv: Record<string, string> = {};
+    for (const match of matched) {
+      rv[match[1]] = match[2];
+    }
+    return rv;
+  })();
+  console.info({ parsedExtras });
 
   console.time(`[${username}] catalog`);
 
@@ -113,18 +125,39 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       console.warn(`No cache found for ${username}`);
     }
     const expires = sCache?.expires ? sCache.expires - Date.now() : 3600;
-    if (env.isProduction)
+    if (env.isProduction) {
       res.appendHeader(
         "Cache-Control",
         `stale-white-revalidate, max-age: ${expires > 3600 ? expires : 3600}`
       );
+    }
+
     if (sCache && Date.now() - expires > 0) {
       console.info("serving static file");
       res.setHeader("Content-Type", "application/json");
-      console.timeEnd(`[${username}] catalog`);
-      return res.redirect(
-        `/lists/${decodeURIComponent(username).replace(/(\||%7C)/g, "-")}.json`
-      );
+      if (sCache.metas.length < 100) {
+        console.info(
+          `Cache < 100 (${sCache.metas.length}) or no extra parameters.`
+        );
+        console.timeEnd(`[${username}] catalog`);
+        return res.redirect(
+          `/lists/${decodeURIComponent(username).replace(
+            /(\||%7C)/g,
+            "-"
+          )}.json`
+        );
+      } else {
+        console.timeEnd(`[${username}] catalog`);
+        const amt = parsedExtras?.skip ? +parsedExtras.skip + 100 : 200;
+        console.info({ amt });
+        const mutatedArray = [...sCache.metas];
+        const metas = mutatedArray.splice(0, amt);
+
+        return res.json({
+          count: metas.length,
+          metas,
+        });
+      }
     } else {
       console.warn(
         `Cache exists? ${!!sCache} or out of date, fetching fresh. Expires: ${
@@ -135,6 +168,9 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
 
     const films = await fetchWatchlist(decodeURIComponent(username));
     films.source = undefined; // make sure it can be cached.
+    if (parsedExtras && parsedExtras.skip) {
+      films.metas = films.metas.slice(0, +parsedExtras.skip);
+    }
 
     staticCache.save(username);
 
