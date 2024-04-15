@@ -1,10 +1,12 @@
 import path, { join } from "path";
 import { prisma } from "../prisma.js";
-import { findMovie } from "./cinemeta.js";
 import { addonFetch } from "./fetch.js";
 import { readFile, writeFile } from "node:fs/promises";
 
 const __dirname = path.resolve(path.dirname(""));
+
+/** Too many movies, truncate Cinemeta data. */
+const TOO_MANY_MOVIES = 500;
 
 const generatePath = (id: string) =>
   join(
@@ -15,6 +17,12 @@ const generatePath = (id: string) =>
   );
 
 const writing = new Set<string>();
+
+type Cache = {
+  metas: any[];
+  expires?: number;
+  cacheTime: number;
+};
 
 export const staticCache = {
   save: async (id: string) => {
@@ -44,12 +52,11 @@ export const staticCache = {
 
     for (let movie of movies) {
       try {
-        const res = await addonFetch(
-          `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${movie}`
-        );
-        if (!res.ok) continue;
-        const meta = (await res.json()) as Record<string, any>;
-        metas.push(meta.metasDetailed[0]);
+        const cinemeta = await prisma.cinemeta.findFirst({
+          where: { id: movie },
+        });
+        if (!cinemeta) continue;
+        metas.push(JSON.parse(cinemeta.info));
       } catch {
         console.warn(`Couldn't get Cinemeta for ${movie}, continuing.`);
         continue;
@@ -59,9 +66,14 @@ export const staticCache = {
     // save to static file
     writing.add(id);
     try {
+      // If more than 1000 entries, change the expiry time to 60
+      const expires =
+        metas.length > TOO_MANY_MOVIES
+          ? Date.now() + 1000 * 60 * metas.length
+          : undefined;
       await writeFile(
         generatePath(id),
-        JSON.stringify({ metas: metas, cacheTime: Date.now() }),
+        JSON.stringify({ metas: metas, cacheTime: Date.now(), expires }),
         {
           encoding: "utf8",
           flag: "w",
@@ -74,9 +86,10 @@ export const staticCache = {
     writing.delete(id);
   },
   get: async (id: string) => {
+    console.info(`Trying to get ${id} static cache`);
     try {
       const file = await readFile(generatePath(id), { encoding: "utf8" });
-      const metas = JSON.parse(file) as Record<string, any>;
+      const metas = JSON.parse(file) as Cache;
       return metas;
     } catch (error) {
       console.error(`[static_cache] Couldn't parse el JSON`);

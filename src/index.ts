@@ -108,14 +108,28 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       return res.status(404).send();
     }
 
-    if (env.isProduction) res.appendHeader("Cache-Control", "max-age: 3600");
-
     const sCache = await staticCache.get(username);
-    if (sCache && Date.now() - sCache.cacheTime < 1000 * 3600) {
+    if (!sCache) {
+      console.warn(`No cache found for ${username}`);
+    }
+    const expires = sCache?.expires ? sCache.expires - Date.now() : 3600;
+    if (env.isProduction)
+      res.appendHeader(
+        "Cache-Control",
+        `stale-white-revalidate, max-age: ${expires > 3600 ? expires : 3600}`
+      );
+    if (sCache && Date.now() - expires > 0) {
       console.info("serving static file");
       res.setHeader("Content-Type", "application/json");
+      console.timeEnd(`[${username}] catalog`);
       return res.redirect(
         `/lists/${decodeURIComponent(username).replace(/(\||%7C)/g, "-")}.json`
+      );
+    } else {
+      console.warn(
+        `Cache exists? ${!!sCache} or out of date, fetching fresh. Expires: ${
+          Date.now() - expires < 0
+        }.`
       );
     }
 

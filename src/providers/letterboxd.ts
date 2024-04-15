@@ -7,20 +7,21 @@ export async function find(
 ): Promise<{ letterboxd: string; imdb: string } | undefined> {
   try {
     // template literal because prisma coerces strings to numbers
-    const db = await prisma.letterboxdIMDb.findFirst({
+    const db = await prisma.letterboxdIMDb.findUnique({
       where: { letterboxd: `${letterboxdSlug}` },
     });
     if (!db) {
-      throw "No record.";
+      throw `No record for ${letterboxdSlug}`;
     }
 
     // Early return if we have a record already.
+    console.info(`Found L-IMDB: ${letterboxdSlug} -> ${db.imdb}`);
     return {
       letterboxd: db.letterboxd,
       imdb: db.imdb,
     };
   } catch (error) {
-    if (error instanceof String) {
+    if (typeof error === "string") {
       console.warn(error);
     } else {
       console.error(`Couldn't query db for some reason`);
@@ -62,8 +63,10 @@ export async function find(
         console.info(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`)
       )
       .catch((err) => {
-        console.error(`Prisma error creating letterboxd->imdb:`);
-        console.error(err);
+        console.error(
+          `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id}`
+        );
+        console.error(err.message);
       });
 
     return { letterboxd: letterboxdSlug, imdb: id };
