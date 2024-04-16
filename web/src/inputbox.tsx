@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 export default function Inputbox() {
   const [url, setUrl] = useState("");
+  const [inProgress, setInProgress] = useState(false);
   const urlInput = useRef<HTMLInputElement>(null);
 
   function updateInputUrl() {
@@ -37,17 +38,23 @@ export default function Inputbox() {
   }
 
   async function copyToClipboard() {
+    setInProgress(true);
     if (url.length) {
+      updateInputUrl();
       const manifestUrl = await generateManifestURL();
-      navigator.clipboard.writeText(manifestUrl).catch((_) => {});
+      await navigator.clipboard.writeText(manifestUrl).catch((_) => {});
     }
+    setInProgress(false);
   }
 
   async function installAddon() {
+    setInProgress(true);
     if (url.length) {
+      updateInputUrl();
       const manifestUrl = await generateManifestURL();
       window.location.href = manifestUrl;
     }
+    setInProgress(false);
   }
 
   return (
@@ -67,14 +74,16 @@ export default function Inputbox() {
         <button
           className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
           onClick={installAddon}
+          disabled={inProgress}
         >
-          Install
+          {inProgress === false ? "Install" : "..."}
         </button>
         <button
           className="grow border border-transparent hover:border-white bg-tailwind uppercase text-white text-lg p-2 rounded font-normal"
           onClick={copyToClipboard}
+          disabled={inProgress}
         >
-          Copy
+          {inProgress === false ? "Copy" : "..."}
         </button>
       </div>
     </div>
