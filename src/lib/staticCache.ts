@@ -42,7 +42,7 @@ export const staticCache = {
         throw Error(`[static_cache] no user by id ${id}`);
       }
     } catch {
-      console.warn("No user by that ID.");
+      console.warn("[static_cache] No user by that ID.");
       return;
     }
 

@@ -298,7 +298,7 @@ async function getFilmDataFromLetterboxd(
 }
 
 /** Fetch a page from a Letterboxd user's watchlist */
-async function fetchWatchlistPage(
+export async function fetchWatchlistPage(
   username: Parameters<typeof fetchWatchlist>[0],
   options: Partial<Parameters<typeof fetchWatchlist>[1] & { page: number }> = {
     preferLetterboxdPosters: false,
@@ -357,11 +357,14 @@ export async function fetchWatchlist(
 
   const fetchFreshData = async () => {
     try {
-      if (!doesLetterboxdListExist(letterboxdId))
+      if (
+        !letterboxdId.startsWith("_internal_") ||
+        !doesLetterboxdListExist(letterboxdId)
+      )
         throw Error(`[${letterboxdId}}: does not exist.`);
 
       const generatedURL = generateURL(letterboxdId);
-      console.info(`GeneratedUR: ${generatedURL}`);
+      console.info(`GeneratedURL: ${generatedURL}`);
       const rawHtml = await (await addonFetch(generatedURL)).text();
       const $ = cheerio(rawHtml);
 

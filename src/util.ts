@@ -1,7 +1,15 @@
 import { LetterboxdRegex } from "./consts.js";
 import { env } from "./env.js";
+import { popularLists } from "./popular.js";
 
 export const generateURL = (id: string, page: number = 1) => {
+  if (id.startsWith("_internal_")) {
+    const found = popularLists.findIndex((list) => list.id === id);
+    if (found >= 0) {
+      return popularLists[found].url;
+    }
+  }
+
   const separator = "|";
   let part = "";
   const isList = id.indexOf(separator) > 0;

@@ -13,6 +13,7 @@ import landingTemplate from "./landingTemplate.js";
 import { LetterboxdUsernameOrListRegex } from "./consts.js";
 import { parseLetterboxdURLToID } from "./util.js";
 import { staticCache } from "./lib/staticCache.js";
+import { popularLists } from "./popular.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -45,7 +46,7 @@ app.get("/manifest.json", (req, res) => {
 // Create the catalog
 app.get("/:id/manifest.json", async function (req, res) {
   const idInfo = IDUtil.split(req.params.id);
-  const name = `${!env.isProduction ? "Dev - " : ""}${idInfo.username} - ${
+  let name = `${!env.isProduction ? "Dev - " : ""}${idInfo.username} - ${
     idInfo.listName
   }`;
 
@@ -62,9 +63,21 @@ app.get("/:id/manifest.json", async function (req, res) {
       ? `${idInfo.username} - Watchlist`
       : `${idInfo.listName} - ${idInfo.username}`
   }`;
-  cloned_manifest.description = `Provides ${idInfo.username}'s ${
-    idInfo.listName
-  } ${idInfo.type !== "watchlist" ? "list " : ""}as a catalog.`;
+
+  if (idInfo.username.startsWith("_internal_")) {
+    console.info(popularLists, idInfo);
+    const found = popularLists.findIndex((list) => list.id === req.params.id);
+    if (found >= 0) {
+      name = popularLists[found].name;
+      cloned_manifest.name = name;
+    }
+  }
+
+  cloned_manifest.description = `Provides ${
+    idInfo.username === "_internal_" ? "Letterboxd" : idInfo.username
+  }'s ${idInfo.listName} ${
+    idInfo.type !== "watchlist" ? "list " : ""
+  }as a catalog.`;
   cloned_manifest.catalogs = [
     {
       id: req.params.id,
@@ -172,7 +185,9 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       films.metas = films.metas.slice(0, +parsedExtras.skip);
     }
 
-    staticCache.save(username);
+    staticCache
+      .save(username)
+      .then(() => console.info(`[static_cache] saved ${username}`));
 
     console.info(`[${username}] serving ${films.metas.length}`);
     console.timeEnd(`[${username}] catalog`);
