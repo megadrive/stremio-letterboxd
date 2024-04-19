@@ -1,5 +1,6 @@
 ---
 import Inputbox from "../inputbox"
+import Popular from "../popular"
 import {Image} from 'astro:assets'
 import LogoImage from '../logo.png'
 ---
@@ -17,6 +18,8 @@ import LogoImage from '../logo.png'
 			<div class="text-center"><Image src={LogoImage} title="Letterboxd logo" alt="Letterboxd logo" class="mx-auto" /></div>
 			<div class="text-center">Add Letterboxd lists as catalogs!</div>
 			<Inputbox client:load />
+			<br/>
+			<Popular client:only />
 		</div>
 	</body>
 </html>
