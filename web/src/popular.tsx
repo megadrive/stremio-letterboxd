@@ -1,5 +1,7 @@
 function List({ id, name, url }: { id: string; name: string; url: string }) {
-  const installUrl = `stremio://${document.baseURI}/${id}/manifest.json`;
+  const installUrl = `stremio://${
+    new URL(window.location.href).host
+  }/${id}/manifest.json`;
   return (
     <div className="grid gap-2 grid-cols-2">
       <div className="text-right">
