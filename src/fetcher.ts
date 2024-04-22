@@ -358,7 +358,7 @@ export async function fetchWatchlist(
   const fetchFreshData = async () => {
     try {
       if (
-        !letterboxdId.startsWith("_internal_") ||
+        !letterboxdId.startsWith("_internal_") &&
         !doesLetterboxdListExist(letterboxdId)
       )
         throw Error(`[${letterboxdId}}: does not exist.`);
