@@ -137,7 +137,10 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     if (!sCache) {
       console.warn(`No cache found for ${username}`);
     }
-    const expires = sCache?.expires ? sCache.expires - Date.now() : 3600;
+    console.log(
+      `[${username}] Static cache expires: ${sCache} exists. ${sCache?.expires} expires`
+    );
+    const expires = sCache?.expires ? Date.now() - sCache.expires : 0;
     if (env.isProduction) {
       res.appendHeader(
         "Cache-Control",
@@ -145,7 +148,8 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       );
     }
 
-    if (sCache && Date.now() - expires > 0) {
+    if (sCache && expires > 0) {
+      console.log(sCache.expires);
       console.info("serving static file");
       res.setHeader("Content-Type", "application/json");
       if (sCache.metas.length < 100) {
