@@ -18,11 +18,14 @@ export default function Inputbox() {
       /https:\/\/(www\.)?letterboxd\.com\/([A-Za-z0-9-_]+)(\/([A-Za-z0-9-_]+)\/([A-Za-z0-9-_]+))?/gi;
     const rboxditUrl = /https:\/\/boxd\.it\/.+/gi;
 
+    console.log(url);
     if (rboxditUrl.test(url)) {
+      console.log(`boxdit_url: ${url}`);
       const realUrl = await (
         await fetch(`/url/${encodeURIComponent(url)}`)
       ).json();
       url = realUrl;
+      console.log(`resolved url: ${url}`);
     }
 
     const matches = [...url.matchAll(rletterboxdUrl)];
@@ -32,9 +35,15 @@ export default function Inputbox() {
   }
 
   async function generateManifestURL() {
-    const convertedId = await convertToId(url);
-    const installUrl = new URL(window.location.href);
-    return `stremio://${installUrl.host}/${convertedId}/manifest.json`;
+    try {
+      const convertedId = await convertToId(url);
+      const installUrl = new URL(window.location.href);
+      return `stremio://${installUrl.host}/${convertedId}/manifest.json`;
+    } catch (error) {
+      alert("Try again in a few seconds.");
+    }
+
+    return "";
   }
 
   async function copyToClipboard() {
@@ -42,19 +51,28 @@ export default function Inputbox() {
     if (url.length) {
       updateInputUrl();
       const manifestUrl = await generateManifestURL();
-      await navigator.clipboard.writeText(manifestUrl).catch((_) => {});
+      await navigator.clipboard
+        .writeText(manifestUrl)
+        .then(() => alert("Copied, paste in Stremio!"))
+        .catch((_) => {
+          setInProgress(false);
+        });
     }
     setInProgress(false);
   }
 
   async function installAddon() {
-    setInProgress(true);
-    if (url.length) {
-      updateInputUrl();
-      const manifestUrl = await generateManifestURL();
-      window.location.href = manifestUrl;
+    try {
+      setInProgress(true);
+      if (url.length) {
+        updateInputUrl();
+        const manifestUrl = await generateManifestURL();
+        window.location.href = manifestUrl;
+      }
+      setInProgress(false);
+    } catch (error) {
+      setInProgress(false);
     }
-    setInProgress(false);
   }
 
   return (
@@ -66,8 +84,11 @@ export default function Inputbox() {
           placeholder="https://letterboxd.com/almosteffective"
           className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
           ref={urlInput}
+          onKeyDown={updateInputUrl}
+          onKeyUp={updateInputUrl}
           onChange={updateInputUrl}
           onBlur={updateInputUrl}
+          onPaste={updateInputUrl}
         />
       </div>
       <div className="flex gap-1">
