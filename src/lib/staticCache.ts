@@ -20,11 +20,18 @@ const writing = new Set<string>();
 
 type Cache = {
   metas: any[];
-  expires?: number;
+  expires: number;
   cacheTime: number;
 };
 
 export const staticCache = {
+  generateUrl: (username: string): string => {
+    return `/lists/${decodeURIComponent(username).replace(
+      /(\||%7C)/g,
+      "-"
+    )}.json`;
+  },
+
   save: async (id: string) => {
     if (writing.has(id)) {
       console.info(`already saving ${id}`);
@@ -66,11 +73,11 @@ export const staticCache = {
     // save to static file
     writing.add(id);
     try {
-      // If more than 1000 entries, change the expiry time to 60
+      // If more than 1000 entries, change the expiry time to 60 multiplied by the amount of movies to limit large fetches.
       const expires =
         metas.length > TOO_MANY_MOVIES
           ? Date.now() + 1000 * 60 * metas.length
-          : undefined;
+          : Date.now() + 1000 * 60 * 60;
       await writeFile(
         generatePath(id),
         JSON.stringify({ metas: metas, cacheTime: Date.now(), expires }),
@@ -90,6 +97,9 @@ export const staticCache = {
     try {
       const file = await readFile(generatePath(id), { encoding: "utf8" });
       const metas = JSON.parse(file) as Cache;
+      console.info(
+        `Fetched ${id}, expires at ${new Date(metas.expires ?? Date.now())}`
+      );
       return metas;
     } catch (error) {
       console.error(`[static_cache] Couldn't parse el JSON`);

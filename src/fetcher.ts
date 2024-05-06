@@ -360,8 +360,9 @@ export async function fetchWatchlist(
       if (
         !letterboxdId.startsWith("_internal_") &&
         !doesLetterboxdListExist(letterboxdId)
-      )
-        throw Error(`[${letterboxdId}}: does not exist.`);
+      ) {
+        throw Error(`[${letterboxdId}]: does not exist.`);
+      }
 
       const generatedURL = generateURL(letterboxdId);
       console.info(`GeneratedURL: ${generatedURL}`);
@@ -399,14 +400,6 @@ export async function fetchWatchlist(
         metaToReturn.metas = [...metaToReturn.metas, ...result.films];
       });
 
-      // if we/the user prefer letterboxd posters, use those instead
-      console.info(
-        `[${letterboxdId}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
-      );
-      // if (options.preferLetterboxdPosters) {
-      //   metaToReturn.metas = replaceMetaWithLetterboxdPosters(metaToReturn.metas);
-      // }
-
       /* async */ upsertLetterboxdUserWithMovies(
         letterboxdId,
         metaToReturn.metas
@@ -419,6 +412,26 @@ export async function fetchWatchlist(
           )
         )
         .catch((err) => console.error(err));
+
+      // if we/the user prefer letterboxd posters, use those instead
+      console.info(
+        `[${letterboxdId}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
+      );
+      if (options.preferLetterboxdPosters) {
+        const metas = metaToReturn.metas.map(async (meta) => {
+          const lbxd = await prisma.letterboxdIMDb.findFirst({
+            where: {
+              imdb: meta.id,
+            },
+            include: { poster: true },
+          });
+          if (lbxd?.poster.length) {
+            meta.poster = lbxd.poster[0].url;
+          }
+
+          return meta;
+        });
+      }
 
       return {
         metas: metaToReturn.metas,

@@ -2,16 +2,109 @@ import { addonFetch } from "../lib/fetch.js";
 import { load as cheerio } from "cheerio";
 import { prisma } from "../prisma.js";
 
+const getHtml = async (
+  letterboxdSlug: string,
+  overrideUrl?: string
+): Promise<ReturnType<typeof cheerio>> => {
+  letterboxdSlug = letterboxdSlug.replace(/ /g, "-");
+  const url = !overrideUrl
+    ? `https://letterboxd.com/film/${letterboxdSlug}`
+    : overrideUrl.replace(/\{letterboxdSlug\}/g, letterboxdSlug);
+  const res = await addonFetch(url, {
+    keepalive: false,
+  });
+  if (!res.ok) {
+    throw Error(`[${letterboxdSlug}]: Couldn't get Letterboxd info: ${url}`);
+  }
+
+  const html = await res.text();
+  const $ = cheerio(html);
+  return $;
+};
+
+/**
+ * Updates the letterboxd posters.
+ * @param letterboxdId Letterboxd slug
+ * @returns
+ */
+const updatePoster = async (letterboxdId: string) => {
+  letterboxdId = `${letterboxdId}`;
+  try {
+    const letterboxd = await prisma.letterboxdPoster.findUnique({
+      where: {
+        letterboxdId,
+      },
+    });
+
+    const shouldUpdate =
+      letterboxd &&
+      Date.now() - letterboxd.updatedAt.getTime() < 1000 * 60 * 60;
+
+    const create = !letterboxd;
+
+    if (!create && !shouldUpdate) {
+      // early exit, don't update
+      console.info(`Not updating poster for ${letterboxdId}, too recent.`);
+      return undefined;
+    }
+
+    console.info(
+      `${
+        create ? "Creating a new poster" : "Updating poster"
+      } for ${letterboxdId}`
+    );
+
+    const $ = await getHtml(
+      letterboxdId,
+      "https://letterboxd.com/ajax/poster/film/{letterboxdSlug}/std/1000x1500/?k=53eb16aa"
+    );
+
+    const poster = $("img").first().attr("src");
+    if (!poster) {
+      throw `Couldn't get poster from page for ${letterboxdId}`;
+    }
+    const upserted = await prisma.letterboxdPoster.upsert({
+      where: {
+        letterboxdId,
+      },
+      create: {
+        letterboxdId,
+        url: poster,
+      },
+      update: {
+        url: poster,
+      },
+    });
+
+    if (!upserted) {
+      throw `Couldn't create poster entry for ${letterboxdId}`;
+    }
+
+    return poster;
+  } catch (error) {
+    console.warn(error);
+  }
+
+  return undefined;
+};
+
 export async function find(
   letterboxdSlug: string
-): Promise<{ letterboxd: string; imdb: string } | undefined> {
+): Promise<{ letterboxd: string; imdb: string; poster?: string } | undefined> {
   try {
+    let rv: { poster?: string } = {};
     // template literal because prisma coerces strings to numbers
     const db = await prisma.letterboxdIMDb.findUnique({
       where: { letterboxd: `${letterboxdSlug}` },
+      include: { poster: true },
     });
     if (!db) {
       throw `No record for ${letterboxdSlug}`;
+    }
+    if (db.poster) {
+      // await a poster, then continue
+      const poster = await updatePoster(letterboxdSlug);
+      rv = { poster };
     }
 
     // Early return if we have a record already.
@@ -19,6 +112,7 @@ export async function find(
     return {
       letterboxd: db.letterboxd,
       imdb: db.imdb,
+      ...rv,
     };
   } catch (error) {
     if (typeof error === "string") {
@@ -30,19 +124,7 @@ export async function find(
   }
 
   try {
-    const url = `https://letterboxd.com/film/${letterboxdSlug.replace(
-      / /gi,
-      "-"
-    )}`;
-    const res = await addonFetch(url, {
-      keepalive: false,
-    });
-    if (!res.ok) {
-      throw Error(`[${letterboxdSlug}]: Couldn't get Letterboxd info: ${url}`);
-    }
-
-    const html = await res.text();
-    const $ = cheerio(html);
+    const $ = await getHtml(letterboxdSlug);
 
     const imdbUrl = $('a[data-track-action="IMDb"]').attr("href");
     const rimdb = /tt[0-9]+/;
@@ -69,7 +151,7 @@ export async function find(
         console.error(err.message);
       });
 
-    return { letterboxd: letterboxdSlug, imdb: id };
+    return { letterboxd: letterboxdSlug, imdb: id, poster: undefined };
   } catch (error) {
     console.error(error.message);
   }

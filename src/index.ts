@@ -140,7 +140,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     console.log(
       `[${username}] Static cache expires: ${sCache} exists. ${sCache?.expires} expires`
     );
-    const expires = sCache?.expires ? Date.now() - sCache.expires : 0;
+    const expires = sCache?.expires ? sCache.expires - Date.now() : 0;
     if (env.isProduction) {
       res.appendHeader(
         "Cache-Control",
@@ -148,8 +148,12 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       );
     }
 
+    const paginate = (arr: unknown[], skip?: number): unknown[] => {
+      const amt = parsedExtras?.skip ? +parsedExtras.skip + 100 : 200;
+      return arr.slice(0, amt);
+    };
+
     if (sCache && expires > 0) {
-      console.log(sCache.expires);
       console.info("serving static file");
       res.setHeader("Content-Type", "application/json");
       if (sCache.metas.length < 100) {
@@ -172,7 +176,7 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
 
         return res.json({
           count: metas.length,
-          metas,
+          metas: paginate(metas),
         });
       }
     } else {
@@ -189,13 +193,13 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
       films.metas = films.metas.slice(0, +parsedExtras.skip);
     }
 
-    staticCache
-      .save(username)
-      .then(() => console.info(`[static_cache] saved ${username}`));
+    const cached = await staticCache.save(username);
+    console.info(`[static_cache] saved ${username}`);
+    const cache = (await staticCache.get(username)) ?? { metas: [] };
 
     console.info(`[${username}] serving ${films.metas.length}`);
     console.timeEnd(`[${username}] catalog`);
-    return res.json(films);
+    return res.json({ metas: paginate(cache?.metas) });
   } catch (error) {
     // Return empty
     console.error(error);
