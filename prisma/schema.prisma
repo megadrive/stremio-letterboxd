@@ -37,6 +37,17 @@ model LetterboxdIMDb {
   letterboxd String @id
   imdb       String @unique
 
+  posterId String?
+  poster   LetterboxdPoster[]
+
   @@unique([letterboxd, imdb])
   @@index([letterboxd, imdb])
+}
+
+model LetterboxdPoster {
+  letterboxdId   String         @id
+  url            String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  letterboxdIMDb LetterboxdIMDb @relation(fields: [letterboxdId], references: [letterboxd])
 }
