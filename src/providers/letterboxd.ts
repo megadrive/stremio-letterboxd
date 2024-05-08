@@ -1,6 +1,7 @@
 import { addonFetch } from "../lib/fetch.js";
 import { load as cheerio } from "cheerio";
 import { prisma } from "../prisma.js";
+import { StremioMeta } from "../consts.js";
 
 const getHtml = async (
   letterboxdSlug: string,
@@ -158,6 +159,48 @@ export async function find(
 
   return undefined;
 }
+
+export const replacePosters = async (metas: StremioMeta[]) => {
+  try {
+    const letterboxdImdbIDs = await prisma.letterboxdIMDb.findMany({
+      where: {
+        imdb: {
+          in: metas.map((meta) => meta.id),
+        },
+      },
+      include: {
+        poster: true,
+      },
+    });
+
+    if (!letterboxdImdbIDs || letterboxdImdbIDs.length === 0) {
+      throw "No posters found or error.";
+    }
+
+    return metas.map((meta) => {
+      const found = letterboxdImdbIDs.findIndex((v) => v.imdb === meta.id);
+      if (found === -1) {
+        console.warn("No letterboxd poster found to replace.");
+        return meta;
+      }
+
+      if (letterboxdImdbIDs[found].poster.length === 0) {
+        console.warn(`No letterboxd posters in database for ${meta.id}`);
+        return meta;
+      }
+
+      return {
+        ...meta,
+        poster: letterboxdImdbIDs[found].poster[0].url,
+      };
+    });
+  } catch (error) {
+    console.error("Couldn't update with Letterboxd posters");
+    console.error(error);
+  }
+
+  return metas;
+};
 
 export async function find_old(letterboxdSlug: string) {
   // https://letterboxd.com/ajax/poster/film/wait-until-dark/std/125x187/?k=851e7b94

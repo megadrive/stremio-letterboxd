@@ -14,6 +14,8 @@ import { LetterboxdUsernameOrListRegex } from "./consts.js";
 import { parseLetterboxdURLToID } from "./util.js";
 import { staticCache } from "./lib/staticCache.js";
 import { popularLists } from "./popular.js";
+import { parseConfig } from "./lib/config.js";
+import { replacePosters } from "./providers/letterboxd.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -44,8 +46,10 @@ app.get("/manifest.json", (req, res) => {
 });
 
 // Create the catalog
-app.get("/:id/manifest.json", async function (req, res) {
-  const idInfo = IDUtil.split(req.params.id);
+app.get("/:info/manifest.json", async function (req, res) {
+  const { info } = req.params;
+  const config = parseConfig(info);
+  const idInfo = IDUtil.split(info);
   let name = `${!env.isProduction ? "Dev - " : ""}${idInfo.username} - ${
     idInfo.listName
   }`;
@@ -66,7 +70,9 @@ app.get("/:id/manifest.json", async function (req, res) {
 
   if (idInfo.username.startsWith("_internal_")) {
     console.info(popularLists, idInfo);
-    const found = popularLists.findIndex((list) => list.id === req.params.id);
+    const found = popularLists.findIndex(
+      (list) => list.id === `${idInfo.username}|${idInfo.listName}`
+    );
     if (found >= 0) {
       name = popularLists[found].name;
       cloned_manifest.name = name;
@@ -80,7 +86,7 @@ app.get("/:id/manifest.json", async function (req, res) {
   }as a catalog.`;
   cloned_manifest.catalogs = [
     {
-      id: req.params.id,
+      id: config.username,
       /** @ts-ignore next-line */
       type: "letterboxd",
       name,
@@ -97,10 +103,12 @@ app.get("/:id/manifest.json", async function (req, res) {
 });
 
 // Serve the meta items
-app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
+app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
-  const { username, type, id, extra } = req.params;
-  console.log({ extra });
+  const { userConfig, type, id, extra } = req.params;
+  const config = parseConfig(userConfig);
+  const username = config.username;
+  console.log({ config });
   const parsedExtras = (() => {
     if (!extra) return undefined;
 
@@ -172,7 +180,12 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
         const amt = parsedExtras?.skip ? +parsedExtras.skip + 100 : 200;
         console.info({ amt });
         const mutatedArray = [...sCache.metas];
-        const metas = mutatedArray.splice(0, amt);
+        let metas = mutatedArray.splice(0, amt);
+
+        if (config.letterboxdPosters) {
+          console.info(`Replacing Letterboxd posters for ${username}`);
+          metas = await replacePosters(metas);
+        }
 
         return res.json({
           count: metas.length,
@@ -196,6 +209,10 @@ app.get("/:username/catalog/:type/:id/:extra?", async (req, res) => {
     const cached = await staticCache.save(username);
     console.info(`[static_cache] saved ${username}`);
     const cache = (await staticCache.get(username)) ?? { metas: [] };
+    if (config.letterboxdPosters) {
+      console.info(`Replacing Letterboxd posters for ${username}`);
+      cache.metas = await replacePosters(cache.metas);
+    }
 
     console.info(`[${username}] serving ${films.metas.length}`);
     console.timeEnd(`[${username}] catalog`);
@@ -220,7 +237,7 @@ app.get("/generate/:url", (req, res) => {
 
 app.get("/url/:letterboxdUrl", async (req, res) => {
   const { letterboxdUrl } = req.params;
-  console.log(letterboxdUrl);
+
   if (!letterboxdUrl) return res.status(404).send();
   try {
     const urlRes = await fetch(letterboxdUrl, { redirect: "follow" });
