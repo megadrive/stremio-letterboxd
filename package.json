@@ -11,7 +11,7 @@
     "dev": "tsc && npm run dev:copy-static && node ./dist/index.js",
     "start": "tsc && npm run dev:copy-static && npm run prisma:push-db && node ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "cd web && npm run build && copyfiles -u 1 \"dist/**/*\" \"../static\"",
+    "build": "npm ci && prisma generate && cd web && npm run build && copyfiles -u 1 \"dist/**/*\" \"../static\"",
     "build:astro": "cd ./web && npm run build"
   },
   "keywords": [],
