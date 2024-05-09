@@ -82,7 +82,7 @@ export const IDUtil = {
     type: "list" | "watchlist";
   } => {
     const [username, unparsedListId] = id.split("|");
-    const [listId] = unparsedListId.split(",");
+    const [listId] = unparsedListId?.split(",") ?? "";
     console.log({ unparsedListId, listId });
     // parse the list ID
     const listName = listId ? `${listId.replace(/-/g, " ")}` : "watchlist";
