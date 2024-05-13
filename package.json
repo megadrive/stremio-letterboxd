@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev:copy-static": "copyfiles \"static/*\" dist && mkdirp \"dist/static/list\"",
+    "dev:copy-static": "copyfiles \"static/*\" dist && mkdirp \"./static/lists\"",
     "prisma": "prisma",
     "prisma:push-db": "prisma db push --accept-data-loss",
     "dev": "tsc && npm run dev:copy-static && node ./dist/index.js",
