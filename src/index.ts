@@ -158,7 +158,10 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
     const paginate = (arr: unknown[], skip?: number): unknown[] => {
       const amt = parsedExtras?.skip ? +parsedExtras.skip + 100 : 200;
-      return arr.slice(0, amt);
+      if (!skip) {
+        skip = +(parsedExtras?.skip ?? 0);
+      }
+      return arr.slice(skip + 1, amt);
     };
 
     if (sCache && expires > 0) {
@@ -206,9 +209,15 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
       films.metas = films.metas.slice(0, +parsedExtras.skip);
     }
 
-    const cached = await staticCache.save(username);
-    console.info(`[static_cache] saved ${username}`);
-    const cache = (await staticCache.get(username)) ?? { metas: [] };
+    staticCache
+      .save(username)
+      .then(() => console.info(`[static_cache] saved ${username}`))
+      .catch((err) => {
+        console.warn(`Couldn't save staticcache ${username}`);
+        console.warn(err);
+      });
+
+    const cache = films;
     if (config.letterboxdPosters) {
       console.info(`Replacing Letterboxd posters for ${username}`);
       cache.metas = await replacePosters(cache.metas);
