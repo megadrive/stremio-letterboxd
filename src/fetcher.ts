@@ -343,7 +343,6 @@ export async function fetchWatchlist(
     preferLetterboxdPosters?: boolean;
   } = { preferLetterboxdPosters: false }
 ): Promise<{
-  source?: "fresh" | "cache";
   metas: Awaited<
     ReturnType<typeof fetchWatchlistPage> & { elapsed: Date["toString"] }
   >["films"];
@@ -493,7 +492,7 @@ export async function fetchWatchlist(
         Date.now()
       )}`
     );
-    return { metas: cached_movies, source: "cache" };
+    return { metas: cached_movies };
   } catch (error) {
     console.warn(`[${letterboxdId}]: No user or old data, continuing..`);
   }

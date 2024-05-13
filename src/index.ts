@@ -204,7 +204,6 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
     }
 
     const films = await fetchWatchlist(decodeURIComponent(username));
-    films.source = undefined; // make sure it can be cached.
     if (parsedExtras && parsedExtras.skip) {
       films.metas = films.metas.slice(0, +parsedExtras.skip);
     }
