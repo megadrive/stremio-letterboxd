@@ -1,4 +1,4 @@
-import { fetchWatchlistPage } from "./fetcher.js";
+import { fetchFilmsSinglePage } from "./fetcher.js";
 
 export const popularLists: {
   id: string;
@@ -18,7 +18,7 @@ export const popularLists: {
 ];
 
 const startFetchingPopular = () => {
-  const promises = popularLists.map((list) => fetchWatchlistPage(list.id));
+  const promises = popularLists.map((list) => fetchFilmsSinglePage(list.id));
 
   Promise.all(promises)
     .then(() => console.info("Fetched weekly and monthly popular lists."))

@@ -10,7 +10,7 @@ import {
 } from "./consts.js";
 import {
   generateURL,
-  doesLetterboxdListExist,
+  doesLetterboxdResourceExist,
   isOld,
   formatTimeBetween,
 } from "./util.js";
@@ -298,17 +298,15 @@ async function getFilmDataFromLetterboxd(
 }
 
 /** Fetch a page from a Letterboxd user's watchlist */
-export async function fetchWatchlistPage(
-  username: Parameters<typeof fetchWatchlist>[0],
-  options: Partial<Parameters<typeof fetchWatchlist>[1] & { page: number }> = {
+export async function fetchFilmsSinglePage(
+  letterboxdPath: Parameters<typeof fetchFilms>[0],
+  options: Partial<Parameters<typeof fetchFilms>[1] & { page: number }> = {
     preferLetterboxdPosters: false,
     page: 1,
   }
 ) {
-  console.info(`[${username}] getting page ${options.page}`);
-  const rawHtml = await (
-    await addonFetch(generateURL(username, options.page))
-  ).text();
+  console.info(`[${letterboxdPath}] getting page ${options.page}`);
+  const rawHtml = await (await addonFetch(generateURL(letterboxdPath))).text();
   const $$ = cheerio(rawHtml);
 
   // Get the film slugs from Letterboxd
@@ -320,12 +318,12 @@ export async function fetchWatchlistPage(
     })
     .toArray();
 
-  console.info(`[${username}] got ${filmSlugs.length} films`);
+  console.info(`[${letterboxdPath}] got ${filmSlugs.length} films`);
 
   const imdbIds = await getImdbIDs(filmSlugs);
   const films_with_metadata = await getCinemetaInfoMany(imdbIds);
 
-  console.info(`[${username}] got ${imdbIds.length} imdb IDs`);
+  console.info(`[${letterboxdPath}] got ${imdbIds.length} imdb IDs`);
 
   return {
     films: films_with_metadata,
@@ -337,50 +335,51 @@ export async function fetchWatchlistPage(
  * fetch a Letterboxd user's watchlist
  * .TODO Make this return early with the first page, then spawn a child process to grab the rest.
  */
-export async function fetchWatchlist(
-  letterboxdId: string,
+export async function fetchFilms(
+  letterboxdPath: string,
   options: {
     preferLetterboxdPosters?: boolean;
   } = { preferLetterboxdPosters: false }
 ): Promise<{
   metas: Awaited<
-    ReturnType<typeof fetchWatchlistPage> & { elapsed: Date["toString"] }
+    ReturnType<typeof fetchFilmsSinglePage> & { elapsed: Date["toString"] }
   >["films"];
 }> {
   // early exit, don't continue if the username doesn't match what we expect
-  console.info(`[${letterboxdId}] Checking id`);
-  if (!LetterboxdUsernameOrListRegex.test(letterboxdId)) {
-    console.log(`[${letterboxdId}] id invalid`);
+  console.info(`[${letterboxdPath}] Checking path`);
+  if (!LetterboxdUsernameOrListRegex.test(letterboxdPath)) {
+    console.log(`[${letterboxdPath}] path invalid`);
     return { metas: [] };
   }
 
   const fetchFreshData = async () => {
     try {
+      // TODO: Remove later
       if (
-        !letterboxdId.startsWith("_internal_") &&
-        !doesLetterboxdListExist(letterboxdId)
+        !letterboxdPath.startsWith("_internal_") &&
+        !doesLetterboxdResourceExist(letterboxdPath)
       ) {
-        throw Error(`[${letterboxdId}]: does not exist.`);
+        throw Error(`[${letterboxdPath}]: does not exist.`);
       }
 
-      const generatedURL = generateURL(letterboxdId);
+      const generatedURL = generateURL(letterboxdPath);
       console.info(`GeneratedURL: ${generatedURL}`);
       const rawHtml = await (await addonFetch(generatedURL)).text();
       const $ = cheerio(rawHtml);
 
       let pages = +$(".paginate-page").last().text();
       if (pages === 0) pages = 1;
-      console.info(`[${letterboxdId}] has ${pages} pages`);
+      console.info(`[${letterboxdPath}] has ${pages} pages`);
 
       // full data will go in here
-      const metaToReturn: Awaited<ReturnType<typeof fetchWatchlist>> = {
+      const metaToReturn: Awaited<ReturnType<typeof fetchFilms>> = {
         metas: [],
       };
 
       // grab the pages
       const promises = [];
       for (let page = 1; page <= pages; page++) {
-        promises.push(fetchWatchlistPage(letterboxdId, { page }));
+        promises.push(fetchFilmsSinglePage(letterboxdPath, { page }));
       }
       // const results = await Promise.allSettled(promises);
       let results = await Promise.all(promises.splice(0, 1));
@@ -400,12 +399,12 @@ export async function fetchWatchlist(
       });
 
       /* async */ upsertLetterboxdUserWithMovies(
-        letterboxdId,
+        letterboxdPath,
         metaToReturn.metas
       )
         .then((user) =>
           console.info(
-            `[${letterboxdId}]: updated user . ${user.updatedAt} with ${
+            `[${letterboxdPath}]: updated user . ${user.updatedAt} with ${
               (JSON.parse(user.movie_ids) as string[]).length
             } movies.`
           )
@@ -414,7 +413,7 @@ export async function fetchWatchlist(
 
       // if we/the user prefer letterboxd posters, use those instead
       console.info(
-        `[${letterboxdId}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
+        `[${letterboxdPath}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
       );
       if (options.preferLetterboxdPosters) {
         const metas = metaToReturn.metas.map(async (meta) => {
@@ -444,9 +443,9 @@ export async function fetchWatchlist(
   const cachedStartTime = Date.now();
   // if we have a cached user, serve that and update in the background for _-sPeEd-_
   try {
-    let cachedUser = await getDBCachedUser(letterboxdId);
+    let cachedUser = await getDBCachedUser(letterboxdPath);
     console.info(
-      `[${letterboxdId}]: ${cachedUser ? "got" : "couldnt get"} cached`
+      `[${letterboxdPath}]: ${cachedUser ? "got" : "couldnt get"} cached`
     );
     // if (options.preferLetterboxdPosters) {
     //   cachedUser = replaceMetaWithLetterboxdPosters(
@@ -474,7 +473,7 @@ export async function fetchWatchlist(
           };
 
         console.info(
-          `[${letterboxdId}] fresh data fetched in ${formatTimeBetween(
+          `[${letterboxdPath}] fresh data fetched in ${formatTimeBetween(
             freshStartTime,
             Date.now()
           )} seconds`
@@ -487,14 +486,14 @@ export async function fetchWatchlist(
       });
 
     console.info(
-      `[${letterboxdId}] cached time: ${formatTimeBetween(
+      `[${letterboxdPath}] cached time: ${formatTimeBetween(
         cachedStartTime,
         Date.now()
       )}`
     );
     return { metas: cached_movies };
   } catch (error) {
-    console.warn(`[${letterboxdId}]: No user or old data, continuing..`);
+    console.warn(`[${letterboxdPath}]: No user or old data, continuing..`);
   }
 
   // if we don't then fetch fresh

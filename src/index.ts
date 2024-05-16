@@ -6,11 +6,11 @@ import path, { join } from "path";
 import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
-import { fetchWatchlist } from "./fetcher.js";
-import { IDUtil, PrependWithDev, doesLetterboxdListExist } from "./util.js";
+import { fetchFilms } from "./fetcher.js";
+import { IDUtil, PrependWithDev, doesLetterboxdResourceExist } from "./util.js";
 import { env } from "./env.js";
 import landingTemplate from "./landingTemplate.js";
-import { LetterboxdUsernameOrListRegex } from "./consts.js";
+import { LetterboxdRegex, LetterboxdUsernameOrListRegex } from "./consts.js";
 import { parseLetterboxdURLToID } from "./util.js";
 import { staticCache } from "./lib/staticCache.js";
 import { popularLists } from "./popular.js";
@@ -45,51 +45,32 @@ app.get("/manifest.json", (req, res) => {
   res.json(manifest);
 });
 
-// Create the catalog
-app.get("/:info/manifest.json", async function (req, res) {
-  const { info } = req.params;
-  const config = parseConfig(info);
-  const idInfo = IDUtil.split(info);
-  let name = `${!env.isProduction ? "Dev - " : ""}${idInfo.username} - ${
-    idInfo.listName
-  }`;
+/**
+ * Create the catalog.
+ */
+app.get("/:providedConfig/manifest.json", async function (req, res) {
+  const { providedConfig } = req.params;
+  // TODO: Fix this.
+  let catalogName = `Dev - Test`;
+  const config = parseConfig(providedConfig);
+  console.log({ config });
 
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
   ) as ManifestExpanded;
-  cloned_manifest.id = PrependWithDev(
-    `com.github.megadrive.letterboxd-watchlist-${idInfo.username}${
-      idInfo.listId ? `|${idInfo.listId}` : ""
-    }`
-  );
-  cloned_manifest.name = `Letterboxd - ${
-    idInfo.type === "watchlist"
-      ? `${idInfo.username} - Watchlist`
-      : `${idInfo.listName} - ${idInfo.username}`
-  }`;
+  cloned_manifest.id = `${
+    env.isDevelopment ? "dev-" : ""
+  }com.github.megadrive.letterboxd-watchlist-${config.pathSafe}`;
+  cloned_manifest.name = `Letterboxd - ${config.name} ${config.type}`;
 
-  if (idInfo.username.startsWith("_internal_")) {
-    console.info(popularLists, idInfo);
-    const found = popularLists.findIndex(
-      (list) => list.id === `${idInfo.username}|${idInfo.listName}`
-    );
-    if (found >= 0) {
-      name = popularLists[found].name;
-      cloned_manifest.name = name;
-    }
-  }
+  cloned_manifest.description = `Provides the list at https://letterboxd.com${config.path} as a catalog.`;
 
-  cloned_manifest.description = `Provides ${
-    idInfo.username === "_internal_" ? "Letterboxd" : idInfo.username
-  }'s ${idInfo.listName} ${
-    idInfo.type !== "watchlist" ? "list " : ""
-  }as a catalog.`;
   cloned_manifest.catalogs = [
     {
-      id: config.username,
+      id: config.path,
       /** @ts-ignore next-line */
       type: "letterboxd",
-      name,
+      name: catalogName,
       extra: [
         {
           name: "skip",
@@ -103,12 +84,12 @@ app.get("/:info/manifest.json", async function (req, res) {
 });
 
 // Serve the meta items
-app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
+app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
-  const { userConfig, type, id, extra } = req.params;
-  const config = parseConfig(userConfig);
+  const { providedConfig, type, id, extra } = req.params;
+  const config = parseConfig(providedConfig);
+  console.log({ providedConfig, config });
   const username = config.username;
-  console.log({ config });
   const parsedExtras = (() => {
     if (!extra) return undefined;
 
@@ -131,17 +112,12 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
   }
 
   try {
-    if (!LetterboxdUsernameOrListRegex.test(username)) {
-      throw Error(`[${username}] invalid id`);
-    }
-    if (
-      (await doesLetterboxdListExist(decodeURIComponent(username))) === false
-    ) {
+    if ((await doesLetterboxdResourceExist(config.path)) === false) {
       console.warn(`[${username}]: doesn't exist`);
       return res.status(404).send();
     }
 
-    const sCache = await staticCache.get(username);
+    const sCache = await staticCache.get(config.pathSafe);
     if (!sCache) {
       console.warn(`No cache found for ${username}`);
     }
@@ -172,12 +148,7 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
           `Cache < 100 (${sCache.metas.length}) or no extra parameters.`
         );
         console.timeEnd(`[${username}] catalog`);
-        return res.redirect(
-          `/lists/${decodeURIComponent(username).replace(
-            /(\||%7C)/g,
-            "-"
-          )}.json`
-        );
+        return res.redirect(`/lists/${config.pathSafe}.json`);
       } else {
         console.timeEnd(`[${username}] catalog`);
         const amt = parsedExtras?.skip ? +parsedExtras.skip + 100 : 200;
@@ -185,7 +156,7 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
         const mutatedArray = [...sCache.metas];
         let metas = mutatedArray.splice(0, amt);
 
-        if (config.letterboxdPosters) {
+        if (config.posters) {
           console.info(`Replacing Letterboxd posters for ${username}`);
           metas = await replacePosters(metas);
         }
@@ -203,13 +174,13 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
       );
     }
 
-    const films = await fetchWatchlist(decodeURIComponent(username));
+    const films = await fetchFilms(config.path);
     if (parsedExtras && parsedExtras.skip) {
       films.metas = films.metas.slice(0, +parsedExtras.skip);
     }
 
     staticCache
-      .save(username)
+      .save(config.pathSafe)
       .then(() => console.info(`[static_cache] saved ${username}`))
       .catch((err) => {
         console.warn(`Couldn't save staticcache ${username}`);
@@ -217,7 +188,7 @@ app.get("/:userConfig/catalog/:type/:id/:extra?", async (req, res) => {
       });
 
     const cache = films;
-    if (config.letterboxdPosters) {
+    if (config.posters) {
       console.info(`Replacing Letterboxd posters for ${username}`);
       cache.metas = await replacePosters(cache.metas);
     }

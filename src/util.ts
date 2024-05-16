@@ -2,34 +2,18 @@ import { LetterboxdRegex } from "./consts.js";
 import { env } from "./env.js";
 import { popularLists } from "./popular.js";
 
-export const generateURL = (id: string, page: number = 1) => {
-  if (id.startsWith("_internal_")) {
-    const found = popularLists.findIndex((list) => list.id === id);
-    if (found >= 0) {
-      return popularLists[found].url;
-    }
-  }
-
-  const separator = "|";
-  let part = "";
-  const isList = id.indexOf(separator) > 0;
-  if (isList) {
-    const [username, listid] = id.split(separator);
-    part = `${username}/list/${listid}`;
-  } else {
-    part = `${id}/watchlist`;
-  }
-
-  return `https://letterboxd.com/${part}/page/${page}`;
+export const generateURL = (path: string, page: number = 1) => {
+  // slice is to strip the initial /
+  return `https://letterboxd.com/${path.slice(1)}/page/${page}`;
 };
 
-export async function doesLetterboxdListExist(id: string) {
+export async function doesLetterboxdResourceExist(path: string) {
   try {
-    const generatedURL = generateURL(id);
+    const generatedURL = generateURL(path);
     const res = await fetch(generatedURL);
     if (res.ok) return true;
   } catch (error) {
-    console.warn(`Couldn't determine if ${id} exists.`);
+    console.warn(`Couldn't determine if ${path} exists.`);
   }
 
   return false;

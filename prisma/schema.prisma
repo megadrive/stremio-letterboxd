@@ -40,7 +40,6 @@ model LetterboxdIMDb {
   posterId String?
   poster   LetterboxdPoster[]
 
-  @@unique([letterboxd, imdb])
   @@index([letterboxd, imdb])
 }
 
