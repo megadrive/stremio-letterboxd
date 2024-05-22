@@ -103,7 +103,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   })();
   console.info({ parsedExtras });
 
-  console.time(`[${username}] catalog`);
+  console.time(`[${config.path}] catalog`);
 
   // We still keep movie here for legacy purposes, so current users don't break.
   if (type !== "movie" && type !== "letterboxd") {
@@ -180,26 +180,29 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     }
 
     staticCache
-      .save(config.pathSafe)
-      .then(() => console.info(`[static_cache] saved ${username}`))
+      .save(
+        config.pathSafe,
+        films.metas.map((film) => film.id)
+      )
+      .then(() => console.info(`[static_cache] saved ${config.pathSafe}`))
       .catch((err) => {
-        console.warn(`Couldn't save staticcache ${username}`);
+        console.warn(`Couldn't save staticcache ${config.pathSafe}`);
         console.warn(err);
       });
 
     const cache = films;
     if (config.posters) {
-      console.info(`Replacing Letterboxd posters for ${username}`);
+      console.info(`Replacing Letterboxd posters for ${config.path}`);
       cache.metas = await replacePosters(cache.metas);
     }
 
-    console.info(`[${username}] serving ${films.metas.length}`);
-    console.timeEnd(`[${username}] catalog`);
+    console.info(`[${config.path}] serving ${films.metas.length}`);
+    console.timeEnd(`[${config.path}] catalog`);
     return res.json({ metas: paginate(cache?.metas) });
   } catch (error) {
     // Return empty
     console.error(error);
-    console.timeEnd(`[${username}] catalog`);
+    console.timeEnd(`[${config.path}] catalog`);
     return res.json({ metas: [] });
   }
 });

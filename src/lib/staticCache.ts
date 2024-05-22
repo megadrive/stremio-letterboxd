@@ -32,29 +32,57 @@ export const staticCache = {
     )}.json`;
   },
 
-  save: async (id: string) => {
+  save: async (id: string, movieIds?: string[]) => {
+    console.info(
+      `[staticCache:save] Start saving ${id} with ${
+        movieIds ? movieIds.length : 0
+      } movies provided.`
+    );
+    const filename = generatePath(id);
+    console.info(`File: ${filename}`);
+    const consoleTime = `staticCache:save ${id}`;
+    console.time(consoleTime);
     if (writing.has(id)) {
       console.info(`already saving ${id}`);
       return;
     }
 
-    // grab list
-    const user = await prisma.letterboxdUser.findUnique({
-      where: {
-        id,
-      },
-    });
-    try {
-      if (!user) {
-        throw Error(`[static_cache] no user by id ${id}`);
+    const movies = await (async (): Promise<string[] | undefined> => {
+      try {
+        if (!movieIds) {
+          // grab list
+          const user = await prisma.letterboxdUser.findUnique({
+            where: {
+              id,
+            },
+          });
+          try {
+            if (!user) {
+              throw `No user with the ID: ${id}`;
+            }
+          } catch (error) {
+            console.warn(`[static_cache] ${error}`);
+            return undefined;
+          }
+
+          return JSON.parse(user.movie_ids) as string[];
+        } else {
+          return movieIds;
+        }
+      } catch (error) {
+        console.error(`[staticCache:save] Couldn't get movie IDs`);
       }
-    } catch {
-      console.warn("[static_cache] No user by that ID.");
-      return;
+
+      return undefined;
+    })();
+
+    if (!movies) {
+      console.warn(`[staticCache:save] Couldn't save ${id}`);
+      writing.delete(id);
+      return undefined;
     }
 
     // get meta from movies
-    const movies = JSON.parse(user.movie_ids) as string[];
     const metas: any[] = [];
 
     for (let movie of movies) {
@@ -79,7 +107,7 @@ export const staticCache = {
           ? Date.now() + 1000 * 60 * metas.length
           : Date.now() + 1000 * 60 * 60;
       await writeFile(
-        generatePath(id),
+        filename,
         JSON.stringify({ metas: metas, cacheTime: Date.now(), expires }),
         {
           encoding: "utf8",
@@ -89,8 +117,11 @@ export const staticCache = {
     } catch (error) {
       console.error(`Couldn't save staticCache ${id}`);
       console.error(error);
+      return { status: "error", message: error.message, error };
     }
     writing.delete(id);
+    console.timeEnd(consoleTime);
+    return { status: "success", filePath: generatePath(id), metas };
   },
   get: async (id: string) => {
     console.info(`Trying to get ${id} static cache`);
