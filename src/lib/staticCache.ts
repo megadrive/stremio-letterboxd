@@ -1,6 +1,5 @@
 import path, { join } from "path";
 import { prisma } from "../prisma.js";
-import { addonFetch } from "./fetch.js";
 import { readFile, writeFile } from "node:fs/promises";
 
 const __dirname = path.resolve(path.dirname(""));
@@ -44,6 +43,7 @@ export const staticCache = {
     console.time(consoleTime);
     if (writing.has(id)) {
       console.info(`already saving ${id}`);
+      console.timeEnd(consoleTime);
       return;
     }
 
@@ -79,23 +79,24 @@ export const staticCache = {
     if (!movies) {
       console.warn(`[staticCache:save] Couldn't save ${id}`);
       writing.delete(id);
+      console.timeEnd(consoleTime);
       return undefined;
     }
 
     // get meta from movies
     const metas: any[] = [];
 
+    // get all cinemeta, if we can
+    const cinemetas = await prisma.cinemeta.findMany({
+      where: { id: { in: movies } },
+    });
+
+    // sort the metas
     for (let movie of movies) {
-      try {
-        const cinemeta = await prisma.cinemeta.findFirst({
-          where: { id: movie },
-        });
-        if (!cinemeta) continue;
-        metas.push(JSON.parse(cinemeta.info));
-      } catch {
-        console.warn(`Couldn't get Cinemeta for ${movie}, continuing.`);
-        continue;
-      }
+      // find the cinemeta entry and push it to metas
+      const foundMovie = cinemetas.findIndex((m) => m.id === movie);
+      if (foundMovie === -1) continue;
+      metas.push(cinemetas[foundMovie]);
     }
 
     // save to static file
@@ -117,12 +118,14 @@ export const staticCache = {
     } catch (error) {
       console.error(`Couldn't save staticCache ${id}`);
       console.error(error);
+      console.timeEnd(consoleTime);
       return { status: "error", message: error.message, error };
     }
     writing.delete(id);
     console.timeEnd(consoleTime);
     return { status: "success", filePath: generatePath(id), metas };
   },
+
   get: async (id: string) => {
     console.info(`Trying to get ${id} static cache`);
     try {
