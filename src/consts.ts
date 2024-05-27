@@ -1,6 +1,6 @@
 import { env } from "./env.js";
 
-const ONE_HOUR = 3600000;
+export const ONE_HOUR = 3600000;
 const THIRTY_SECONDS = 30000;
 export const config = {
   /* In milliseconds. When the cached user data is stale. */

@@ -7,15 +7,14 @@ import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
 import { fetchFilms } from "./fetcher.js";
-import { IDUtil, PrependWithDev, doesLetterboxdResourceExist } from "./util.js";
+import { doesLetterboxdResourceExist } from "./util.js";
 import { env } from "./env.js";
 import landingTemplate from "./landingTemplate.js";
-import { LetterboxdRegex, LetterboxdUsernameOrListRegex } from "./consts.js";
 import { parseLetterboxdURLToID } from "./util.js";
-import { staticCache } from "./lib/staticCache.js";
-import { popularLists } from "./popular.js";
+import { lruCache } from "./lib/lruCache.js";
 import { parseConfig } from "./lib/config.js";
 import { replacePosters } from "./providers/letterboxd.js";
+import { StremioMeta } from "./consts.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -113,92 +112,62 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
   try {
     if ((await doesLetterboxdResourceExist(config.path)) === false) {
-      console.warn(`[${username}]: doesn't exist`);
+      console.warn(`[${config.path}]: doesn't exist`);
       return res.status(404).send();
     }
 
-    const sCache = await staticCache.get(config.pathSafe);
+    const sCache = lruCache.get(config.pathSafe);
     if (!sCache) {
       console.warn(`No cache found for ${username}`);
     }
-    console.log(
-      `[${username}] Static cache expires: ${sCache} exists. ${sCache?.expires} expires`
-    );
-    const expires = sCache?.expires ? sCache.expires - Date.now() : 0;
-    if (env.isProduction) {
-      res.appendHeader(
-        "Cache-Control",
-        `stale-white-revalidate, max-age: ${expires > 3600 ? expires : 3600}`
-      );
-    }
 
+    // slice is zero based, stremio is 1 based
     const paginate = (arr: unknown[], skip?: number): unknown[] => {
-      const amt = parsedExtras?.skip ? +parsedExtras.skip + 100 : 200;
+      const amt = parsedExtras?.skip ? +parsedExtras.skip + 99 : 199;
       if (!skip) {
         skip = +(parsedExtras?.skip ?? 0);
       }
-      return arr.slice(skip + 1, amt);
+      const sliced = arr.slice(skip, amt);
+      console.info(
+        sliced.length,
+        // @ts-ignore
+        sliced.map((s) => s.name)
+      );
+      return sliced;
     };
 
-    if (sCache && expires > 0) {
-      console.info("serving static file");
+    if (sCache) {
+      console.info("serving cached");
       res.setHeader("Content-Type", "application/json");
-      if (sCache.metas.length < 100) {
-        console.info(
-          `Cache < 100 (${sCache.metas.length}) or no extra parameters.`
-        );
-        console.timeEnd(`[${username}] catalog`);
-        return res.redirect(`/lists/${config.pathSafe}.json`);
-      } else {
-        console.timeEnd(`[${username}] catalog`);
-        const amt = parsedExtras?.skip ? +parsedExtras.skip + 100 : 200;
-        console.info({ amt });
-        const mutatedArray = [...sCache.metas];
-        let metas = mutatedArray.splice(0, amt);
+      let metas: typeof sCache = [];
 
-        if (config.posters) {
-          console.info(`Replacing Letterboxd posters for ${username}`);
-          metas = await replacePosters(metas);
-        }
-
-        return res.json({
-          count: metas.length,
-          metas: paginate(metas),
-        });
+      if (config.posters) {
+        console.info(`Replacing Letterboxd posters for ${config.path}`);
+        metas = await replacePosters(sCache);
       }
-    } else {
-      console.warn(
-        `Cache exists? ${!!sCache} or out of date, fetching fresh. Expires: ${
-          Date.now() - expires < 0
-        }.`
-      );
+
+      return res.json({
+        count: metas.length,
+        metas: paginate(metas),
+      });
     }
 
     const films = await fetchFilms(config.path);
-    if (parsedExtras && parsedExtras.skip) {
-      films.metas = films.metas.slice(0, +parsedExtras.skip);
-    }
 
-    staticCache
-      .save(
-        config.pathSafe,
-        films.metas.map((film) => film.id)
-      )
-      .then(() => console.info(`[static_cache] saved ${config.pathSafe}`))
-      .catch((err) => {
-        console.warn(`Couldn't save staticcache ${config.pathSafe}`);
-        console.warn(err);
-      });
+    lruCache.save(
+      config.pathSafe,
+      films.metas.map((film) => film.id)
+    );
 
-    const cache = films;
     if (config.posters) {
       console.info(`Replacing Letterboxd posters for ${config.path}`);
-      cache.metas = await replacePosters(cache.metas);
+      films.metas = await replacePosters(films.metas);
     }
 
+    console.info(`[${config.path} serving fresh]`);
     console.info(`[${config.path}] serving ${films.metas.length}`);
     console.timeEnd(`[${config.path}] catalog`);
-    return res.json({ metas: paginate(cache?.metas) });
+    return res.json({ metas: paginate(films.metas) });
   } catch (error) {
     // Return empty
     console.error(error);

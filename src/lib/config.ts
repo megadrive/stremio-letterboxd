@@ -28,19 +28,17 @@ const defaultConfig: Config = {
  */
 const parseOldConfig = (str: string): Config => {
   const decoded = decodeURIComponent(str);
-  const split = decoded.split(/\|/g);
+  const split = decoded.split(/\|/g); // "almosteffective|maybe" -> ["almosteffective", "maybe"]
   const [username, listId] = split;
 
   let type: Config["type"] = "unset";
   let path = "";
-  if (split.length > 1) {
-    if (split[1] === "list") {
-      path = `/${username}/list/${listId}`;
-      type = "list";
-    } else {
-      path = `/${username}`;
-      type = "watchlist";
-    }
+  if (split[1]) {
+    path = `/${username}/list/${listId}`;
+    type = "list";
+  } else {
+    path = `/${username}/watchlist`;
+    type = "watchlist";
   }
 
   return {
@@ -49,7 +47,7 @@ const parseOldConfig = (str: string): Config => {
     posters: false,
     type,
     listId,
-    name: listId.replace(/[^A-Za-z]/g, " "),
+    name: listId ? listId.replace(/[^A-Za-z]/g, " ") : "watchlist",
     username,
   };
 };

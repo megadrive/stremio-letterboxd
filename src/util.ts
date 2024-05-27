@@ -12,13 +12,15 @@ export async function doesLetterboxdResourceExist(path: string) {
     const generatedURL = generateURL(path);
     const res = await fetch(generatedURL);
     if (res.ok) return true;
+    throw new Error(res.statusText);
   } catch (error) {
-    console.warn(`Couldn't determine if ${path} exists.`);
+    console.warn(`Couldn't determine if ${path} exists: ${error.message}`);
   }
 
   return false;
 }
 
+/** @deprecated */
 export const parseLetterboxdURLToID = (url: string) => {
   console.log(`testing ${url}`);
   const match = LetterboxdRegex.exec(url);

@@ -306,7 +306,9 @@ export async function fetchFilmsSinglePage(
   }
 ) {
   console.info(`[${letterboxdPath}] getting page ${options.page}`);
-  const rawHtml = await (await addonFetch(generateURL(letterboxdPath))).text();
+  const rawHtml = await (
+    await addonFetch(generateURL(letterboxdPath, options.page))
+  ).text();
   const $$ = cheerio(rawHtml);
 
   // Get the film slugs from Letterboxd
