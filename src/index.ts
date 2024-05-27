@@ -14,7 +14,6 @@ import { parseLetterboxdURLToID } from "./util.js";
 import { lruCache } from "./lib/lruCache.js";
 import { parseConfig } from "./lib/config.js";
 import { replacePosters } from "./providers/letterboxd.js";
-import { StremioMeta } from "./consts.js";
 const app = express();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -28,6 +27,7 @@ app.get("/", (_req, res) => {
   return res.redirect("/configure");
 });
 
+// TODO: Make the new landing page work with provided values.
 app.get("/:id?/configure", function (req, res, next) {
   const { id } = req.params;
   const cloned_manifest = Object.assign({}, manifest);
@@ -49,10 +49,10 @@ app.get("/manifest.json", (req, res) => {
  */
 app.get("/:providedConfig/manifest.json", async function (req, res) {
   const { providedConfig } = req.params;
-  // TODO: Fix this.
-  let catalogName = `Dev - Test`;
   const config = parseConfig(providedConfig);
-  console.log({ config });
+
+  // TODO: Fix this.
+  let catalogName = `${config.username} - ${config.type}`;
 
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)

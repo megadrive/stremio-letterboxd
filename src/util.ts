@@ -20,7 +20,10 @@ export async function doesLetterboxdResourceExist(path: string) {
   return false;
 }
 
-/** @deprecated */
+/**
+ * @todo change this to parse to a `Config` object.
+ * @deprecated
+ * */
 export const parseLetterboxdURLToID = (url: string) => {
   console.log(`testing ${url}`);
   const match = LetterboxdRegex.exec(url);
