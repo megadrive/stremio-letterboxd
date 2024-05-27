@@ -11,7 +11,7 @@ type Config = {
   posters: boolean;
   /** A user's list identifier. */
   listId?: string;
-  /** @deprecated */
+  /** A user's username. */
   username?: string;
 };
 
@@ -104,6 +104,14 @@ export const parseConfig = (str: string): Config => {
   /** first: username or reserved word, second: list,  watchlist or actors name, third: list-id */
   const [_, usernameOrReserved, typeOrPerson, listId] = pathSplit;
 
+  const username = (() => {
+    if (!reserved.first.includes(usernameOrReserved.toLowerCase())) {
+      return usernameOrReserved;
+    }
+
+    return undefined;
+  })();
+
   // Get the Type of link
   const type = ((): Config["type"] => {
     // replace duplicate slashes, then split
@@ -140,10 +148,7 @@ export const parseConfig = (str: string): Config => {
       case "unset":
         return undefined;
     }
-
-    return undefined;
   })();
-  console.log({ resolvedName: name });
 
   console.info(
     `Got config: ${path} (${type}) with ${opts.length} options from ${str}`
@@ -157,8 +162,8 @@ export const parseConfig = (str: string): Config => {
     listId,
     name,
     posters: opts.includes("p"),
+    username,
   };
-  console.info({ resolvedConfig });
 
   return resolvedConfig;
 };
