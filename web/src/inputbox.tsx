@@ -69,13 +69,15 @@ export default function Inputbox() {
     setInProgress(true);
     updateInputUrl();
     const manifestUrl = await generateManifestURL();
-    setManifest(manifestUrl);
-    await navigator.clipboard
-      .writeText(manifestUrl)
-      .then(() => alert("Copied, paste in Stremio!"))
-      .catch((_) => {
-        setInProgress(false);
-      });
+    if (manifestUrl.length) {
+      setManifest(manifestUrl);
+      await navigator.clipboard
+        .writeText(manifestUrl)
+        .then(() => alert("Copied, paste in Stremio!"))
+        .catch((_) => {
+          setInProgress(false);
+        });
+    }
     setInProgress(false);
   }
 
@@ -84,9 +86,11 @@ export default function Inputbox() {
       setInProgress(true);
       updateInputUrl();
       const manifestUrl = await generateManifestURL();
-      setManifest(manifestUrl);
-      window.location.href = manifestUrl;
-      setInProgress(false);
+      if (manifestUrl.length) {
+        setManifest(manifestUrl);
+        window.location.href = manifestUrl;
+        setInProgress(false);
+      }
     } catch (error) {
       setInProgress(false);
     }
@@ -121,7 +125,7 @@ export default function Inputbox() {
           {inProgress === false ? "Copy" : "..."}
         </button>
       </div>
-      <div>{manifest}</div>
+      <div className="hidden">{manifest}</div>
     </div>
   );
 }
