@@ -186,8 +186,9 @@ app.get("/generate/:url", (req, res) => {
   res.send(id);
 });
 
-app.get("/url/:letterboxdUrl", async (req, res) => {
-  const { letterboxdUrl } = req.params;
+app.get("/url/:url", async (req, res) => {
+  const { url } = req.params;
+  let letterboxdUrl = decodeURIComponent(url);
 
   if (!letterboxdUrl) return res.status(404).send();
   try {

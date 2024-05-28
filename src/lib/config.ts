@@ -34,10 +34,10 @@ const parseOldConfig = (str: string): Config => {
   let type: Config["type"] = "unset";
   let path = "";
   if (split[1]) {
-    path = `/${username}/list/${listId}`;
+    path = `/${username}/list/${listId}/`;
     type = "list";
   } else {
-    path = `/${username}/watchlist`;
+    path = `/${username}/watchlist/`;
     type = "watchlist";
   }
 
@@ -58,6 +58,8 @@ const parseOldConfig = (str: string): Config => {
  * @returns Config object
  */
 export const parseConfig = (str: string): Config => {
+  // remove leading https://letterboxd.com if present
+  str = str.trim().replace(/^https:\/\/(www\.)?letterboxd\.com/, "");
   /**
    * Expected input: %2Ffcbarcelona%2Flist%2Fmovies-everyone-should-watch-at-least-once%2F%2Cp
    * p = posters

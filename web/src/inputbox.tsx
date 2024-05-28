@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 export default function Inputbox() {
   const [url, setUrl] = useState("");
   const [inProgress, setInProgress] = useState(false);
+  const [manifest, setManifest] = useState("");
   const urlInput = useRef<HTMLInputElement>(null);
 
   function updateInputUrl() {
@@ -13,34 +14,54 @@ export default function Inputbox() {
     }
   }
 
-  async function convertToId(url: string) {
-    const rletterboxdUrl =
-      /https:\/\/(www\.)?letterboxd\.com\/([A-Za-z0-9-_]+)(\/([A-Za-z0-9-_]+)\/([A-Za-z0-9-_]+))?/gi;
-    const rboxditUrl = /https:\/\/boxd\.it\/.+/gi;
+  /**
+   * Resolves a URL after redirects. Returns undefined if an error occurs or not a letterboxd URL.
+   * @param url URL to resolve
+   * @returns Resolved URL
+   */
+  async function resolveUrl(url: string) {
+    const rletterboxdUrl = /^https:\/\/(www\.)?letterboxd\.com\//gi;
+    const rboxditUrl = /^https:\/\/boxd\.it\/.+/gi;
+    const originalUrl = url;
 
-    console.log(url);
+    // if it's an boxd.it URL, resolve to a Letterboxd URL.
     if (rboxditUrl.test(url)) {
-      console.log(`boxdit_url: ${url}`);
-      const realUrl = await (
-        await fetch(`/url/${encodeURIComponent(url)}`)
-      ).json();
-      url = realUrl;
-      console.log(`resolved url: ${url}`);
+      console.log(`boxdit url: ${url}`);
+      try {
+        const res = await fetch(
+          `http://localhost:3030/url/${encodeURIComponent(url)}`
+        );
+        if (!res.ok) {
+          return undefined;
+        }
+        const realUrl = await res.json();
+        url = realUrl;
+        console.log(`resolved url: ${url}`);
+      } catch {
+        console.error(`Error occurred while resolving.`);
+        return undefined;
+      }
     }
 
-    const matches = [...url.matchAll(rletterboxdUrl)];
-    let [, , username, , type, listid] = matches[0];
-    if (!type) type = "watchlist";
-    return `${username}${listid ? `${`|${listid}`}` : ""}`;
+    if (!rletterboxdUrl.test(url)) {
+      console.error(`bad resolved url: ${url} from ${originalUrl}`);
+      return undefined;
+    }
+
+    return encodeURIComponent(url);
   }
 
   async function generateManifestURL() {
     try {
-      const convertedId = await convertToId(url);
-      const installUrl = new URL(window.location.href);
-      return `stremio://${installUrl.host}/${convertedId}/manifest.json`;
+      const resolvedUrl = await resolveUrl(url);
+      if (!resolvedUrl) {
+        throw Error("Conversion failed.");
+      }
+      const host = new URL(window.location.href).host;
+      return `stremio://${host}/${resolvedUrl}/manifest.json`;
     } catch (error) {
-      alert("Try again in a few seconds.");
+      // @ts-ignore
+      alert(`Try again in a few seconds: ${error.message}`);
     }
 
     return "";
@@ -48,27 +69,25 @@ export default function Inputbox() {
 
   async function copyToClipboard() {
     setInProgress(true);
-    if (url.length) {
-      updateInputUrl();
-      const manifestUrl = await generateManifestURL();
-      await navigator.clipboard
-        .writeText(manifestUrl)
-        .then(() => alert("Copied, paste in Stremio!"))
-        .catch((_) => {
-          setInProgress(false);
-        });
-    }
+    updateInputUrl();
+    const manifestUrl = await generateManifestURL();
+    setManifest(manifestUrl);
+    await navigator.clipboard
+      .writeText(manifestUrl)
+      .then(() => alert("Copied, paste in Stremio!"))
+      .catch((_) => {
+        setInProgress(false);
+      });
     setInProgress(false);
   }
 
   async function installAddon() {
     try {
       setInProgress(true);
-      if (url.length) {
-        updateInputUrl();
-        const manifestUrl = await generateManifestURL();
-        window.location.href = manifestUrl;
-      }
+      updateInputUrl();
+      const manifestUrl = await generateManifestURL();
+      setManifest(manifestUrl);
+      window.location.href = manifestUrl;
       setInProgress(false);
     } catch (error) {
       setInProgress(false);
@@ -77,18 +96,15 @@ export default function Inputbox() {
 
   return (
     <div className="grid grid-cols-1 gap-1">
-      <div className="text-base">A user's Letterboxd URL or a List URL:</div>
+      <div className="text-base">
+        A Letterboxd URL containing a list of posters (including any sorting!):
+      </div>
       <div>
         <input
           type="text"
-          placeholder="https://letterboxd.com/almosteffective"
+          placeholder="https://letterboxd.com/almosteffective/watchlist"
           className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
           ref={urlInput}
-          onKeyDown={updateInputUrl}
-          onKeyUp={updateInputUrl}
-          onChange={updateInputUrl}
-          onBlur={updateInputUrl}
-          onPaste={updateInputUrl}
         />
       </div>
       <div className="flex gap-1">
@@ -107,6 +123,7 @@ export default function Inputbox() {
           {inProgress === false ? "Copy" : "..."}
         </button>
       </div>
+      <div>{manifest}</div>
     </div>
   );
 }
