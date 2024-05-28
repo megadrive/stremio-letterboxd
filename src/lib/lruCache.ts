@@ -20,37 +20,38 @@ const generatePath = (id: string) =>
   );
 
 export const lruCache = {
-  save: async (id: string, movieIds?: string[]) => {
+  save: async (id: string, providedMetas?: StremioMeta[]) => {
     console.info(
-      `[lrucache:save] Start saving ${id} with ${
-        movieIds ? movieIds.length : 0
-      } movies provided.`
+      `[lrucache:save] Start saving ${id} with ${providedMetas?.length} movies provided.`
     );
     const consoleTime = `lrucache:save ${id}`;
     console.time(consoleTime);
 
+    // if metas provided, save early and quit
+    if (providedMetas && providedMetas.length) {
+      console.log(providedMetas.map((m) => m.name));
+      cache.set(id, providedMetas);
+      return true;
+    }
+
     const movies = await (async (): Promise<string[] | undefined> => {
       try {
-        if (!movieIds) {
-          // grab list
-          const user = await prisma.letterboxdUser.findUnique({
-            where: {
-              id,
-            },
-          });
-          try {
-            if (!user) {
-              throw `No user with the ID: ${id}`;
-            }
-          } catch (error) {
-            console.warn(`[lrucache:save] ${error}`);
-            return undefined;
+        // grab list
+        const user = await prisma.letterboxdUser.findUnique({
+          where: {
+            id,
+          },
+        });
+        try {
+          if (!user) {
+            throw `No user with the ID: ${id}`;
           }
-
-          return JSON.parse(user.movie_ids) as string[];
-        } else {
-          return movieIds;
+        } catch (error) {
+          console.warn(`[lrucache:save] ${error}`);
+          return undefined;
         }
+
+        return JSON.parse(user.movie_ids) as string[];
       } catch (error) {
         console.error(`[lrucache:save] Couldn't get movie IDs`);
       }
@@ -103,7 +104,6 @@ export const lruCache = {
     console.info(`[lrucache:get] Trying to get ${id} static cache`);
     try {
       const metas = cache.get(id);
-      console.info(`first get ${metas ? metas[0]?.name : "no"}`);
       return metas;
     } catch (error) {
       console.error(`[lrucache:get] Couldn't parse meta JSON`);

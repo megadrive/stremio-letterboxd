@@ -309,16 +309,28 @@ export async function fetchFilmsSinglePage(
   const rawHtml = await (
     await addonFetch(generateURL(letterboxdPath, options.page))
   ).text();
-  const $$ = cheerio(rawHtml);
+  let $$ = cheerio(rawHtml);
+
+  const getFilmSlugs = () => {
+    return $$(".poster")
+      .map(function () {
+        const slug = $$(this).data().filmSlug as string;
+        if (!slug || typeof slug !== "string") return slug;
+        return slug.replace(/-/g, " ");
+      })
+      .toArray();
+  };
 
   // Get the film slugs from Letterboxd
-  const filmSlugs = $$(".poster")
-    .map(function () {
-      const slug = $$(this).data().filmSlug as string;
-      if (!slug || typeof slug !== "string") return slug;
-      return slug.replace(/-/g, " ");
-    })
-    .toArray();
+  let filmSlugs = getFilmSlugs();
+  if (filmSlugs.length === 0) {
+    // try making an ajax request instead
+    const ajaxRaw = await (
+      await addonFetch(generateURL(letterboxdPath, options.page, true))
+    ).text();
+    $$ = cheerio(ajaxRaw);
+    filmSlugs = getFilmSlugs();
+  }
 
   console.info(`[${letterboxdPath}] got ${filmSlugs.length} films`);
 

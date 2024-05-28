@@ -139,7 +139,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     if (sCache) {
       console.info("serving cached");
       res.setHeader("Content-Type", "application/json");
-      let metas: typeof sCache = [];
+      let metas: typeof sCache = sCache;
 
       if (config.posters) {
         console.info(`Replacing Letterboxd posters for ${config.path}`);
@@ -154,10 +154,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
     const films = await fetchFilms(config.path);
 
-    lruCache.save(
-      config.pathSafe,
-      films.metas.map((film) => film.id)
-    );
+    lruCache.save(config.pathSafe, films.metas);
 
     if (config.posters) {
       console.info(`Replacing Letterboxd posters for ${config.path}`);

@@ -2,9 +2,17 @@ import { LetterboxdRegex } from "./consts.js";
 import { env } from "./env.js";
 import { popularLists } from "./popular.js";
 
-export const generateURL = (path: string, page: number = 1) => {
+export const generateURL = (
+  path: string,
+  page: number = 1,
+  isAjaxRequest = false
+) => {
   // slice is to strip the initial /
-  return `https://letterboxd.com/${path.slice(1)}/page/${page}`;
+  let split = path.replace(/\/+/g, "/").split("/");
+  if (isAjaxRequest) {
+    split = [split[1], "ajax", ...split.slice(2)];
+  }
+  return `https://letterboxd.com/${split.join("/")}/page/${page}`;
 };
 
 export async function doesLetterboxdResourceExist(path: string) {
