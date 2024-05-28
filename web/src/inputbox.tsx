@@ -28,9 +28,7 @@ export default function Inputbox() {
     if (rboxditUrl.test(url)) {
       console.log(`boxdit url: ${url}`);
       try {
-        const res = await fetch(
-          `http://localhost:3030/url/${encodeURIComponent(url)}`
-        );
+        const res = await fetch(`/url/${encodeURIComponent(url)}`);
         if (!res.ok) {
           return undefined;
         }
