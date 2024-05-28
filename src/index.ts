@@ -51,9 +51,6 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
   const { providedConfig } = req.params;
   const config = parseConfig(providedConfig);
 
-  // TODO: Fix this.
-  let catalogName = `${config.username} - ${config.type}`;
-
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
   ) as ManifestExpanded;
@@ -69,7 +66,7 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
       id: config.path,
       /** @ts-ignore next-line */
       type: "letterboxd",
-      name: catalogName,
+      name: config.catalogName,
       extra: [
         {
           name: "skip",

@@ -7,12 +7,15 @@ type Config = {
   name?: string;
   /** Type of the resource. */
   type: "unset" | "watchlist" | "list" | "person";
+  reserved?: boolean;
   /** Replace posters with Letterboxd ones. */
   posters: boolean;
   /** A user's list identifier. */
   listId?: string;
   /** A user's username. */
   username?: string;
+  /** Best guess at a catalog name. */
+  catalogName: string;
 };
 
 const defaultConfig: Config = {
@@ -20,6 +23,7 @@ const defaultConfig: Config = {
   pathSafe: "-",
   type: "unset",
   posters: false,
+  catalogName: "Unnamed Catalog",
 };
 
 /**
@@ -41,6 +45,13 @@ const parseOldConfig = (str: string): Config => {
     type = "watchlist";
   }
 
+  let catalogName = "";
+  if (listId) {
+    catalogName = `${listId} ${type} - ${username}`;
+  } else {
+    catalogName = `${type} - ${username}`;
+  }
+
   return {
     path,
     pathSafe: path.replace(/[^A-Za-z0-9]/g, "-"),
@@ -49,6 +60,7 @@ const parseOldConfig = (str: string): Config => {
     listId,
     name: listId ? listId.replace(/[^A-Za-z]/g, " ") : "watchlist",
     username,
+    catalogName,
   };
 };
 
@@ -74,6 +86,7 @@ export const parseConfig = (str: string): Config => {
 
   const reserved = {
     first: [
+      "films",
       "film",
       "actor",
       "director",
@@ -114,6 +127,8 @@ export const parseConfig = (str: string): Config => {
     return undefined;
   })();
 
+  let isReservedType = false;
+
   // Get the Type of link
   const type = ((): Config["type"] => {
     // replace duplicate slashes, then split
@@ -130,16 +145,17 @@ export const parseConfig = (str: string): Config => {
     }
 
     if (reserved.first.includes(usernameOrReserved.toLowerCase())) {
-      return "person";
+      isReservedType = true;
+      // TODO: Typescript error here, might need to hoist the reserved up and use an `as const`.
+      // @ts-ignore
+      return usernameOrReserved;
     }
 
     console.log("made unset");
     return "unset";
   })();
-  console.log({ resolvedType: type });
 
   const name = ((): Config["name"] => {
-    console.log({ type });
     // Reserved, it's a person
     switch (type) {
       case "person":
@@ -151,6 +167,49 @@ export const parseConfig = (str: string): Config => {
         return undefined;
     }
   })();
+
+  let catalogName = "";
+  if (isReservedType) {
+    // shenanigans
+    // /films/decade/2020s/genre/adventure/by/releases
+    // k/v pairs after films
+    const [_, __, ...urlOpts] = pathSplit;
+    const opts: Record<string, string> = {};
+    let i = 0;
+    while (i < urlOpts.length) {
+      if (!urlOpts[i + 1]) break; // if no second option, break out of the loop
+      opts[urlOpts[i]] = urlOpts[i + 1].replace(/\-/g, " ");
+      i += 2;
+    }
+
+    /*
+    {
+      'decade': '2020s',
+      'by': 'release',
+      'genre': 'adventure',
+      'on': 'amazon-us',
+    }
+    preferred is decade -> genre -> sort/by -> on
+    */
+    const catalog: string[] = [];
+    if (opts.decade) {
+      catalog.push(opts.decade);
+    }
+    if (opts.genre) {
+      catalog.push(opts.genre);
+    }
+    catalog.push("films");
+    if (opts.by) {
+      catalog.push("sorted by");
+      catalog.push(opts.by);
+    }
+    if (opts.on) {
+      catalog.push("on");
+      catalog.push(opts.on);
+    }
+
+    catalogName = catalog.map((l) => l[0].toUpperCase() + l.slice(1)).join(" ");
+  }
 
   console.info(
     `Got config: ${path} (${type}) with ${opts.length} options from ${str}`
@@ -165,7 +224,10 @@ export const parseConfig = (str: string): Config => {
     name,
     posters: opts.includes("p"),
     username,
+    catalogName,
   };
+
+  console.log({ resolvedConfig });
 
   return resolvedConfig;
 };
