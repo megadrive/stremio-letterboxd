@@ -78,7 +78,28 @@ export const parseConfig = (str: string): Config => {
    */
   const decoded = decodeURIComponent(str);
   const split = decoded.split(/\|/g);
-  const [path, ...opts] = split;
+  const [path, ...providedOpts] = split;
+  const opts: {
+    posters: Config["posters"];
+    catalogName?: Config["catalogName"];
+  } = { posters: false };
+  if (providedOpts) {
+    providedOpts.forEach((o) => {
+      o = decodeURIComponent(o);
+      // if a = is included, parse as a string
+      if (!o.includes("=")) {
+        // parse as a boolean, then continue
+        opts.posters = o === "p";
+        return;
+      }
+
+      // parse as a string
+      const [k, v] = o.split("=");
+      if (k === "cn") {
+        opts.catalogName = v;
+      }
+    });
+  }
 
   if (!path.startsWith("/")) {
     return parseOldConfig(str);
@@ -168,22 +189,25 @@ export const parseConfig = (str: string): Config => {
     }
   })();
 
-  let catalogName = "";
-  if (isReservedType) {
-    // shenanigans
-    // /films/decade/2020s/genre/adventure/by/releases
-    // k/v pairs after films
-    const [_, __, ...urlOpts] = pathSplit;
-    const opts: Record<string, string> = {};
-    let i = 0;
-    while (i < urlOpts.length) {
-      if (!urlOpts[i + 1]) break; // if no second option, break out of the loop
-      opts[urlOpts[i]] = urlOpts[i + 1].replace(/\-/g, " ");
-      i += 2;
-    }
+  let catalogName = opts.catalogName ?? "";
+  console.log(catalogName);
+  if (!catalogName) {
+    if (isReservedType) {
+      // shenanigans
+      // /films/decade/2020s/genre/adventure/by/releases
+      // k/v pairs after films
+      const [, , ...urlOpts] = pathSplit;
+      const opts: Record<string, string> = {};
+      let i = 1;
+      while (i < urlOpts.length) {
+        if (!urlOpts[i + 1]) break; // if no second option, break out of the loop
+        opts[urlOpts[i]] = urlOpts[i + 1].replace(/\-/g, " ");
+        i += 2;
+      }
 
-    /*
+      /*
     {
+      'this': 'week'|'month'
       'decade': '2020s',
       'by': 'release',
       'genre': 'adventure',
@@ -191,28 +215,43 @@ export const parseConfig = (str: string): Config => {
     }
     preferred is decade -> genre -> sort/by -> on
     */
-    const catalog: string[] = [];
-    if (opts.decade) {
-      catalog.push(opts.decade);
-    }
-    if (opts.genre) {
-      catalog.push(opts.genre);
-    }
-    catalog.push("films");
-    if (opts.by) {
-      catalog.push("sorted by");
-      catalog.push(opts.by);
-    }
-    if (opts.on) {
-      catalog.push("on");
-      catalog.push(opts.on);
-    }
+      console.log("catalog opts", opts);
+      const catalog: string[] = [];
+      if (opts.this) {
+        catalog.push("Popular this " + opts.this);
+      }
+      if (opts.decade) {
+        catalog.push(opts.decade);
+      }
+      if (opts.genre) {
+        catalog.push(opts.genre);
+      }
+      catalog.push("films");
+      if (opts.by) {
+        catalog.push("sorted by");
+        catalog.push(opts.by);
+      }
+      if (opts.on) {
+        catalog.push("on");
+        catalog.push(opts.on);
+      }
 
-    catalogName = catalog.map((l) => l[0].toUpperCase() + l.slice(1)).join(" ");
+      catalogName = catalog
+        .map((l) => l[0].toUpperCase() + l.slice(1))
+        .join(" ");
+    }
+    if (type === "list") {
+      catalogName = `${listId} ${username}`;
+    }
+    if (type === "watchlist") {
+      catalogName = `watchlist ${username}`;
+    }
   }
 
   console.info(
-    `Got config: ${path} (${type}) with ${opts.length} options from ${str}`
+    `Got config: ${path} (${type}) with ${
+      Object.keys(opts).length
+    } options from ${str}`
   );
 
   const resolvedConfig: Config = {
@@ -222,12 +261,22 @@ export const parseConfig = (str: string): Config => {
     type,
     listId,
     name,
-    posters: opts.includes("p"),
+    posters: opts.posters,
     username,
     catalogName,
   };
 
-  console.log({ resolvedConfig });
-
   return resolvedConfig;
 };
+
+[
+  "/films/popular/this/week/",
+  "/ben_v_/activity/|p",
+  "/films/popular/this/week/decade/1940s/genre/documentary/",
+  "/almosteffective/watchlist",
+  "/almosteffective/list/addon-wrong/",
+  "/almosteffective/list/maybe/share/XnaH9zFXs11jxLik/|p|cn=A Custom Thing",
+].map((url) => {
+  const parsedConfig = parseConfig(encodeURIComponent(url));
+  console.log(url, parsedConfig);
+});
