@@ -9,7 +9,6 @@ import express from "express";
 import { fetchFilms } from "./fetcher.js";
 import { doesLetterboxdResourceExist } from "./util.js";
 import { env } from "./env.js";
-import landingTemplate from "./landingTemplate.js";
 import { parseLetterboxdURLToID } from "./util.js";
 import { lruCache } from "./lib/lruCache.js";
 import { parseConfig } from "./lib/config.js";
@@ -20,6 +19,10 @@ const __dirname = path.resolve(path.dirname(""));
 
 const PORT = process.env.PORT || 3030;
 
+const BASE_URL = env.isProduction
+  ? "stremio://letterboxd.almosteffective.com"
+  : "http://localhost:3030";
+
 app.use(cors());
 app.use(express.static("static"));
 
@@ -29,14 +32,7 @@ app.get("/", (_req, res) => {
 
 // TODO: Make the new landing page work with provided values.
 app.get("/:id?/configure", function (req, res, next) {
-  const { id } = req.params;
-  const cloned_manifest = Object.assign({}, manifest);
-  if (cloned_manifest.config && cloned_manifest.config[0]) {
-    cloned_manifest.config[0].default = id;
-  }
-  const landingPage = landingTemplate(manifest);
-  res.setHeader("Content-Type", "text/html");
-  res.end(landingPage);
+  return res.redirect("/configure");
 });
 
 app.get("/manifest.json", (req, res) => {
@@ -178,6 +174,86 @@ app.get("/generate/:url", (req, res) => {
   const id = parseLetterboxdURLToID(decodeURIComponent(req.params.url));
 
   res.send(id);
+});
+
+/**
+ * Bas64 object: {url: string, options: {posters: boolean}}
+ */
+app.get("/verify/:base64", async (req, res) => {
+  // Resolve config
+  const { base64 } = req.params;
+  console.log(base64);
+  let decoded;
+  let userConfig: {
+    url: string;
+    posters: boolean;
+  };
+  try {
+    decoded = atob(base64);
+    console.log({ decoded });
+    userConfig = JSON.parse(decoded) as {
+      url: string;
+      posters: boolean;
+    };
+  } catch {
+    console.warn(
+      `Could not convert base64 to string or convert to userConfig`,
+      base64
+    );
+    return res.status(500).json();
+  }
+
+  console.info(`Got userconfig:`, userConfig);
+
+  // Early exit if no url provided
+  if (!userConfig.url || userConfig.url.length === 0) {
+    console.warn(`no url in userconfig`);
+    return res.status(500).send();
+  }
+
+  // Resolve final URL (boxd.it -> letterboxd)
+  if (userConfig.url.startsWith("https://boxd.it/")) {
+    console.info(`converting boxd.it url`);
+    try {
+      const fetchRes = await fetch(userConfig.url, { redirect: "follow" });
+      if (!fetchRes.ok) {
+        console.warn(`couldn't resolve boxd.it url`);
+        return res.status(500).json();
+      }
+      userConfig.url = fetchRes.url;
+    } catch (error) {
+      console.warn(`couldn't resolve boxd.it url: ${error.message}`);
+      return res.status(500).json(error.message);
+    }
+  }
+
+  const path = new URL(userConfig.url).pathname;
+  const opts = [];
+  if (userConfig.posters) {
+    opts.push("p");
+  }
+  const unencoded = `${path}${opts.length ? `|${opts}` : ""}`;
+  const config = encodeURIComponent(unencoded);
+
+  // Verify we get metas from the URL
+  try {
+    const catalogUrl = `${BASE_URL}/${encodeURIComponent(
+      config
+    )}/catalog/letterboxd/test.json`;
+    console.info(`Can get metas? ${catalogUrl}`);
+    const fetchRes = await fetch(catalogUrl);
+    if (!fetchRes.ok) {
+      console.warn(`Couldn't get metas`);
+      return res.status(500).json();
+    }
+  } catch (error) {
+    console.warn(`Couldn't get metas`);
+    return res.status(500).json(error.message);
+  }
+
+  return res
+    .status(200)
+    .json(`${BASE_URL}/${encodeURIComponent(config)}/manifest.json`);
 });
 
 app.get("/url/:url", async (req, res) => {

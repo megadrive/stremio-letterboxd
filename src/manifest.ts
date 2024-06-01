@@ -2,15 +2,6 @@ import type { Manifest } from "stremio-addon-sdk";
 
 export type ManifestExpanded = Manifest & {
   behaviorHints?: { configurable?: boolean; configurationRequired?: boolean };
-  config?: {
-    key: string;
-    type: "text" | "number" | "password" | "checkbox" | "select";
-    default?: "checked" | string;
-    title?: string;
-    options?: string[];
-    required?: boolean;
-    special: "anonymous";
-  }[];
 };
 
 const manifest: ManifestExpanded = {
@@ -26,15 +17,6 @@ const manifest: ManifestExpanded = {
   behaviorHints: {
     configurable: true,
   },
-  config: [
-    {
-      title: "A user's Letterboxd URL or a List URL",
-      key: "letterboxdUrl",
-      type: "text",
-      special: "anonymous",
-      required: true,
-    },
-  ],
 };
 
 export default manifest;

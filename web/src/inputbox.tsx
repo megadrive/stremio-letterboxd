@@ -19,44 +19,17 @@ export default function Inputbox() {
    * @param url URL to resolve
    * @returns Resolved URL
    */
-  async function resolveUrl(url: string) {
-    const rletterboxdUrl = /^https:\/\/(www\.)?letterboxd\.com\//gi;
-    const rboxditUrl = /^https:\/\/boxd\.it\/.+/gi;
-    const originalUrl = url;
-
-    // if it's an boxd.it URL, resolve to a Letterboxd URL.
-    if (rboxditUrl.test(url)) {
-      console.log(`boxdit url: ${url}`);
-      try {
-        const res = await fetch(`/url/${encodeURIComponent(url)}`);
-        if (!res.ok) {
-          return undefined;
-        }
-        const realUrl = await res.json();
-        url = realUrl;
-        console.log(`resolved url: ${url}`);
-      } catch {
-        console.error(`Error occurred while resolving.`);
-        return undefined;
-      }
-    }
-
-    if (!rletterboxdUrl.test(url)) {
-      console.error(`bad resolved url: ${url} from ${originalUrl}`);
-      return undefined;
-    }
-
-    return encodeURIComponent(url);
-  }
-
   async function generateManifestURL() {
     try {
-      const resolvedUrl = await resolveUrl(url);
-      if (!resolvedUrl) {
-        throw Error("Conversion failed.");
+      const toVerify = btoa(JSON.stringify({ url: url }));
+      const res = await fetch(`/verify/${toVerify}`);
+      if (!res.ok) {
+        const message = await res.json();
+        alert(message);
+        return;
       }
-      const host = new URL(window.location.href).host;
-      return `stremio://${host}/${resolvedUrl}/manifest.json`;
+      const manifestUrl = await res.json();
+      return manifestUrl;
     } catch (error) {
       // @ts-ignore
       alert(`Try again in a few seconds: ${error.message}`);
@@ -107,6 +80,11 @@ export default function Inputbox() {
           placeholder="https://letterboxd.com/almosteffective/watchlist"
           className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
           ref={urlInput}
+          onPaste={updateInputUrl}
+          onKeyDown={updateInputUrl}
+          onKeyUp={updateInputUrl}
+          onBlur={updateInputUrl}
+          onFocus={updateInputUrl}
         />
       </div>
       <div className="flex gap-1">
