@@ -20,9 +20,12 @@ export default function Inputbox() {
    * @returns Resolved URL
    */
   async function generateManifestURL() {
+    const base = window.location.origin.includes(":4321")
+      ? "http://localhost:3030"
+      : window.location.origin;
     try {
-      const toVerify = btoa(JSON.stringify({ url: url }));
-      const res = await fetch(`/verify/${toVerify}`);
+      const toVerify = btoa(JSON.stringify({ url: url, base }));
+      const res = await fetch(`${base}/verify/${toVerify}`);
       if (!res.ok) {
         const message = await res.json();
         alert(message);

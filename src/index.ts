@@ -184,15 +184,13 @@ app.get("/verify/:base64", async (req, res) => {
   const { base64 } = req.params;
   console.log(base64);
   let decoded;
-  let userConfig: {
-    url: string;
-    posters: boolean;
-  };
+  let userConfig;
   try {
     decoded = atob(base64);
     console.log({ decoded });
     userConfig = JSON.parse(decoded) as {
       url: string;
+      base: string;
       posters: boolean;
     };
   } catch {
@@ -237,10 +235,9 @@ app.get("/verify/:base64", async (req, res) => {
 
   // Verify we get metas from the URL
   try {
-    const catalogUrl = `${BASE_URL.replace(
-      /(stremio)/,
-      "https"
-    )}/${encodeURIComponent(config)}/catalog/letterboxd/test.json`;
+    const catalogUrl = `${userConfig.base}/${encodeURIComponent(
+      config
+    )}/catalog/letterboxd/test.json`;
     console.info(`Can get metas? ${catalogUrl}`);
     const fetchRes = await fetch(catalogUrl);
     if (!fetchRes.ok) {
