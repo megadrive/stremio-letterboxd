@@ -4,13 +4,23 @@ export default function Inputbox() {
   const [url, setUrl] = useState("");
   const [inProgress, setInProgress] = useState(false);
   const [manifest, setManifest] = useState("");
+  const [customListName, setCustomListName] = useState("");
   const urlInput = useRef<HTMLInputElement>(null);
+  const customListNameInput = useRef<HTMLInputElement>(null);
 
   function updateInputUrl() {
     if (urlInput.current?.value) {
       setUrl(urlInput.current.value);
     } else {
       setUrl("");
+    }
+  }
+
+  function updateCustomListName() {
+    if (customListNameInput.current?.value) {
+      setCustomListName(customListNameInput.current.value);
+    } else {
+      setCustomListName("");
     }
   }
 
@@ -24,7 +34,14 @@ export default function Inputbox() {
       ? "http://localhost:3030"
       : window.location.origin;
     try {
-      const toVerify = btoa(JSON.stringify({ url: url, base }));
+      const toVerify = btoa(
+        JSON.stringify({
+          url,
+          base,
+          posters: false,
+          customListName: customListName.length ? customListName : undefined,
+        })
+      );
       const res = await fetch(`${base}/verify/${toVerify}`);
       if (!res.ok) {
         const message = await res.json();
@@ -73,40 +90,59 @@ export default function Inputbox() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-1">
-      <div className="text-base">
-        A Letterboxd URL containing a list of posters (including any sorting!):
+    <div>
+      <div className="grid grid-cols-1 gap-1">
+        <div className="text-base">
+          A Letterboxd URL containing a list of posters (including any
+          sorting!):
+        </div>
+        <div>
+          <input
+            type="text"
+            placeholder="https://letterboxd.com/almosteffective/watchlist"
+            className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
+            ref={urlInput}
+            onPaste={updateInputUrl}
+            onKeyDown={updateInputUrl}
+            onKeyUp={updateInputUrl}
+            onBlur={updateInputUrl}
+            onFocus={updateInputUrl}
+          />
+        </div>
+        <div className="text-base">
+          Set a custom list if you'd like (leave empty to auto-generate):
+        </div>
+        <div>
+          <input
+            type="text"
+            placeholder="My Cool List Name"
+            className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
+            ref={customListNameInput}
+            onPaste={updateCustomListName}
+            onKeyDown={updateCustomListName}
+            onKeyUp={updateCustomListName}
+            onBlur={updateCustomListName}
+            onFocus={updateCustomListName}
+          />
+        </div>
+        <div className="flex gap-1">
+          <button
+            className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
+            onClick={installAddon}
+            disabled={inProgress}
+          >
+            {inProgress === false ? "Install" : "..."}
+          </button>
+          <button
+            className="grow border border-transparent hover:border-white bg-tailwind uppercase text-white text-lg p-2 rounded font-normal"
+            onClick={copyToClipboard}
+            disabled={inProgress}
+          >
+            {inProgress === false ? "Copy" : "..."}
+          </button>
+        </div>
+        <div className="hidden">{manifest}</div>
       </div>
-      <div>
-        <input
-          type="text"
-          placeholder="https://letterboxd.com/almosteffective/watchlist"
-          className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
-          ref={urlInput}
-          onPaste={updateInputUrl}
-          onKeyDown={updateInputUrl}
-          onKeyUp={updateInputUrl}
-          onBlur={updateInputUrl}
-          onFocus={updateInputUrl}
-        />
-      </div>
-      <div className="flex gap-1">
-        <button
-          className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
-          onClick={installAddon}
-          disabled={inProgress}
-        >
-          {inProgress === false ? "Install" : "..."}
-        </button>
-        <button
-          className="grow border border-transparent hover:border-white bg-tailwind uppercase text-white text-lg p-2 rounded font-normal"
-          onClick={copyToClipboard}
-          disabled={inProgress}
-        >
-          {inProgress === false ? "Copy" : "..."}
-        </button>
-      </div>
-      <div className="hidden">{manifest}</div>
     </div>
   );
 }

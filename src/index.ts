@@ -188,6 +188,7 @@ app.get("/verify/:base64", async (req, res) => {
       url: string;
       base: string;
       posters: boolean;
+      customListName: string;
     };
   } catch {
     console.warn(
@@ -225,6 +226,9 @@ app.get("/verify/:base64", async (req, res) => {
   const opts = [];
   if (userConfig.posters) {
     opts.push("p");
+  }
+  if (userConfig.customListName && userConfig.customListName.length) {
+    opts.push(`cn=${userConfig.customListName}`);
   }
   const unencoded = `${path}${opts.length ? `|${opts}` : ""}`;
   const config = encodeURIComponent(unencoded);
