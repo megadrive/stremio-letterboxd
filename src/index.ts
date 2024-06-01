@@ -19,10 +19,6 @@ const __dirname = path.resolve(path.dirname(""));
 
 const PORT = process.env.PORT || 3030;
 
-const BASE_URL = env.isProduction
-  ? "stremio://letterboxd.almosteffective.com"
-  : "http://localhost:3030";
-
 app.use(cors());
 app.use(express.static("static"));
 
@@ -251,7 +247,7 @@ app.get("/verify/:base64", async (req, res) => {
 
   return res
     .status(200)
-    .json(`${BASE_URL}/${encodeURIComponent(config)}/manifest.json`);
+    .json(`${userConfig.base}/${encodeURIComponent(config)}/manifest.json`);
 });
 
 app.get("/url/:url", async (req, res) => {
