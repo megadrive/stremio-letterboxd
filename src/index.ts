@@ -237,9 +237,10 @@ app.get("/verify/:base64", async (req, res) => {
 
   // Verify we get metas from the URL
   try {
-    const catalogUrl = `${BASE_URL}/${encodeURIComponent(
-      config
-    )}/catalog/letterboxd/test.json`;
+    const catalogUrl = `${BASE_URL.replace(
+      /(stremio)/,
+      "https"
+    )}/${encodeURIComponent(config)}/catalog/letterboxd/test.json`;
     console.info(`Can get metas? ${catalogUrl}`);
     const fetchRes = await fetch(catalogUrl);
     if (!fetchRes.ok) {
