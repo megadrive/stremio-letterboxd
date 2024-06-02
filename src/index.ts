@@ -249,6 +249,11 @@ app.get("/verify/:base64", async (req, res) => {
     return res.status(500).json(error.message);
   }
 
+  // change protocol to stremio
+  userConfig.base = userConfig.base.startsWith("https")
+    ? userConfig.base.replace(/https/, "stremio")
+    : userConfig.base;
+
   return res
     .status(200)
     .json(`${userConfig.base}/${encodeURIComponent(config)}/manifest.json`);
