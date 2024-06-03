@@ -91,7 +91,8 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   })();
   console.info({ parsedExtras });
 
-  console.time(`[${config.path}] catalog`);
+  const consoleTime = `[${config.path}] catalog`;
+  console.time(consoleTime);
 
   // We still keep movie here for legacy purposes, so current users don't break.
   if (type !== "movie" && type !== "letterboxd") {
@@ -135,6 +136,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
         metas = await replacePosters(sCache);
       }
 
+      console.timeEnd(consoleTime);
       return res.json({
         count: metas.length,
         metas: paginate(metas),
@@ -150,14 +152,14 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       films.metas = await replacePosters(films.metas);
     }
 
-    console.info(`[${config.path} serving fresh]`);
+    console.info(`[${config.path}] serving fresh`);
     console.info(`[${config.path}] serving ${films.metas.length}`);
-    console.timeEnd(`[${config.path}] catalog`);
+    console.timeEnd(consoleTime);
     return res.json({ metas: paginate(films.metas) });
   } catch (error) {
     // Return empty
     console.error(error);
-    console.timeEnd(`[${config.path}] catalog`);
+    console.timeEnd(consoleTime);
     return res.json({ metas: [] });
   }
 });
