@@ -13,7 +13,10 @@ import { parseLetterboxdURLToID } from "./util.js";
 import { lruCache } from "./lib/lruCache.js";
 import { parseConfig } from "./lib/config.js";
 import { replacePosters } from "./providers/letterboxd.js";
+import { logger } from "./logger.js";
 const app = express();
+
+const logBase = logger("server");
 
 const __dirname = path.resolve(path.dirname(""));
 
@@ -75,8 +78,9 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
 app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
   const { providedConfig, type, id, extra } = req.params;
+  const log = logBase.extend(`catalog:${id}`);
   const config = parseConfig(providedConfig);
-  console.log({ providedConfig, config });
+  log({ providedConfig, config });
   const username = config.username;
   const parsedExtras = (() => {
     if (!extra) return undefined;
@@ -89,26 +93,25 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     }
     return rv;
   })();
-  console.info({ parsedExtras });
 
   const consoleTime = `[${config.path}] catalog`;
   console.time(consoleTime);
 
   // We still keep movie here for legacy purposes, so current users don't break.
   if (type !== "movie" && type !== "letterboxd") {
-    console.warn(`Wrong type: ${type}, giving nothing.`);
+    log(`Wrong type: ${type}, giving nothing.`);
     return res.status(304).json({ metas: [] });
   }
 
   try {
     if ((await doesLetterboxdResourceExist(config.path)) === false) {
-      console.warn(`[${config.path}]: doesn't exist`);
+      log(`${config.path} doesn't exist`);
       return res.status(404).send();
     }
 
     const sCache = lruCache.get(config.pathSafe);
     if (!sCache) {
-      console.warn(`No cache found for ${username}`);
+      log(`No cache found for ${username}`);
     }
 
     // slice is zero based, stremio is 1 based
@@ -178,14 +181,14 @@ app.get("/generate/:url", (req, res) => {
  * Bas64 object: {url: string, options: {posters: boolean}}
  */
 app.get("/verify/:base64", async (req, res) => {
+  const log = logBase.extend("verify");
   // Resolve config
   const { base64 } = req.params;
-  console.log(base64);
   let decoded;
   let userConfig;
   try {
     decoded = atob(base64);
-    console.log({ decoded });
+    log({ decoded });
     userConfig = JSON.parse(decoded) as {
       url: string;
       base: string;
@@ -193,33 +196,30 @@ app.get("/verify/:base64", async (req, res) => {
       customListName: string;
     };
   } catch {
-    console.warn(
-      `Could not convert base64 to string or convert to userConfig`,
-      base64
-    );
+    log(`Could not convert base64 to string or convert to userConfig`, base64);
     return res.status(500).json();
   }
 
-  console.info(`Got userconfig:`, userConfig);
+  log(`Got userconfig:`, userConfig);
 
   // Early exit if no url provided
   if (!userConfig.url || userConfig.url.length === 0) {
-    console.warn(`no url in userconfig`);
+    log(`no url in userconfig`);
     return res.status(500).send();
   }
 
   // Resolve final URL (boxd.it -> letterboxd)
   if (userConfig.url.startsWith("https://boxd.it/")) {
-    console.info(`converting boxd.it url`);
+    log(`converting boxd.it url`);
     try {
       const fetchRes = await fetch(userConfig.url, { redirect: "follow" });
       if (!fetchRes.ok) {
-        console.warn(`couldn't resolve boxd.it url`);
+        log(`couldn't resolve boxd.it url`);
         return res.status(500).json();
       }
       userConfig.url = fetchRes.url;
     } catch (error) {
-      console.warn(`couldn't resolve boxd.it url: ${error.message}`);
+      log(`couldn't resolve boxd.it url: ${error.message}`);
       return res.status(500).json(error.message);
     }
   }
@@ -232,6 +232,7 @@ app.get("/verify/:base64", async (req, res) => {
   if (userConfig.customListName && userConfig.customListName.length) {
     opts.push(`cn=${userConfig.customListName}`);
   }
+
   const unencoded = `${path}${opts.length ? `|${opts}` : ""}`;
   const config = encodeURIComponent(unencoded);
 
@@ -239,19 +240,20 @@ app.get("/verify/:base64", async (req, res) => {
   try {
     const catalogUrl = `${userConfig.base}/${encodeURIComponent(
       config
-    )}/catalog/letterboxd/test.json`;
-    console.info(`Can get metas? ${catalogUrl}`);
+    )}/catalog/letterboxd/${encodeURIComponent(path)}.json`;
+    log(`Can get metas? ${catalogUrl}`);
     const fetchRes = await fetch(catalogUrl);
     if (!fetchRes.ok) {
-      console.warn(`Couldn't get metas`);
+      log(`Couldn't get metas`);
       return res.status(500).json();
     }
   } catch (error) {
-    console.warn(`Couldn't get metas`);
+    log(`Couldn't get metas`);
     return res.status(500).json(error.message);
   }
+  log(`Got metas!`);
 
-  // change protocol to stremio
+  // change protocol to stremio, only if https
   userConfig.base = userConfig.base.startsWith("https")
     ? userConfig.base.replace(/https/, "stremio")
     : userConfig.base;

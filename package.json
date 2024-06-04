@@ -29,16 +29,19 @@
   },
   "dependencies": {
     "@prisma/client": "^5.9.1",
+    "@types/debug": "^4.1.12",
     "cheerio": "^1.0.0-rc.12",
     "copyfiles": "^2.4.1",
     "cors": "^2.8.5",
     "cross-fetch": "^4.0.0",
+    "debug": "^4.3.5",
     "dotenv": "^16.3.1",
     "envalid": "^8.0.0",
     "express": "^4.18.2",
     "lru-cache": "^10.2.2",
     "minisearch": "^6.3.0",
     "mkdirp": "^3.0.1",
+    "supports-color": "^9.4.0",
     "user-agents": "^1.1.109"
   }
 }

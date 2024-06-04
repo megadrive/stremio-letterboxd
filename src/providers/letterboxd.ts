@@ -1,7 +1,10 @@
 import { addonFetch } from "../lib/fetch.js";
 import { load as cheerio } from "cheerio";
 import { prisma } from "../prisma.js";
-import { StremioMeta } from "../consts.js";
+import type { StremioMeta } from "../consts.js";
+import { logger } from "../logger.js";
+
+const logBase = logger("providers:letterboxd");
 
 const getHtml = async (
   letterboxdSlug: string,
@@ -29,6 +32,7 @@ const getHtml = async (
  * @returns
  */
 const updatePoster = async (letterboxdId: string) => {
+  const log = logBase.extend("updatePoster");
   letterboxdId = `${letterboxdId}`;
   try {
     const letterboxd = await prisma.letterboxdPoster.findUnique({
@@ -45,11 +49,11 @@ const updatePoster = async (letterboxdId: string) => {
 
     if (!create && !shouldUpdate) {
       // early exit, don't update
-      console.info(`Not updating poster for ${letterboxdId}, too recent.`);
+      log(`Not updating poster for ${letterboxdId}, too recent.`);
       return undefined;
     }
 
-    console.info(
+    log(
       `${
         create ? "Creating a new poster" : "Updating poster"
       } for ${letterboxdId}`
@@ -92,6 +96,7 @@ const updatePoster = async (letterboxdId: string) => {
 export async function find(
   letterboxdSlug: string
 ): Promise<{ letterboxd: string; imdb: string; poster?: string } | undefined> {
+  const log = logBase.extend("find");
   try {
     let rv: { poster?: string } = {};
     // template literal because prisma coerces strings to numbers
@@ -109,7 +114,7 @@ export async function find(
     }
 
     // Early return if we have a record already.
-    console.info(`Found L-IMDB: ${letterboxdSlug} -> ${db.imdb}`);
+    log(`Found L-IMDB: ${letterboxdSlug} -> ${db.imdb}`);
     return {
       letterboxd: db.letterboxd,
       imdb: db.imdb,
@@ -117,14 +122,15 @@ export async function find(
     };
   } catch (error) {
     if (typeof error === "string") {
-      console.warn(error);
+      log(error);
     } else {
-      console.error(`Couldn't query db for some reason`);
-      console.error(error);
+      log(`Couldn't query db for some reason`);
+      log(error);
     }
   }
 
   try {
+    const logLtoImdb = log.extend("lboxdtoimdb");
     const $ = await getHtml(letterboxdSlug);
 
     const imdbUrl = $('a[data-track-action="IMDb"]').attr("href");
@@ -143,24 +149,25 @@ export async function find(
         },
       })
       .then(() =>
-        console.info(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`)
+        logLtoImdb(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`)
       )
       .catch((err) => {
-        console.error(
+        logLtoImdb(
           `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id}`
         );
-        console.error(err.message);
+        logLtoImdb(err.message);
       });
 
     return { letterboxd: letterboxdSlug, imdb: id, poster: undefined };
   } catch (error) {
-    console.error(error.message);
+    log(error.message);
   }
 
   return undefined;
 }
 
 export const replacePosters = async (metas: StremioMeta[]) => {
+  const log = logBase.extend("replacePosters");
   try {
     const letterboxdImdbIDs = await prisma.letterboxdIMDb.findMany({
       where: {
@@ -180,12 +187,12 @@ export const replacePosters = async (metas: StremioMeta[]) => {
     return metas.map((meta) => {
       const found = letterboxdImdbIDs.findIndex((v) => v.imdb === meta.id);
       if (found === -1) {
-        console.warn("No letterboxd poster found to replace.");
+        log("No letterboxd poster found to replace.");
         return meta;
       }
 
       if (letterboxdImdbIDs[found].poster.length === 0) {
-        console.warn(`No letterboxd posters in database for ${meta.id}`);
+        log(`No letterboxd posters in database for ${meta.id}`);
         return meta;
       }
 
@@ -195,8 +202,8 @@ export const replacePosters = async (metas: StremioMeta[]) => {
       };
     });
   } catch (error) {
-    console.error("Couldn't update with Letterboxd posters");
-    console.error(error);
+    log("Couldn't update with Letterboxd posters");
+    log(error);
   }
 
   return metas;

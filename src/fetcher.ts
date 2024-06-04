@@ -17,6 +17,9 @@ import {
 // import { findMovie } from "./lib/cinemeta.js";
 import { find } from "./providers/letterboxd.js";
 import { find as findImdb } from "./providers/imdbSuggests.js";
+import { logger } from "./logger.js";
+
+const logBase = logger("fetcher");
 
 type IFilm = {
   slug: string;
@@ -53,6 +56,7 @@ async function getImdbIDs(films: string[]) {
 
 /** Get Meta information for many IMDB IDs from Cinemeta */
 async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
+  const log = logBase.extend("getCinemetaInfoMany");
   let rv: StremioMeta[] = [];
   const cached = await prisma.cinemeta.findMany({
     where: {
@@ -78,7 +82,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
     ...cached.filter((c) => isOld(c.updatedAt, 86400000)).map((c) => c.id),
   ];
 
-  console.info(
+  log(
     `[cinemeta] need to fetch ${toFetch.length} metas, ${
       imdb_ids.length - toFetch.length
     } are in cache`
@@ -118,21 +122,21 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
           };
           return json.metasDetailed;
         } catch (error) {
-          console.error(error);
+          log(error);
           return [];
         }
       };
 
       for (let chunk of chunks) {
         try {
-          console.info(`[cinemeta] getting chunk ${rv.length}`);
+          log(`[cinemeta] getting chunk ${rv.length}`);
           const res = await fetchChunk(chunk);
           const filtered = res.filter(
             Boolean
           ) as CinemetaMovieResponseLive["meta"][];
           rv.push(...filtered);
         } catch {
-          console.info(`Couldn't fetch chunk ${rv.length}`);
+          log(`Couldn't fetch chunk ${rv.length}`);
           continue;
         }
       }
@@ -175,10 +179,10 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
         });
       })
     )
-      .then(() => console.info("[cinemeta] updated cache"))
+      .then(() => log("[cinemeta] updated cache"))
       .catch((error) => {
-        console.error("Failed to cache Cinemeta data.");
-        console.error(error);
+        log("Failed to cache Cinemeta data.");
+        log(error);
       });
   }
 
@@ -203,7 +207,8 @@ async function upsertLetterboxdUserWithMovies(
   username: string,
   movies: StremioMetaPreview[]
 ) {
-  console.info(`Caching ${username} to database.`);
+  const log = logBase.extend("upsertLetterboxdUserWithMovies");
+  log(`Caching ${username} to database.`);
 
   // create user
   const cached_user = await prisma.letterboxdUser.findUnique({
@@ -234,6 +239,7 @@ async function upsertLetterboxdUserWithMovies(
 
 /** Gets a cached user from the DB. Throws if no user or if the data is old. */
 async function getDBCachedUser(username: string) {
+  const log = logBase.extend("getDBCachedUser");
   const user = await prisma.letterboxdUser.findUnique({
     where: { id: username },
   });
@@ -243,7 +249,7 @@ async function getDBCachedUser(username: string) {
     throw Error(`[${username}]: stale user data`);
 
   const parsed_movie_ids: string[] = JSON.parse(user.movie_ids) as string[];
-  console.info(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
+  log(`[${username}]: got ${parsed_movie_ids.length} movie ids`);
   // const movie_info = await getCinemetaInfoMany(parsed_movie_ids);
   const movie_info: StremioMetaPreview[] = [];
   for (const imdbid of parsed_movie_ids) {
@@ -256,7 +262,7 @@ async function getDBCachedUser(username: string) {
     });
   }
 
-  console.info(
+  log(
     `[${username}]: got metadata ${movie_info.length} -> ${movie_info.map((m) =>
       m ? m.name : undefined
     )}`
@@ -305,7 +311,8 @@ export async function fetchFilmsSinglePage(
     page: 1,
   }
 ) {
-  console.info(`[${letterboxdPath}] getting page ${options.page}`);
+  const log = logBase.extend("fetch:single");
+  log(`[${letterboxdPath}] getting page ${options.page}`);
   const rawHtml = await (
     await addonFetch(generateURL(letterboxdPath, options.page))
   ).text();
@@ -332,12 +339,12 @@ export async function fetchFilmsSinglePage(
     filmSlugs = getFilmSlugs();
   }
 
-  console.info(`[${letterboxdPath}] got ${filmSlugs.length} films`);
+  log(`[${letterboxdPath}] got ${filmSlugs.length} films`);
 
   const imdbIds = await getImdbIDs(filmSlugs);
   const films_with_metadata = await getCinemetaInfoMany(imdbIds);
 
-  console.info(`[${letterboxdPath}] got ${imdbIds.length} imdb IDs`);
+  log(`[${letterboxdPath}] got ${imdbIds.length} imdb IDs`);
 
   return {
     films: films_with_metadata,
@@ -359,14 +366,16 @@ export async function fetchFilms(
     ReturnType<typeof fetchFilmsSinglePage> & { elapsed: Date["toString"] }
   >["films"];
 }> {
+  const log = logBase.extend("fetch");
   // early exit, don't continue if the username doesn't match what we expect
-  console.info(`[${letterboxdPath}] Checking path`);
+  log(`[${letterboxdPath}] Checking path`);
   if (!LetterboxdUsernameOrListRegex.test(letterboxdPath)) {
-    console.log(`[${letterboxdPath}] path invalid`);
+    log(`[${letterboxdPath}] path invalid`);
     return { metas: [] };
   }
 
   const fetchFreshData = async () => {
+    const logFresh = log.extend("fresh");
     try {
       // TODO: Remove later
       if (
@@ -377,13 +386,13 @@ export async function fetchFilms(
       }
 
       const generatedURL = generateURL(letterboxdPath);
-      console.info(`GeneratedURL: ${generatedURL}`);
+      logFresh(`GeneratedURL: ${generatedURL}`);
       const rawHtml = await (await addonFetch(generatedURL)).text();
       const $ = cheerio(rawHtml);
 
       let pages = +$(".paginate-page").last().text();
       if (pages === 0) pages = 1;
-      console.info(`[${letterboxdPath}] has ${pages} pages`);
+      logFresh(`[${letterboxdPath}] has ${pages} pages`);
 
       // full data will go in here
       const metaToReturn: Awaited<ReturnType<typeof fetchFilms>> = {
@@ -417,39 +426,24 @@ export async function fetchFilms(
         metaToReturn.metas
       )
         .then((user) =>
-          console.info(
+          logFresh(
             `[${letterboxdPath}]: updated user . ${user.updatedAt} with ${
               (JSON.parse(user.movie_ids) as string[]).length
             } movies.`
           )
         )
-        .catch((err) => console.error(err));
+        .catch((err) => logFresh(err));
 
       // if we/the user prefer letterboxd posters, use those instead
-      console.info(
+      logFresh(
         `[${letterboxdPath}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
       );
-      if (options.preferLetterboxdPosters) {
-        const metas = metaToReturn.metas.map(async (meta) => {
-          const lbxd = await prisma.letterboxdIMDb.findFirst({
-            where: {
-              imdb: meta.id,
-            },
-            include: { poster: true },
-          });
-          if (lbxd?.poster.length) {
-            meta.poster = lbxd.poster[0].url;
-          }
-
-          return meta;
-        });
-      }
 
       return {
         metas: metaToReturn.metas,
       };
     } catch (error) {
-      console.error(error);
+      log(error);
       return { metas: [] };
     }
   };
@@ -458,9 +452,7 @@ export async function fetchFilms(
   // if we have a cached user, serve that and update in the background for _-sPeEd-_
   try {
     let cachedUser = await getDBCachedUser(letterboxdPath);
-    console.info(
-      `[${letterboxdPath}]: ${cachedUser ? "got" : "couldnt get"} cached`
-    );
+    log(`[${letterboxdPath}]: ${cachedUser ? "got" : "couldnt get"} cached`);
     // if (options.preferLetterboxdPosters) {
     //   cachedUser = replaceMetaWithLetterboxdPosters(
     //     cachedUser.movies
@@ -479,14 +471,14 @@ export async function fetchFilms(
     const freshStartTime = Date.now();
     /* async */ fetchFreshData()
       .then((data) => {
-        console.info(`Fetched fresh data -> ${data.metas.length} films`);
+        log(`Fetched fresh data -> ${data.metas.length} films`);
         if (!cachedUser)
           return {
             source: "fresh",
             ...data,
           };
 
-        console.info(
+        log(
           `[${letterboxdPath}] fresh data fetched in ${formatTimeBetween(
             freshStartTime,
             Date.now()
@@ -495,11 +487,11 @@ export async function fetchFilms(
         return;
       })
       .catch((error) => {
-        console.error("couldnt fetch fresh data after serving cached data");
-        console.error(error);
+        log("couldnt fetch fresh data after serving cached data");
+        log(error);
       });
 
-    console.info(
+    log(
       `[${letterboxdPath}] cached time: ${formatTimeBetween(
         cachedStartTime,
         Date.now()
@@ -507,7 +499,7 @@ export async function fetchFilms(
     );
     return { metas: cached_movies };
   } catch (error) {
-    console.warn(`[${letterboxdPath}]: No user or old data, continuing..`);
+    log(`[${letterboxdPath}]: No user or old data, continuing..`);
   }
 
   // if we don't then fetch fresh
