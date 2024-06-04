@@ -231,6 +231,22 @@ app.get("/verify/:base64", async (req, res) => {
   }
   if (userConfig.customListName && userConfig.customListName.length) {
     opts.push(`cn=${userConfig.customListName}`);
+  } else {
+    try {
+      const nameRes = await fetch(userConfig.url);
+      if (!nameRes.ok) {
+        throw Error(`Couldn't get URL`);
+      }
+      const html = await nameRes.text();
+      const rogname = /<meta property="og:title" content="(.+)" \/>/;
+      const title = rogname.exec(html);
+      if (!title || title.length === 1) {
+        throw Error(`Couldn't get URL`);
+      }
+      opts.push(`cn=${title[1]}`);
+    } catch (error) {
+      log(error.message);
+    }
   }
 
   const unencoded = `${path}${opts.length ? `|${opts}` : ""}`;
