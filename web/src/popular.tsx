@@ -1,7 +1,10 @@
+import { Toaster, toast } from "react-hot-toast";
+
 function List({ id, name, url }: { id: string; name: string; url: string }) {
-  const installUrl = `stremio://${
-    new URL(window.location.href).host
-  }/${id}/manifest.json`;
+  const base = window.location.origin.includes(":4321")
+    ? "http://localhost:3030"
+    : window.location.origin;
+  const installUrl = `${base}/${encodeURIComponent(id)}/manifest.json`;
   return (
     <div className="grid gap-2 grid-cols-2">
       <div className="text-right">
@@ -21,7 +24,7 @@ function List({ id, name, url }: { id: string; name: string; url: string }) {
           onClick={() =>
             navigator.clipboard
               .writeText(installUrl)
-              .then(() => alert("Copied!"))
+              .then(() => toast.success("Copied, paste in Stremio!"))
           }
         >
           Copy
@@ -34,19 +37,16 @@ function List({ id, name, url }: { id: string; name: string; url: string }) {
 export default function Popular() {
   return (
     <div>
-      <h2 className="text-center font-semibold text-xl mb-2">
-        Popular lists
-        <br />
-        <div className="text-sm">(first page only)</div>
-      </h2>
+      <Toaster />
+      <h2 className="text-center font-semibold text-xl mb-2">Popular lists</h2>
       <div className="grid gap-1">
         <List
-          id="_internal_|weekly"
+          id="/films/popular/this/week/|cn=Popular This Week"
           name="Weekly"
           url="https://letterboxd.com/films/popular/this/week/"
         />
         <List
-          id="_internal_|monthly"
+          id="/films/popular/this/month/|cn=Popular This Month"
           name="Monthly"
           url="https://letterboxd.com/films/popular/this/monthly/"
         />

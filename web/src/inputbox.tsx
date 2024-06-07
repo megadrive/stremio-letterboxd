@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Toaster, toast } from "react-hot-toast";
 
 export default function Inputbox() {
   const [url, setUrl] = useState("");
@@ -42,31 +43,40 @@ export default function Inputbox() {
           customListName: customListName.length ? customListName : undefined,
         })
       );
-      const res = await fetch(`${base}/verify/${toVerify}`);
+      // if the url is the same, we don't need to verify it again
+      const res = await fetch(`${base}/verify/${toVerify}`, {
+        headers: {
+          "Cache-Control": "max-age=3600, stale-while-revalidate=600",
+        },
+      });
       if (!res.ok) {
         const message = await res.json();
-        alert(message);
+        toast.error(message);
         return;
       }
       const manifestUrl = await res.json();
       return manifestUrl;
     } catch (error) {
       // @ts-ignore
-      alert(`Try again in a few seconds: ${error.message}`);
+      toast.error(`Try again in a few seconds: ${error.message}`);
     }
 
     return "";
   }
 
   async function copyToClipboard() {
-    setInProgress(true);
     updateInputUrl();
+    if (url.length === 0) {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+    setInProgress(true);
     const manifestUrl = await generateManifestURL();
     if (manifestUrl.length) {
       setManifest(manifestUrl);
       await navigator.clipboard
         .writeText(manifestUrl)
-        .then(() => alert("Copied, paste in Stremio!"))
+        .then(() => toast.success("Copied, paste in Stremio!"))
         .catch((_) => {
           setInProgress(false);
         });
@@ -76,8 +86,12 @@ export default function Inputbox() {
 
   async function installAddon() {
     try {
-      setInProgress(true);
       updateInputUrl();
+      if (url.length === 0) {
+        toast.error("Please enter a valid URL");
+        return;
+      }
+      setInProgress(true);
       const manifestUrl = await generateManifestURL();
       if (manifestUrl.length) {
         setManifest(manifestUrl);
@@ -91,6 +105,7 @@ export default function Inputbox() {
 
   return (
     <div>
+      <Toaster />
       <div className="grid grid-cols-1 gap-1">
         <div className="text-base">
           A Letterboxd URL containing a list of posters (including any
@@ -131,14 +146,14 @@ export default function Inputbox() {
             onClick={installAddon}
             disabled={inProgress}
           >
-            {inProgress === false ? "Install" : "..."}
+            {inProgress === false ? "Install" : "Validating..."}
           </button>
           <button
             className="grow border border-transparent hover:border-white bg-tailwind uppercase text-white text-lg p-2 rounded font-normal"
             onClick={copyToClipboard}
             disabled={inProgress}
           >
-            {inProgress === false ? "Copy" : "..."}
+            {inProgress === false ? "Copy" : "Validating..."}
           </button>
         </div>
         <div className="hidden">{manifest}</div>
