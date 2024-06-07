@@ -29,7 +29,6 @@ export const lruCache = {
 
     // if metas provided, save early and quit
     if (providedMetas && providedMetas.length) {
-      console.log(providedMetas.map((m) => m.name));
       cache.set(id, providedMetas);
       return true;
     }

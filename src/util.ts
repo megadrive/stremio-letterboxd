@@ -1,7 +1,13 @@
 import { LetterboxdRegex } from "./consts.js";
 import { env } from "./env.js";
-import { popularLists } from "./popular.js";
 
+/**
+ * Generates a Letterboxd URL from a path.
+ * @param path Path to a Letterboxd resource
+ * @param page The page number, defaults to 1
+ * @param isAjaxRequest If it's an AJAX request, changes the URL slightly
+ * @returns A fully-qualified Letterboxd URL
+ */
 export const generateURL = (
   path: string,
   page: number = 1,
