@@ -52,9 +52,9 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
   cloned_manifest.id = `${
     env.isDevelopment ? "dev-" : ""
   }com.github.megadrive.letterboxd-watchlist-${config.pathSafe}`;
-  cloned_manifest.name = `Letterboxd - ${config.name} ${config.type}`;
+  cloned_manifest.name = `Letterboxd - ${config.catalogName}`;
 
-  cloned_manifest.description = `Provides the list at https://letterboxd.com${config.path} as a catalog.`;
+  cloned_manifest.description = `Provides a list of films at https://letterboxd.com${config.path} as a catalog.`;
 
   // Catalog name
   console.log(config.catalogName);
