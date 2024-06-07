@@ -360,6 +360,7 @@ export async function fetchFilmsSinglePage(
 export async function fetchFilms(
   letterboxdPath: string,
   options: {
+    head?: boolean;
     preferLetterboxdPosters?: boolean;
   } = { preferLetterboxdPosters: false }
 ): Promise<{
@@ -368,6 +369,7 @@ export async function fetchFilms(
   >["films"];
 }> {
   const log = logBase.extend("fetch");
+  console.log({ head: options.head }, log);
   // early exit, don't continue if the username doesn't match what we expect
   log(`[${letterboxdPath}] Checking path`);
   if (!LetterboxdUsernameOrListRegex.test(letterboxdPath)) {
@@ -399,6 +401,10 @@ export async function fetchFilms(
         pages = env.ADDON_MAX_PAGES_FETCHED;
       }
       if (pages === 0) pages = 1;
+      if (options.head) {
+        logFresh('"head" passed, only fetching 1 page');
+        pages = 1;
+      }
       logFresh(`[${letterboxdPath}] has ${pages} pages`);
 
       // full data will go in here

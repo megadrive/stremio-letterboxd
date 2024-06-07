@@ -56,6 +56,9 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
 
   cloned_manifest.description = `Provides the list at https://letterboxd.com${config.path} as a catalog.`;
 
+  // Catalog name
+  console.log(config.catalogName);
+
   cloned_manifest.catalogs = [
     {
       id: config.path,
@@ -94,6 +97,12 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     return rv;
   })();
 
+  if (parsedExtras && parsedExtras["letterboxdhead"] === "1") {
+    // Perform a HEAD-style request to confirm the resource exists and has at least 1 movie.
+    const metas = await fetchFilms(config.path, { head: true });
+    return res.status(200).json(metas);
+  }
+
   const consoleTime = `[${config.path}] catalog`;
   console.time(consoleTime);
 
@@ -121,11 +130,6 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
         skip = +(parsedExtras?.skip ?? 0);
       }
       const sliced = arr.slice(skip, amt);
-      console.info(
-        sliced.length,
-        // @ts-ignore
-        sliced.map((s) => s.name)
-      );
       return sliced;
     };
 
@@ -178,7 +182,8 @@ app.get("/generate/:url", (req, res) => {
 });
 
 /**
- * Bas64 object: {url: string, options: {posters: boolean}}
+ * Bas64 encoded JSON.stringified object:
+ * {url: string, posters: boolean, base: string, customListName: string}
  */
 app.get("/verify/:base64", async (req, res) => {
   const log = logBase.extend("verify");
@@ -256,7 +261,7 @@ app.get("/verify/:base64", async (req, res) => {
   try {
     const catalogUrl = `${userConfig.base}/${encodeURIComponent(
       config
-    )}/catalog/letterboxd/${encodeURIComponent(path)}.json`;
+    )}/catalog/letterboxd/${encodeURIComponent(path)}/letterboxdhead=1.json`;
     log(`Can get metas? ${catalogUrl}`);
     const fetchRes = await fetch(catalogUrl);
     if (!fetchRes.ok) {
