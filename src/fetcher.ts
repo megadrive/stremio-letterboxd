@@ -14,7 +14,6 @@ import {
   isOld,
   formatTimeBetween,
 } from "./util.js";
-// import { findMovie } from "./lib/cinemeta.js";
 import { find } from "./providers/letterboxd.js";
 import { find as findImdb } from "./providers/imdbSuggests.js";
 import { logger } from "./logger.js";
