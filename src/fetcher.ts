@@ -18,6 +18,7 @@ import {
 import { find } from "./providers/letterboxd.js";
 import { find as findImdb } from "./providers/imdbSuggests.js";
 import { logger } from "./logger.js";
+import { env } from "./env.js";
 
 const logBase = logger("fetcher");
 
@@ -391,6 +392,12 @@ export async function fetchFilms(
       const $ = cheerio(rawHtml);
 
       let pages = +$(".paginate-page").last().text();
+      if (pages > env.ADDON_MAX_PAGES_FETCHED) {
+        logFresh(
+          `Pages detected: ${pages}, rounding down to ${env.ADDON_MAX_PAGES_FETCHED}`
+        );
+        pages = env.ADDON_MAX_PAGES_FETCHED;
+      }
       if (pages === 0) pages = 1;
       logFresh(`[${letterboxdPath}] has ${pages} pages`);
 

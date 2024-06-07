@@ -1,4 +1,4 @@
-import { cleanEnv, str, url } from "envalid";
+import { cleanEnv, num, str, url } from "envalid";
 
 export const env = cleanEnv(process.env, {
   DATABASE_URL: str(),
@@ -6,4 +6,5 @@ export const env = cleanEnv(process.env, {
   URL_PRODUCTION: url({
     default: "https://stremio-letterboxd-watchlist.up.railway.app",
   }),
+  ADDON_MAX_PAGES_FETCHED: num({ default: 35 }),
 });
