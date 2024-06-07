@@ -56,9 +56,6 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
 
   cloned_manifest.description = `Provides a list of films at https://letterboxd.com${config.path} as a catalog.`;
 
-  // Catalog name
-  console.log(config.catalogName);
-
   cloned_manifest.catalogs = [
     {
       id: config.path,
@@ -134,12 +131,12 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     };
 
     if (sCache) {
-      console.info("serving cached");
+      log("serving cached");
       res.setHeader("Content-Type", "application/json");
       let metas: typeof sCache = sCache;
 
       if (config.posters) {
-        console.info(`Replacing Letterboxd posters for ${config.path}`);
+        log(`Replacing Letterboxd posters for ${config.path}`);
         metas = await replacePosters(sCache);
       }
 
@@ -155,17 +152,17 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     lruCache.save(config.pathSafe, films.metas);
 
     if (config.posters) {
-      console.info(`Replacing Letterboxd posters for ${config.path}`);
+      log(`Replacing Letterboxd posters for ${config.path}`);
       films.metas = await replacePosters(films.metas);
     }
 
-    console.info(`[${config.path}] serving fresh`);
-    console.info(`[${config.path}] serving ${films.metas.length}`);
+    log(`[${config.path}] serving fresh`);
+    log(`[${config.path}] serving ${films.metas.length}`);
     console.timeEnd(consoleTime);
     return res.json({ metas: paginate(films.metas) });
   } catch (error) {
     // Return empty
-    console.error(error);
+    log(error);
     console.timeEnd(consoleTime);
     return res.json({ metas: [] });
   }

@@ -271,38 +271,6 @@ async function getDBCachedUser(username: string) {
   return { ...user, movies: movie_info };
 }
 
-async function getFilmDataFromLetterboxd(
-  letterboxdSlug: string
-): Promise<IFilm | undefined> {
-  // https://letterboxd.com/ajax/poster/film/wait-until-dark/std/125x187/?k=851e7b94
-  try {
-    const url = `https://letterboxd.com/ajax/poster/film/${letterboxdSlug.replace(
-      / /gi,
-      "-"
-    )}/std/125x187/?k=`;
-    const res = await addonFetch(url);
-    if (!res.ok) {
-      throw Error(`[${letterboxdSlug}]: Couldn't get Letterboxd info: ${url}`);
-    }
-    const rawHtml = await res.text();
-    const $ = cheerio(rawHtml);
-
-    const slug = $("div").data("filmSlug") as string;
-    const year = $("div").data("filmReleaseYear") as string;
-    const name = $("div").data("filmName") as string;
-    let poster = $("img").prop("srcset") as string;
-    if (poster) {
-      poster = poster.replace(/-250-/g, "-400-").replace(/-375-/g, "-600-");
-    }
-
-    return { slug, name, year, poster };
-  } catch (error) {
-    console.error(error);
-  }
-
-  return undefined;
-}
-
 /** Fetch a page from a Letterboxd user's watchlist */
 export async function fetchFilmsSinglePage(
   letterboxdPath: Parameters<typeof fetchFilms>[0],
@@ -368,7 +336,7 @@ export async function fetchFilms(
   >["films"];
 }> {
   const log = logBase.extend("fetch");
-  console.log({ head: options.head }, log);
+
   // early exit, don't continue if the username doesn't match what we expect
   log(`[${letterboxdPath}] Checking path`);
   if (!LetterboxdUsernameOrListRegex.test(letterboxdPath)) {

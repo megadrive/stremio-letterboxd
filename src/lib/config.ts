@@ -172,7 +172,6 @@ export const parseConfig = (str: string): Config => {
       return usernameOrReserved;
     }
 
-    console.log("made unset");
     return "unset";
   })();
 
