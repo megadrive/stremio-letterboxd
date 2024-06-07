@@ -77,7 +77,8 @@ export default function Inputbox() {
       await navigator.clipboard
         .writeText(manifestUrl)
         .then(() => toast.success("Copied, paste in Stremio!"))
-        .catch((_) => {
+        .catch((err) => {
+          toast.error(err.message);
           setInProgress(false);
         });
     }
