@@ -149,6 +149,17 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
     const films = await fetchFilms(config.path);
 
+    // limit what we return, to limit the amount of data we send to the user
+    // @ts-ignore LOL. I know. FIX THIS LATER
+    films.metas = films.metas.map((film) => {
+      return {
+        id: film.id,
+        tupe: film.type,
+        name: film.name,
+        poster: film.poster,
+      };
+    });
+
     lruCache.save(config.pathSafe, films.metas);
 
     if (config.posters) {
