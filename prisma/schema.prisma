@@ -50,3 +50,12 @@ model LetterboxdPoster {
   updatedAt      DateTime       @updatedAt
   letterboxdIMDb LetterboxdIMDb @relation(fields: [letterboxdId], references: [letterboxd])
 }
+
+model Config {
+  id        String   @id @default(uuid())
+  config    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([config])
+}
