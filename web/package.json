@@ -3,8 +3,8 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
+    "dev": "astro dev --host",
+    "start": "astro dev --host",
     "build": "npm i && astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -16,6 +16,7 @@
     "@types/react": "^18.2.70",
     "@types/react-dom": "^18.2.22",
     "astro": "^4.5.9",
+    "astro-tunnel": "^0.1.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",

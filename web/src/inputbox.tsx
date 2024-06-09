@@ -32,7 +32,7 @@ export default function Inputbox() {
    */
   async function generateManifestURL() {
     const base = window.location.origin.includes(":4321")
-      ? "http://localhost:3030"
+      ? "http://192.168.20.27:3030"
       : window.location.origin;
     try {
       const toVerify = btoa(
@@ -74,13 +74,13 @@ export default function Inputbox() {
     const manifestUrl = await generateManifestURL();
     if (manifestUrl.length) {
       setManifest(manifestUrl);
-      await navigator.clipboard
-        .writeText(manifestUrl)
-        .then(() => toast.success("Copied, paste in Stremio!"))
-        .catch((err) => {
-          toast.error(err.message);
-          setInProgress(false);
-        });
+      try {
+        await navigator.clipboard.writeText(manifestUrl);
+        toast.success("Copied, paste in Stremio!");
+      } catch (error) {
+        // @ts-ignore
+        toast.error(error.message);
+      }
     }
     setInProgress(false);
   }
@@ -157,7 +157,21 @@ export default function Inputbox() {
             {inProgress === false ? "Copy" : "Validating..."}
           </button>
         </div>
-        <div className="hidden">{manifest}</div>
+        <div className={`${true ? "" : "hidden"}`}>
+          <div>
+            <a href={manifest}>{manifest}</a>
+          </div>
+          <div>
+            {window.navigator.userActivation.hasBeenActive
+              ? "User has been active"
+              : "User has not been active"}
+          </div>
+          <div>
+            {window.navigator.userActivation.isActive
+              ? "User is active"
+              : "User is not active"}
+          </div>
+        </div>
       </div>
     </div>
   );

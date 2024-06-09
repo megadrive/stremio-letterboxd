@@ -17,7 +17,7 @@ import LogoImage from '../logo.png'
 		<div class="container mx-auto max-w-4xl">
 			<div class="text-center"><Image src={LogoImage} title="Letterboxd logo" alt="Letterboxd logo" class="mx-auto" /></div>
 			<div class="text-center">Add Letterboxd lists as catalogs!</div>
-			<Inputbox client:load />
+			<Inputbox client:only />
 			<br/>
 			<div class="text-center">
 				<Popular client:only />
