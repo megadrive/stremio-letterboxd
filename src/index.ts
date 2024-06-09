@@ -43,8 +43,10 @@ app.get("/manifest.json", (req, res) => {
  * Create the catalog.
  */
 app.get("/:providedConfig/manifest.json", async function (req, res) {
+  const log = logBase.extend("manifest");
   const { providedConfig } = req.params;
   const config = parseConfig(providedConfig);
+  log(config);
 
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
