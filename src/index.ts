@@ -14,6 +14,7 @@ import { lruCache } from "./lib/lruCache.js";
 import { parseConfig } from "./lib/config.js";
 import { replacePosters } from "./providers/letterboxd.js";
 import { logger } from "./logger.js";
+import { prisma } from "./prisma.js";
 const app = express();
 
 const logBase = logger("server");
@@ -45,8 +46,18 @@ app.get("/manifest.json", (req, res) => {
 app.get("/:providedConfig/manifest.json", async function (req, res) {
   const log = logBase.extend("manifest");
   const { providedConfig } = req.params;
-  const config = parseConfig(providedConfig);
-  log(config);
+  let cachedConfig;
+  try {
+    cachedConfig = await prisma.config.findFirstOrThrow({
+      where: {
+        id: providedConfig,
+      },
+    });
+  } catch (error) {
+    log(error);
+    return res.status(500).json();
+  }
+  const config = parseConfig(cachedConfig.config);
 
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
@@ -81,7 +92,18 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
   const { providedConfig, type, id, extra } = req.params;
   const log = logBase.extend(`catalog:${id}`);
-  const config = parseConfig(providedConfig);
+  let cachedConfig;
+  try {
+    cachedConfig = await prisma.config.findFirstOrThrow({
+      where: {
+        id: providedConfig,
+      },
+    });
+  } catch (error) {
+    log(error);
+    return res.status(500).json({ metas: [] });
+  }
+  const config = parseConfig(cachedConfig.config);
   log({ providedConfig, config });
   const username = config.username;
   const parsedExtras = (() => {
@@ -156,7 +178,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     films.metas = films.metas.map((film) => {
       return {
         id: film.id,
-        tupe: film.type,
+        type: film.type,
         name: film.name,
         poster: film.poster,
       };
@@ -289,9 +311,15 @@ app.get("/verify/:base64", async (req, res) => {
     ? userConfig.base.replace(/https/, "stremio")
     : userConfig.base;
 
+  const cachedConfig = await prisma.config.create({
+    data: {
+      config,
+    },
+  });
+
   return res
     .status(200)
-    .json(`${userConfig.base}/${encodeURIComponent(config)}/manifest.json`);
+    .json(`${userConfig.base}/${cachedConfig.id}/manifest.json`);
 });
 
 app.get("/url/:url", async (req, res) => {
