@@ -6,6 +6,7 @@ export default function Inputbox() {
   const [inProgress, setInProgress] = useState(false);
   const [manifest, setManifest] = useState("");
   const [customListName, setCustomListName] = useState("");
+  const [manifestUrl, setManifestUrl] = useState("");
   const urlInput = useRef<HTMLInputElement>(null);
   const customListNameInput = useRef<HTMLInputElement>(null);
 
@@ -55,53 +56,40 @@ export default function Inputbox() {
         return;
       }
       const manifestUrl = await res.json();
-      return manifestUrl;
+      console.log({ manifestUrl });
+      setManifestUrl(manifestUrl);
     } catch (error) {
       // @ts-ignore
       toast.error(`Try again in a few seconds: ${error.message}`);
     }
-
-    return "";
   }
 
-  async function copyToClipboard() {
+  async function generateManifest() {
     updateInputUrl();
     if (url.length === 0) {
       toast.error("Please enter a valid URL");
       return;
     }
     setInProgress(true);
-    const manifestUrl = await generateManifestURL();
+    await generateManifestURL();
     if (manifestUrl.length) {
       setManifest(manifestUrl);
-      try {
-        await navigator.clipboard.writeText(manifestUrl);
-        toast.success("Copied, paste in Stremio!");
-      } catch (error) {
-        // @ts-ignore
-        toast.error(error.message);
-      }
     }
     setInProgress(false);
   }
 
-  async function installAddon() {
+  async function copyToClipboard() {
     try {
-      updateInputUrl();
-      if (url.length === 0) {
-        toast.error("Please enter a valid URL");
-        return;
-      }
-      setInProgress(true);
-      const manifestUrl = await generateManifestURL();
-      if (manifestUrl.length) {
-        setManifest(manifestUrl);
-        window.location.href = manifestUrl;
-        setInProgress(false);
-      }
+      await navigator.clipboard.writeText(manifestUrl);
+      toast.success("Copied, paste in Stremio!");
     } catch (error) {
-      setInProgress(false);
+      // @ts-ignore
+      toast.error(error.message);
     }
+  }
+
+  async function installAddon() {
+    window.location.href = manifestUrl;
   }
 
   return (
@@ -141,23 +129,30 @@ export default function Inputbox() {
             onFocus={updateCustomListName}
           />
         </div>
-        <div className="flex gap-1">
+        <div className="grid gap-1 grid-cols-2 grid-rows-2">
+          <button
+            className="col-span-2 grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
+            onClick={generateManifest}
+            disabled={inProgress}
+          >
+            {inProgress === false ? "Generate Manifest" : "Validating..."}
+          </button>
           <button
             className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
             onClick={installAddon}
-            disabled={inProgress}
+            hidden={inProgress || manifestUrl.length === 0}
           >
             {inProgress === false ? "Install" : "Validating..."}
           </button>
           <button
             className="grow border border-transparent hover:border-white bg-tailwind uppercase text-white text-lg p-2 rounded font-normal"
             onClick={copyToClipboard}
-            disabled={inProgress}
+            hidden={inProgress || manifestUrl.length === 0}
           >
             {inProgress === false ? "Copy" : "Validating..."}
           </button>
         </div>
-        <div className={`${true ? "" : "hidden"}`}>
+        <div className={`${false ? "" : "hidden"}`}>
           <div>
             <a href={manifest}>{manifest}</a>
           </div>
