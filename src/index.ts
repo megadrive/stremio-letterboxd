@@ -15,6 +15,7 @@ import { parseConfig } from "./lib/config.js";
 import { replacePosters } from "./providers/letterboxd.js";
 import { logger } from "./logger.js";
 import { prisma } from "./prisma.js";
+import { StremioMeta, StremioMetaPreview } from "./consts.js";
 const app = express();
 
 const logBase = logger("server");
@@ -87,6 +88,17 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
   return res.json(cloned_manifest);
 });
 
+function toStremioMetaPreview(metas: StremioMeta[]): StremioMetaPreview[] {
+  return metas.map((film) => {
+    return {
+      id: film.id,
+      type: film.type,
+      name: film.name,
+      poster: film.poster,
+    };
+  });
+}
+
 // Serve the meta items
 app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
@@ -105,25 +117,26 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   const log = logBase.extend(`catalog:${id}`);
   let cachedConfig;
   try {
-    cachedConfig = await prisma.config.findFirstOrThrow({
+    cachedConfig = await prisma.config.findFirst({
       where: {
         id: providedConfig,
       },
     });
+    if (!cachedConfig) {
+      log(`No config found for ${providedConfig}, using provided config`);
+    }
   } catch (error) {
     log(error);
-    if (!parsedExtras?.letterboxdhead) {
-      return res.status(500).json({ metas: [] });
-    }
+    return res.status(500).json({ metas: [] });
   }
   // if we have a cacched config, use it, otherwise use the provided one
   const config = parseConfig(
     cachedConfig ? cachedConfig.config : providedConfig
   );
-  log({ providedConfig, config });
+
   const username = config.username;
 
-  if (parsedExtras && parsedExtras["letterboxdhead"] === "1") {
+  if (parsedExtras && parsedExtras["letterboxdhead"]) {
     // Perform a HEAD-style request to confirm the resource exists and has at least 1 movie.
     const metas = await fetchFilms(config.path, { head: true });
     return res.status(200).json(metas);
@@ -176,34 +189,26 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       });
     }
 
-    const films = await fetchFilms(config.path, {
+    let films = await fetchFilms(config.path, {
       head: Boolean(parsedExtras?.letterboxdhead),
     });
 
     // limit what we return, to limit the amount of data we send to the user
     // @ts-ignore LOL. I know. FIX THIS LATER
-    films.metas = films.metas.map((film) => {
-      return {
-        id: film.id,
-        type: film.type,
-        name: film.name,
-        poster: film.poster,
-      };
-    });
-
+    films = toStremioMetaPreview(films);
     if (!parsedExtras?.letterboxdhead) {
-      lruCache.save(config.pathSafe, films.metas);
+      lruCache.save(config.pathSafe, films);
     }
 
     if (config.posters) {
       log(`Replacing Letterboxd posters for ${config.path}`);
-      films.metas = await replacePosters(films.metas);
+      films = await replacePosters(films);
     }
 
     log(`[${config.path}] serving fresh`);
-    log(`[${config.path}] serving ${films.metas.length}`);
+    log(`[${config.path}] serving ${films.length}`);
     console.timeEnd(consoleTime);
-    return res.json({ metas: paginate(films.metas) });
+    return res.json({ metas: paginate(films) });
   } catch (error) {
     // Return empty
     log(error);

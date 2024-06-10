@@ -330,18 +330,14 @@ export async function fetchFilms(
     head?: boolean;
     preferLetterboxdPosters?: boolean;
   } = { preferLetterboxdPosters: false }
-): Promise<{
-  metas: Awaited<
-    ReturnType<typeof fetchFilmsSinglePage> & { elapsed: Date["toString"] }
-  >["films"];
-}> {
+): Promise<StremioMetaPreview[]> {
   const log = logBase.extend("fetch");
 
   // early exit, don't continue if the username doesn't match what we expect
   log(`[${letterboxdPath}] Checking path`);
   if (!LetterboxdUsernameOrListRegex.test(letterboxdPath)) {
     log(`[${letterboxdPath}] path invalid`);
-    return { metas: [] };
+    return [];
   }
 
   const fetchFreshData = async () => {
@@ -375,10 +371,7 @@ export async function fetchFilms(
       logFresh(`[${letterboxdPath}] has ${pages} pages`);
 
       // full data will go in here
-      const metaToReturn: Awaited<ReturnType<typeof fetchFilms>> = {
-        metas: [],
-      };
-
+      let metasToReturn: Awaited<ReturnType<typeof fetchFilms>> = [];
       // grab the pages
       const promises = [];
       for (let page = 1; page <= pages; page++) {
@@ -398,13 +391,10 @@ export async function fetchFilms(
       });
 
       results.forEach((result) => {
-        metaToReturn.metas = [...metaToReturn.metas, ...result.films];
+        metasToReturn = [...metasToReturn, ...result.films];
       });
 
-      /* async */ upsertLetterboxdUserWithMovies(
-        letterboxdPath,
-        metaToReturn.metas
-      )
+      /* async */ upsertLetterboxdUserWithMovies(letterboxdPath, metasToReturn)
         .then((user) =>
           logFresh(
             `[${letterboxdPath}]: updated user . ${user.updatedAt} with ${
@@ -419,12 +409,10 @@ export async function fetchFilms(
         `[${letterboxdPath}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
       );
 
-      return {
-        metas: metaToReturn.metas,
-      };
+      return metasToReturn;
     } catch (error) {
       log(error);
-      return { metas: [] };
+      return [];
     }
   };
 
@@ -451,7 +439,7 @@ export async function fetchFilms(
     const freshStartTime = Date.now();
     /* async */ fetchFreshData()
       .then((data) => {
-        log(`Fetched fresh data -> ${data.metas.length} films`);
+        log(`Fetched fresh data -> ${data.length} films`);
         if (!cachedUser)
           return {
             source: "fresh",
@@ -477,7 +465,7 @@ export async function fetchFilms(
         Date.now()
       )}`
     );
-    return { metas: cached_movies };
+    return cached_movies;
   } catch (error) {
     log(`[${letterboxdPath}]: No user or old data, continuing..`);
   }

@@ -1,9 +1,9 @@
 import path, { join } from "path";
 import { prisma } from "../prisma.js";
 import { LRUCache } from "lru-cache";
-import { ONE_HOUR, StremioMeta } from "../consts.js";
+import { ONE_HOUR, StremioMeta, StremioMetaPreview } from "../consts.js";
 
-const cache = new LRUCache<string, StremioMeta[]>({
+const cache = new LRUCache<string, StremioMetaPreview[]>({
   max: 100,
   ttl: ONE_HOUR,
   allowStale: true,
@@ -20,7 +20,7 @@ const generatePath = (id: string) =>
   );
 
 export const lruCache = {
-  save: async (id: string, providedMetas?: StremioMeta[]) => {
+  save: async (id: string, providedMetas?: StremioMetaPreview[]) => {
     console.info(
       `[lrucache:save] Start saving ${id} with ${providedMetas?.length} movies provided.`
     );
