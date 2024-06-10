@@ -33,7 +33,7 @@ export default function Inputbox() {
    */
   async function generateManifestURL() {
     const base = window.location.origin.includes(":4321")
-      ? "http://192.168.20.27:3030"
+      ? "http://localhost:3030"
       : window.location.origin;
     try {
       const toVerify = btoa(

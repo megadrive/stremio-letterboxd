@@ -91,21 +91,6 @@ app.get("/:providedConfig/manifest.json", async function (req, res) {
 app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   // We would use {id} if we had more than one list.
   const { providedConfig, type, id, extra } = req.params;
-  const log = logBase.extend(`catalog:${id}`);
-  let cachedConfig;
-  try {
-    cachedConfig = await prisma.config.findFirstOrThrow({
-      where: {
-        id: providedConfig,
-      },
-    });
-  } catch (error) {
-    log(error);
-    return res.status(500).json({ metas: [] });
-  }
-  const config = parseConfig(cachedConfig.config);
-  log({ providedConfig, config });
-  const username = config.username;
   const parsedExtras = (() => {
     if (!extra) return undefined;
 
@@ -117,6 +102,26 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     }
     return rv;
   })();
+  const log = logBase.extend(`catalog:${id}`);
+  let cachedConfig;
+  try {
+    cachedConfig = await prisma.config.findFirstOrThrow({
+      where: {
+        id: providedConfig,
+      },
+    });
+  } catch (error) {
+    log(error);
+    if (!parsedExtras?.letterboxdhead) {
+      return res.status(500).json({ metas: [] });
+    }
+  }
+  // if we have a cacched config, use it, otherwise use the provided one
+  const config = parseConfig(
+    cachedConfig ? cachedConfig.config : providedConfig
+  );
+  log({ providedConfig, config });
+  const username = config.username;
 
   if (parsedExtras && parsedExtras["letterboxdhead"] === "1") {
     // Perform a HEAD-style request to confirm the resource exists and has at least 1 movie.
@@ -171,7 +176,9 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       });
     }
 
-    const films = await fetchFilms(config.path);
+    const films = await fetchFilms(config.path, {
+      head: Boolean(parsedExtras?.letterboxdhead),
+    });
 
     // limit what we return, to limit the amount of data we send to the user
     // @ts-ignore LOL. I know. FIX THIS LATER
@@ -184,7 +191,9 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       };
     });
 
-    lruCache.save(config.pathSafe, films.metas);
+    if (!parsedExtras?.letterboxdhead) {
+      lruCache.save(config.pathSafe, films.metas);
+    }
 
     if (config.posters) {
       log(`Replacing Letterboxd posters for ${config.path}`);
