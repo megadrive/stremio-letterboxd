@@ -8,9 +8,12 @@
 ## Installation
 
 1. Clone the repo
-2. Run `npm install` to install dependencies
-3. Run `npm run build` to build the project
-4. Run `npm run start` to start the addon, it will then be available at `http://localhost:3030`
+2. Change environment variables in `.env`. See [Configuration](#configuration).
+3. Run `npm install` to install dependencies
+4. Run `npm run build` to build the project
+5. Run `npm run start` to start the addon, it will then be available at `http://localhost:PORT`
+
+If you ever need to start fresh, delete `node_modules` and `package-lock.json`, from both `/` and `/astro` then run `npm install` again.
 
 ## Configuration
 
@@ -19,6 +22,7 @@ The server is configured via environment variables. The following variables are 
 - `DATABASE_URL`: The URL of the database.
 - `NODE_ENV`: The environment, either `development` or `production`
 - `DEBUG`: Logs are prefixed with `letterboxd`, separated by a `:`. Set to `letterboxd:*` to see all logs for the addon.
+- `PORT`: The port the addon will run on. Default: 3030
 
 ### Databases
 

@@ -214,7 +214,6 @@ export const parseConfig = (str: string): Config => {
     }
     preferred is decade -> genre -> sort/by -> on
     */
-      console.log("catalog opts", opts);
       const catalog: string[] = [];
       if (opts.this) {
         catalog.push("Popular this " + opts.this);
@@ -267,15 +266,3 @@ export const parseConfig = (str: string): Config => {
 
   return resolvedConfig;
 };
-
-[
-  "/films/popular/this/week/",
-  "/ben_v_/activity/|p",
-  "/films/popular/this/week/decade/1940s/genre/documentary/",
-  "/almosteffective/watchlist",
-  "/almosteffective/list/addon-wrong/",
-  "/almosteffective/list/maybe/share/XnaH9zFXs11jxLik/|p|cn=A Custom Thing",
-].map((url) => {
-  const parsedConfig = parseConfig(encodeURIComponent(url));
-  console.log(url, parsedConfig);
-});

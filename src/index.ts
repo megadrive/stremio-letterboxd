@@ -387,4 +387,6 @@ app.get("/check/:id", async (req, res) => {
   res.status(fres.ok ? 200 : 404).end("");
 });
 
-app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`Stremio-Letterboxd available at http://localhost:${PORT}`)
+);
