@@ -17,14 +17,14 @@ import LogoImage from '../logo.png'
 		<div class="container mx-auto max-w-4xl">
 			<div class="text-center"><Image src={LogoImage} title="Letterboxd logo" alt="Letterboxd logo" class="mx-auto" /></div>
 			<div class="text-center">Add Letterboxd lists as catalogs!</div>
-			<Inputbox client:only />
+			<Inputbox client:only="react" />
 			<br/>
 			<div class="text-center">
-				<Popular client:only />
+				<Popular client:only="react" />
 			</div>
 			<br/>
 			<div class="text-center">
-				<small class="hover:underline"><a href="https://letterboxd-dev.up.railway.app/">Do you live on the edge? Try the in-development version! Guaranteed to break!</a></small>
+				<small class="hover:underline"><a href="https://letterboxd-dev.almosteffective.com/">Do you live on the edge? Try the in-development version! Guaranteed to break!</a></small>
 			</div>
 		</div>
 	</body>
