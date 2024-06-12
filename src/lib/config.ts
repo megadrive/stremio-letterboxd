@@ -154,7 +154,7 @@ export const parseConfig = (str: string): Config => {
   const type = ((): Config["type"] => {
     // replace duplicate slashes, then split
     // if "/list or /watchlist", it's a list.
-    if (reserved.second.includes(typeOrPerson.toLowerCase())) {
+    if (typeOrPerson && reserved.second.includes(typeOrPerson.toLowerCase())) {
       switch (typeOrPerson.toLowerCase()) {
         case "watchlist":
           return "watchlist";
@@ -165,7 +165,10 @@ export const parseConfig = (str: string): Config => {
       }
     }
 
-    if (reserved.first.includes(usernameOrReserved.toLowerCase())) {
+    if (
+      usernameOrReserved &&
+      reserved.first.includes(usernameOrReserved.toLowerCase())
+    ) {
       isReservedType = true;
       // TODO: Typescript error here, might need to hoist the reserved up and use an `as const`.
       // @ts-ignore
