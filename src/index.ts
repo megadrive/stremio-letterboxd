@@ -16,11 +16,15 @@ import { replacePosters } from "./providers/letterboxd.js";
 import { logger } from "./logger.js";
 import { prisma } from "./prisma.js";
 import type { StremioMeta, StremioMetaPreview } from "./consts.js";
+import { publishToCentral } from "./lib/publishToStremioOfficialRepository.js";
+
 const app = express();
 
 const logBase = logger("server");
 
-const __dirname = path.resolve(path.dirname(""));
+if (env.isProd || env.isProduction) {
+  publishToCentral("https://letterboxd.almosteffective.com/");
+}
 
 const PORT = process.env.PORT || 3030;
 
