@@ -1,14 +1,25 @@
 import { env } from "./env.js";
 
+const FILMS_PER_PAGE = 28;
+export const TOO_MANY_MOVIES = FILMS_PER_PAGE * 10;
+
 export const ONE_HOUR = 3600000;
 const THIRTY_SECONDS = 30000;
+
 export const config = {
+  // TODO: Determine if the below is redundant
   /* In milliseconds. When the cached user data is stale. */
   cache_user_stale_time: env.isProduction ? ONE_HOUR * 12 : THIRTY_SECONDS,
   /* In milliseconds. When the cached list data is stale. */
   cache_list_stale_time: env.isProduction ? ONE_HOUR * 24 : THIRTY_SECONDS,
   /* In milliseconds. When the cached TMDB data is stale. */
   cache_tmdb_stale_time: ONE_HOUR * 24,
+  // TODO: Determine if the above is redundant
+
+  /** The number of films to fetch per page. Determined by Letterboxd. */
+  filmsPerPage: FILMS_PER_PAGE,
+  /** Threashold of a "big" list, so make TTL longer. */
+  filmThreshold: TOO_MANY_MOVIES,
 };
 
 export const LetterboxdRegex =

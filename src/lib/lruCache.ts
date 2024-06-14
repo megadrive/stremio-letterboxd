@@ -1,7 +1,7 @@
-import path, { join } from "node:path";
 import { prisma } from "../prisma.js";
 import { LRUCache } from "lru-cache";
 import {
+  config,
   ONE_HOUR,
   type StremioMeta,
   type StremioMetaPreview,
@@ -12,16 +12,6 @@ const cache = new LRUCache<string, StremioMetaPreview[]>({
   ttl: ONE_HOUR,
   allowStale: true,
 });
-
-const __dirname = path.resolve(path.dirname(""));
-
-const generatePath = (id: string) =>
-  join(
-    __dirname,
-    "static",
-    "lists",
-    `${decodeURIComponent(id).replace(/(\||%7C)/g, "-")}.json`
-  );
 
 export const lruCache = {
   save: async (id: string, providedMetas?: StremioMetaPreview[]) => {
@@ -92,7 +82,13 @@ export const lruCache = {
       //     ? Date.now() + 1000 * 60 * metas.length
       //     : Date.now() + 1000 * 60 * 60;
       console.info(`[lrucache:save]: saving ${id} with ${metas.length} metas`);
-      cache.set(id, metas);
+      const cacheOpts: Parameters<typeof cache.set>[2] = {};
+      if (metas.length > config.filmThreshold) {
+        const amountOver = config.filmThreshold - metas.length;
+        const extraTTL = (ONE_HOUR / 2) * amountOver;
+        cacheOpts.ttl = extraTTL;
+      }
+      cache.set(id, metas, cacheOpts);
       return true;
     } catch (error) {
       console.error(`[lrucache:save] Couldn't save staticCache ${id}`);
