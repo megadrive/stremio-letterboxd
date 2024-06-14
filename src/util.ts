@@ -8,11 +8,7 @@ import { env } from "./env.js";
  * @param isAjaxRequest If it's an AJAX request, changes the URL slightly
  * @returns A fully-qualified Letterboxd URL
  */
-export const generateURL = (
-  path: string,
-  page: number = 1,
-  isAjaxRequest = false
-) => {
+export const generateURL = (path: string, page = 1, isAjaxRequest = false) => {
   // slice is to strip the initial /
   let split = path.replace(/\/+/g, "/").split("/");
   if (isAjaxRequest) {
@@ -93,5 +89,5 @@ export const IDUtil = {
   },
 };
 
-export const PrependWithDev = (s: string, seperator: string = ".") =>
+export const PrependWithDev = (s: string, seperator = ".") =>
   !env.isProduction ? `dev${seperator}${s}` : s;

@@ -1,7 +1,7 @@
 import { addonFetch } from "../lib/fetch.js";
 import { load as cheerio } from "cheerio";
 import { prisma } from "../prisma.js";
-import type { StremioMeta, StremioMetaPreview } from "../consts.js";
+import type { StremioMetaPreview } from "../consts.js";
 import { logger } from "../logger.js";
 
 const logBase = logger("providers:letterboxd");
@@ -10,15 +10,15 @@ const getHtml = async (
   letterboxdSlug: string,
   overrideUrl?: string
 ): Promise<ReturnType<typeof cheerio>> => {
-  letterboxdSlug = letterboxdSlug.replace(/ /g, "-");
+  const modifiedSlug = letterboxdSlug.replace(/ /g, "-");
   const url = !overrideUrl
-    ? `https://letterboxd.com/film/${letterboxdSlug}`
-    : overrideUrl.replace(/\{letterboxdSlug\}/g, letterboxdSlug);
+    ? `https://letterboxd.com/film/${modifiedSlug}`
+    : overrideUrl.replace(/\{letterboxdSlug\}/g, modifiedSlug);
   const res = await addonFetch(url, {
     keepalive: false,
   });
   if (!res.ok) {
-    throw Error(`[${letterboxdSlug}]: Couldn't get Letterboxd info: ${url}`);
+    throw Error(`[${modifiedSlug}]: Couldn't get Letterboxd info: ${url}`);
   }
 
   const html = await res.text();
@@ -33,11 +33,11 @@ const getHtml = async (
  */
 const updatePoster = async (letterboxdId: string) => {
   const log = logBase.extend("updatePoster");
-  letterboxdId = `${letterboxdId}`;
+  const stringifiedId = `${letterboxdId}`;
   try {
     const letterboxd = await prisma.letterboxdPoster.findUnique({
       where: {
-        letterboxdId,
+        letterboxdId: stringifiedId,
       },
     });
 
@@ -60,7 +60,7 @@ const updatePoster = async (letterboxdId: string) => {
     );
 
     const $ = await getHtml(
-      letterboxdId,
+      stringifiedId,
       "https://letterboxd.com/ajax/poster/film/{letterboxdSlug}/std/1000x1500/?k=53eb16aa"
     );
 
@@ -70,10 +70,10 @@ const updatePoster = async (letterboxdId: string) => {
     }
     const upserted = await prisma.letterboxdPoster.upsert({
       where: {
-        letterboxdId,
+        letterboxdId: stringifiedId,
       },
       create: {
-        letterboxdId,
+        letterboxdId: stringifiedId,
         url: poster,
       },
       update: {

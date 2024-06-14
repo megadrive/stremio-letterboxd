@@ -71,7 +71,10 @@ const parseOldConfig = (str: string): Config => {
  */
 export const parseConfig = (str: string): Config => {
   // remove leading https://letterboxd.com if present
-  str = str.trim().replace(/^https:\/\/(www\.)?letterboxd\.com/, "");
+  const convertedConfigString = str
+    .trim()
+    .replace(/^https:\/\/(www\.)?letterboxd\.com/, "");
+
   /**
    * Expected input: %2Ffcbarcelona%2Flist%2Fmovies-everyone-should-watch-at-least-once%2F%2Cp
    * p = posters
@@ -84,13 +87,13 @@ export const parseConfig = (str: string): Config => {
     catalogName?: Config["catalogName"];
   } = { posters: false };
   if (providedOpts) {
-    providedOpts.forEach((o) => {
-      o = decodeURIComponent(o);
+    for (const o of providedOpts) {
+      const opt = decodeURIComponent(o);
       // if a = is included, parse as a string
-      if (!o.includes("=")) {
+      if (!opt.includes("=")) {
         // parse as a boolean, then continue
         opts.posters = o === "p";
-        return;
+        continue;
       }
 
       // parse as a string
@@ -98,7 +101,7 @@ export const parseConfig = (str: string): Config => {
       if (k === "cn") {
         opts.catalogName = v;
       }
-    });
+    }
   }
 
   if (!path.startsWith("/")) {
@@ -219,7 +222,7 @@ export const parseConfig = (str: string): Config => {
     */
       const catalog: string[] = [];
       if (opts.this) {
-        catalog.push("Popular this " + opts.this);
+        catalog.push(`Popular this ${opts.this}`);
       }
       if (opts.decade) {
         catalog.push(opts.decade);

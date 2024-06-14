@@ -1,7 +1,7 @@
 import { config as dotenv } from "dotenv";
 dotenv();
 
-import path, { join } from "path";
+import path from "node:path";
 
 import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
@@ -15,7 +15,7 @@ import { parseConfig } from "./lib/config.js";
 import { replacePosters } from "./providers/letterboxd.js";
 import { logger } from "./logger.js";
 import { prisma } from "./prisma.js";
-import { StremioMeta, StremioMetaPreview } from "./consts.js";
+import type { StremioMeta, StremioMetaPreview } from "./consts.js";
 const app = express();
 
 const logBase = logger("server");
@@ -32,9 +32,7 @@ app.get("/", (_req, res) => {
 });
 
 // TODO: Make the new landing page work with provided values.
-app.get("/:id?/configure", function (req, res, next) {
-  return res.redirect("/configure");
-});
+app.get("/:id?/configure", (req, res, next) => res.redirect("/configure"));
 
 app.get("/manifest.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -44,10 +42,10 @@ app.get("/manifest.json", (req, res) => {
 /**
  * Create the catalog.
  */
-app.get("/:providedConfig/manifest.json", async function (req, res) {
+app.get("/:providedConfig/manifest.json", async (req, res) => {
   const log = logBase.extend("manifest");
   const { providedConfig } = req.params;
-  let cachedConfig;
+  let cachedConfig: Awaited<ReturnType<typeof prisma.config.findFirstOrThrow>>;
   try {
     cachedConfig = await prisma.config.findFirstOrThrow({
       where: {
@@ -115,7 +113,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     return rv;
   })();
   const log = logBase.extend(`catalog:${id}`);
-  let cachedConfig;
+  let cachedConfig: Awaited<ReturnType<typeof prisma.config.findFirst>>;
   try {
     cachedConfig = await prisma.config.findFirst({
       where: {
@@ -136,7 +134,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
   const username = config.username;
 
-  if (parsedExtras && parsedExtras["letterboxdhead"]) {
+  if (parsedExtras?.letterboxdhead) {
     // Perform a HEAD-style request to confirm the resource exists and has at least 1 movie.
     const metas = await fetchFilms(config.path, { head: true });
     return res.status(200).json(metas);
@@ -165,10 +163,13 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     // slice is zero based, stremio is 1 based
     const paginate = (arr: unknown[], skip?: number): unknown[] => {
       const amt = parsedExtras?.skip ? +parsedExtras.skip + 99 : 199;
+      let skipAmt = 0;
+
       if (!skip) {
-        skip = +(parsedExtras?.skip ?? 0);
+        skipAmt = +(parsedExtras?.skip ?? 0);
       }
-      const sliced = arr.slice(skip, amt);
+
+      const sliced = arr.slice(skipAmt, amt);
       return sliced;
     };
 
@@ -232,36 +233,37 @@ app.get("/generate/:url", (req, res) => {
  * {url: string, posters: boolean, base: string, customListName: string}
  */
 app.get("/verify/:base64", async (req, res) => {
+  type VerifyConfig = {
+    url: string;
+    base: string;
+    posters: boolean;
+    customListName: string;
+  };
   const log = logBase.extend("verify");
   // Resolve config
   const { base64 } = req.params;
-  let decoded;
-  let userConfig;
+  let decoded: string;
+  let userConfig: VerifyConfig;
   try {
     decoded = atob(base64);
     log({ decoded });
-    userConfig = JSON.parse(decoded) as {
-      url: string;
-      base: string;
-      posters: boolean;
-      customListName: string;
-    };
+    userConfig = JSON.parse(decoded) as VerifyConfig;
   } catch {
-    log(`Could not convert base64 to string or convert to userConfig`, base64);
+    log("Could not convert base64 to string or convert to userConfig", base64);
     return res.status(500).json();
   }
 
-  log(`Got userconfig:`, userConfig);
+  log("Got userconfig:", userConfig);
 
   // Early exit if no url provided
   if (!userConfig.url || userConfig.url.length === 0) {
-    log(`no url in userconfig`);
+    log("no url in userconfig");
     return res.status(500).send();
   }
 
   // Resolve final URL (boxd.it -> letterboxd)
   if (userConfig.url.startsWith("https://boxd.it/")) {
-    log(`converting boxd.it url`);
+    log("converting boxd.it url");
     try {
       const fetchRes = await fetch(userConfig.url, { redirect: "follow" });
       if (!fetchRes.ok) {
@@ -280,7 +282,7 @@ app.get("/verify/:base64", async (req, res) => {
   if (userConfig.posters) {
     opts.push("p");
   }
-  if (userConfig.customListName && userConfig.customListName.length) {
+  if (userConfig?.customListName?.length) {
     opts.push(`cn=${userConfig.customListName}`);
   } else {
     try {
@@ -318,7 +320,7 @@ app.get("/verify/:base64", async (req, res) => {
     log(`Couldn't get metas`);
     return res.status(500).json(error.message);
   }
-  log(`Got metas!`);
+  log("Got metas!");
 
   // change protocol to stremio, only if https
   userConfig.base = userConfig.base.startsWith("https")
@@ -338,7 +340,7 @@ app.get("/verify/:base64", async (req, res) => {
 
 app.get("/url/:url", async (req, res) => {
   const { url } = req.params;
-  let letterboxdUrl = decodeURIComponent(url);
+  const letterboxdUrl = decodeURIComponent(url);
 
   if (!letterboxdUrl) return res.status(404).send();
   try {

@@ -4,9 +4,9 @@ import { prisma } from "./prisma.js";
 import {
   type CinemetaMovieResponseLive,
   type StremioMetaPreview,
+  type StremioMeta,
   config,
   LetterboxdUsernameOrListRegex,
-  StremioMeta,
 } from "./consts.js";
 import {
   generateURL,
@@ -20,13 +20,6 @@ import { logger } from "./logger.js";
 import { env } from "./env.js";
 
 const logBase = logger("fetcher");
-
-type IFilm = {
-  slug: string;
-  name?: string;
-  year?: string;
-  poster?: string;
-};
 
 /** Parse a Cinemeta API response into a Streamio Meta Preview object. */
 function parseCinemetaInfo(meta: CinemetaMovieResponseLive["meta"]) {
@@ -45,11 +38,11 @@ async function getImdbIDs(films: string[]) {
   const IDs: string[] = [];
   const filmPromises = films.map((f) => find(f));
   const results = await Promise.allSettled(filmPromises);
-  results.forEach((result) => {
+  for (const result of results) {
     if (result.status === "fulfilled" && result.value) {
       IDs.push(result.value.imdb);
     }
-  });
+  }
 
   return IDs;
 }
@@ -92,7 +85,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
     // split into 0-99 chunks
     const chunks = ((): string[][] => {
       const chunkSize = 100;
-      let chunks: (typeof toFetch)[] = [];
+      const chunks: (typeof toFetch)[] = [];
       for (let i = 0; i < toFetch.length; i += chunkSize) {
         chunks.push(toFetch.slice(i, i + chunkSize));
       }
@@ -127,7 +120,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
         }
       };
 
-      for (let chunk of chunks) {
+      for (const chunk of chunks) {
         try {
           log(`[cinemeta] getting chunk ${rv.length}`);
           const res = await fetchChunk(chunk);
@@ -137,7 +130,6 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
           rv.push(...filtered);
         } catch {
           log(`Couldn't fetch chunk ${rv.length}`);
-          continue;
         }
       }
 
@@ -221,16 +213,16 @@ async function upsertLetterboxdUserWithMovies(
     return cached_user;
   }
 
-  movies = movies.filter(Boolean);
+  const filteredMovies = movies.filter(Boolean);
   const user = await prisma.letterboxdUser.upsert({
     where: { id: username },
     create: {
       id: username,
-      movie_ids: JSON.stringify(movies.map((movie) => movie.id)),
+      movie_ids: JSON.stringify(filteredMovies.map((movie) => movie.id)),
     },
     update: {
       id: username,
-      movie_ids: JSON.stringify(movies.map((movie) => movie.id)),
+      movie_ids: JSON.stringify(filteredMovies.map((movie) => movie.id)),
     },
   });
 
@@ -378,7 +370,7 @@ export async function fetchFilms(
         promises.push(fetchFilmsSinglePage(letterboxdPath, { page }));
       }
       // const results = await Promise.allSettled(promises);
-      let results = await Promise.all(promises.splice(0, 1));
+      const results = await Promise.all(promises.splice(0, 1));
 
       while (promises.length) {
         // 10 pages at a time (280 movies at a time)
@@ -390,9 +382,9 @@ export async function fetchFilms(
         return a.page - b.page;
       });
 
-      results.forEach((result) => {
+      for (const result of results) {
         metasToReturn = [...metasToReturn, ...result.films];
-      });
+      }
 
       /* async */ upsertLetterboxdUserWithMovies(letterboxdPath, metasToReturn)
         .then((user) =>
@@ -419,7 +411,7 @@ export async function fetchFilms(
   const cachedStartTime = Date.now();
   // if we have a cached user, serve that and update in the background for _-sPeEd-_
   try {
-    let cachedUser = await getDBCachedUser(letterboxdPath);
+    const cachedUser = await getDBCachedUser(letterboxdPath);
     log(`[${letterboxdPath}]: ${cachedUser ? "got" : "couldnt get"} cached`);
     // if (options.preferLetterboxdPosters) {
     //   cachedUser = replaceMetaWithLetterboxdPosters(

@@ -1,7 +1,11 @@
-import path, { join } from "path";
+import path, { join } from "node:path";
 import { prisma } from "../prisma.js";
 import { LRUCache } from "lru-cache";
-import { ONE_HOUR, StremioMeta, StremioMetaPreview } from "../consts.js";
+import {
+  ONE_HOUR,
+  type StremioMeta,
+  type StremioMetaPreview,
+} from "../consts.js";
 
 const cache = new LRUCache<string, StremioMetaPreview[]>({
   max: 100,
@@ -28,7 +32,7 @@ export const lruCache = {
     console.time(consoleTime);
 
     // if metas provided, save early and quit
-    if (providedMetas && providedMetas.length) {
+    if (providedMetas?.length) {
       cache.set(id, providedMetas);
       return true;
     }
@@ -65,7 +69,7 @@ export const lruCache = {
     }
 
     // get meta from movies
-    const metas: any[] = [];
+    const metas: StremioMeta[] = [];
 
     // get all cinemeta, if we can
     const cinemetas = await prisma.cinemeta.findMany({
@@ -73,7 +77,7 @@ export const lruCache = {
     });
 
     // sort the metas
-    for (let movie of movies) {
+    for (const movie of movies) {
       // find the cinemeta entry and push it to metas
       const foundMovie = cinemetas.findIndex((m) => m.id === movie);
       if (foundMovie === -1) continue;
