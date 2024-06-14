@@ -16,7 +16,7 @@ const manifest: ManifestExpanded = {
   catalogs: [],
   behaviorHints: {
     configurable: true,
-    configurationRequired: true,
+    configurationRequired: false,
   },
 };
 
