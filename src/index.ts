@@ -58,7 +58,9 @@ app.get("/manifest.json", (req, res) => {
 app.get("/:providedConfig/manifest.json", async (req, res) => {
   const log = logBase.extend("manifest");
   const { providedConfig } = req.params;
-  let cachedConfig: Awaited<ReturnType<typeof prisma.config.findFirstOrThrow>>;
+  let cachedConfig:
+    | Awaited<ReturnType<typeof prisma.config.findFirstOrThrow>>
+    | undefined = undefined;
   try {
     cachedConfig = await prisma.config.findFirstOrThrow({
       where: {
@@ -66,10 +68,15 @@ app.get("/:providedConfig/manifest.json", async (req, res) => {
       },
     });
   } catch (error) {
+    log("No config found for providedConfig", providedConfig);
     log(error);
+  }
+  const config = parseConfig(
+    cachedConfig ? cachedConfig.config : providedConfig
+  );
+  if (!config) {
     return res.status(500).json();
   }
-  const config = parseConfig(cachedConfig.config);
 
   const cloned_manifest = JSON.parse(
     JSON.stringify(manifest)
