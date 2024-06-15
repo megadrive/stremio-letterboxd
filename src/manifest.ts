@@ -16,8 +16,10 @@ const manifest: ManifestExpanded = {
   catalogs: [],
   behaviorHints: {
     configurable: true,
-    configurationRequired: true,
+    /** Only set to true if Stremio makes it workable with non-SDK addons. */
+    // configurationRequired: false,
   },
+  contactEmail: "stremio@almosteffective.com",
 };
 
 export default manifest;
