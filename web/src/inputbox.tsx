@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 
 export default function Inputbox() {
@@ -7,8 +7,42 @@ export default function Inputbox() {
   const [manifest, setManifest] = useState("");
   const [customListName, setCustomListName] = useState("");
   const [manifestUrl, setManifestUrl] = useState("");
+  const [config, setConfig] = useState<{ path: string; catalogName: string }>();
   const urlInput = useRef<HTMLInputElement>(null);
   const customListNameInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const providedConfigId = params.get("id") ?? "";
+
+    // get the config if the ID exists.
+    if (providedConfigId) {
+      setInProgress(true);
+      const base = window.location.origin.includes(":4321")
+        ? "http://localhost:3030"
+        : window.location.origin;
+      fetch(`${base}/getConfig/${encodeURIComponent(providedConfigId)}`)
+        .then((res) => res.json())
+        .then((gotConfig: typeof config) => {
+          if (!gotConfig) throw new Error("No config found");
+
+          setConfig(gotConfig);
+          setCustomListName(gotConfig.catalogName);
+          const configToProvide = encodeURIComponent(
+            `${gotConfig.path}${
+              gotConfig.catalogName ? `|cn=${gotConfig.catalogName}` : ""
+            }`
+          );
+          setManifest(`${base}/${configToProvide}/manifest.json`);
+        })
+        .catch((error) => {
+          console.warn(error);
+        })
+        .finally(() => {
+          setInProgress(false);
+        });
+    }
+  }, []);
 
   function updateInputUrl() {
     if (urlInput.current?.value) {
@@ -66,6 +100,7 @@ export default function Inputbox() {
 
   async function generateManifest() {
     updateInputUrl();
+    setManifest("");
     if (url.length === 0) {
       toast.error("Please enter a valid URL");
       return;
@@ -111,6 +146,11 @@ export default function Inputbox() {
             onKeyUp={updateInputUrl}
             onBlur={updateInputUrl}
             onFocus={updateInputUrl}
+            defaultValue={
+              config?.path
+                ? `https://letterboxd.com${decodeURIComponent(config.path)}`
+                : ""
+            }
           />
         </div>
         <div className="text-base">
@@ -127,6 +167,11 @@ export default function Inputbox() {
             onKeyUp={updateCustomListName}
             onBlur={updateCustomListName}
             onFocus={updateCustomListName}
+            defaultValue={
+              config?.catalogName
+                ? `${decodeURIComponent(config.catalogName)}`
+                : ""
+            }
           />
         </div>
         <div className="grid gap-1 grid-cols-2 grid-rows-2">
@@ -134,6 +179,7 @@ export default function Inputbox() {
             className="col-span-2 grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
             onClick={generateManifest}
             disabled={inProgress}
+            type="button"
           >
             {inProgress === false ? "Generate Manifest" : "Validating..."}
           </button>
@@ -141,6 +187,7 @@ export default function Inputbox() {
             className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
             onClick={installAddon}
             hidden={inProgress || manifestUrl.length === 0}
+            type="button"
           >
             {inProgress === false ? "Install" : "Validating..."}
           </button>
@@ -148,13 +195,14 @@ export default function Inputbox() {
             className="grow border border-transparent hover:border-white bg-tailwind uppercase text-white text-lg p-2 rounded font-normal"
             onClick={copyToClipboard}
             hidden={inProgress || manifestUrl.length === 0}
+            type="submit"
           >
             {inProgress === false ? "Copy" : "Validating..."}
           </button>
         </div>
-        <div className={`${false ? "" : "hidden"}`}>
+        <div className="hidden">
           <div>
-            <a href={manifest}>{manifest}</a>
+            <a href={manifestUrl}>{manifestUrl}</a>
           </div>
           <div>
             {window.navigator.userActivation.hasBeenActive

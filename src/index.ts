@@ -42,7 +42,13 @@ app.get("/", (_req, res) => {
 });
 
 // TODO: Make the new landing page work with provided values.
-app.get("/:id?/configure", (req, res, next) => res.redirect("/configure"));
+app.get("/:id/configure", (req, res) => {
+  const base = !env.isProduction ? "http://localhost:4321/" : "";
+
+  return res.redirect(
+    `${base}/configure?id=${encodeURIComponent(req.params.id)}`
+  );
+});
 
 app.get("/manifest.json", (req, res) => {
   const cloned_manifest = Object.assign({}, manifest);
@@ -246,6 +252,25 @@ app.get("/generate/:url", (req, res) => {
   const id = parseLetterboxdURLToID(decodeURIComponent(req.params.url));
 
   res.send(id);
+});
+
+app.get("/getConfig/:id", async (req, res) => {
+  const log = logBase.extend("getConfig");
+  let cachedConfig: Awaited<ReturnType<typeof prisma.config.findFirst>>;
+  try {
+    cachedConfig = await prisma.config.findFirst({
+      where: {
+        id: req.params.id,
+      },
+    });
+    const config = parseConfig(
+      cachedConfig ? cachedConfig.config : req.params.id
+    );
+    return res.json(config);
+  } catch (error) {
+    log(error);
+    return res.status(500).send();
+  }
 });
 
 /**
