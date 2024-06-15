@@ -23,7 +23,13 @@ const app = express();
 const logBase = logger("server");
 
 if (env.isProd || env.isProduction) {
-  publishToCentral("https://letterboxd.almosteffective.com/");
+  publishToCentral("https://letterboxd.almosteffective.com/").then(() => {
+    logBase(
+      `Published to stremio official repository as ${manifest.name} with ID ${manifest.id} and version ${manifest.version}`
+    );
+  });
+} else {
+  logBase("Not in Production, not publishing to stremio official repository");
 }
 
 const PORT = process.env.PORT || 3030;
@@ -39,8 +45,11 @@ app.get("/", (_req, res) => {
 app.get("/:id?/configure", (req, res, next) => res.redirect("/configure"));
 
 app.get("/manifest.json", (req, res) => {
+  const cloned_manifest = Object.assign({}, manifest);
+  cloned_manifest.description =
+    "!! Letterboxd requires configuration! Click Configure instead or go to https://letterboxd.almosteffective.com/ !!";
   res.setHeader("Content-Type", "application/json");
-  res.json(manifest);
+  res.json(cloned_manifest);
 });
 
 /**

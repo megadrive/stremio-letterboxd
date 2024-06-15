@@ -1,4 +1,6 @@
 import { addonFetch } from "./fetch.js";
+import { logger } from "../logger.js";
+const log = logger("publishToStremioOfficialRepository");
 
 const DEFAULT_API_URL = "https://api.strem.io";
 
@@ -7,7 +9,7 @@ export const publishToCentral = async (
   apiURL = DEFAULT_API_URL
 ) => {
   try {
-    const res = await addonFetch(apiURL, {
+    const res = await addonFetch(`${apiURL}/api/addonPublish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transportUrl: addonURL, transportName: "http" }),
@@ -24,7 +26,8 @@ export const publishToCentral = async (
         `Failed to publish to stremio official repository: ${json.error}`
       );
     }
+    log(json);
   } catch (error) {
-    console.error(error);
+    log(error);
   }
 };
