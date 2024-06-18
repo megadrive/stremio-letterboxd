@@ -13,7 +13,7 @@
 4. Run `npm run build` to build the project
 5. Run `npm run start` to start the addon, it will then be available at `http://localhost:PORT`
 
-If you ever need to start fresh, delete `node_modules` and `package-lock.json`, from both `/` and `/astro` then run `npm install` again.
+If you ever need to start fresh, run `node clean.js` then run `npm install` again.
 
 ## Configuration
 
