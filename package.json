@@ -16,6 +16,9 @@
     "astro:dev": "cd ./web && npx astro dev",
     "clean": "node clean.js"
   },
+  "engines": {
+    "node": ">= 22.2"
+  },
   "keywords": [],
   "author": "",
   "license": "MIT",
