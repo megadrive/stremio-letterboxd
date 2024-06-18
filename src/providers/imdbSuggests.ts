@@ -36,6 +36,7 @@ type IMDBResult = {
 
 /** strip non-alphanumeric characters from a string, includes spaces. */
 const onlyAlphaNumeric = (s: string) => s.replace(/[^A-Za-z0-9 ]/gi, "");
+
 export async function find(name: string, year?: number) {
   console.info(`[imdbfind] finding ${name} (${year ?? "no year"})`);
   try {

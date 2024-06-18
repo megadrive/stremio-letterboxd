@@ -21,18 +21,6 @@ import { env } from "./env.js";
 
 const logBase = logger("fetcher");
 
-/** Parse a Cinemeta API response into a Streamio Meta Preview object. */
-function parseCinemetaInfo(meta: CinemetaMovieResponseLive["meta"]) {
-  return meta;
-  // const { id, name, poster } = meta;
-  // return {
-  //   id,
-  //   name,
-  //   type: "movie",
-  //   poster,
-  // };
-}
-
 /** Gets many IMDB ID from films */
 async function getImdbIDs(films: string[]) {
   const IDs: string[] = [];
@@ -61,8 +49,8 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       },
     },
   });
-  // @ts-ignore
-  rv = [...cached.map((c) => parseCinemetaInfo(JSON.parse(c.info)))];
+
+  rv = [...cached.map((c) => JSON.parse(c.info) as StremioMeta)];
 
   // get non-cached ids
   let toFetch = imdb_ids.filter((id) => {
@@ -99,7 +87,6 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
         chunk: string[]
       ): Promise<typeof rv | null[]> => {
         try {
-          // TODO: There is a null happening here when using thisisalexei's watchlist. Why? Idk.
           const res = await addonFetch(
             `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
               ","
@@ -141,18 +128,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       ];
     })();
 
-    rv = [
-      ...rv,
-      ...fetched,
-      // ...fetched.map((film): StremioMetaPreview => {
-      //   return {
-      //     id: film.id,
-      //     name: film.name,
-      //     poster: film.poster,
-      //     type: "movie",
-      //   };
-      // }),
-    ];
+    rv = [...rv, ...fetched];
 
     // cache the data
     /* async */ Promise.all(
@@ -195,6 +171,10 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
   return rv;
 }
 
+/**
+ * Populate LetterboxdUser with movies from Cinemeta.
+ * @returns The cached user, or a new one if it doesn't exist.
+ */
 async function upsertLetterboxdUserWithMovies(
   username: string,
   movies: StremioMetaPreview[]
@@ -389,9 +369,9 @@ export async function fetchFilms(
       /* async */ upsertLetterboxdUserWithMovies(letterboxdPath, metasToReturn)
         .then((user) =>
           logFresh(
-            `[${letterboxdPath}]: updated user . ${user.updatedAt} with ${
-              (JSON.parse(user.movie_ids) as string[]).length
-            } movies.`
+            `[${letterboxdPath}]: updated user ${letterboxdPath}. ${
+              user.updatedAt
+            } with ${(JSON.parse(user.movie_ids) as string[]).length} movies.`
           )
         )
         .catch((err) => logFresh(err));
