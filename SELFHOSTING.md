@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js
-- A database (anything that Prisma supports, see [Prisma docs](https://www.prisma.io/docs/database-engines/list-of-database-engines)), SQLite is recommended for self-hosting.
+- A database (anything that Prisma supports, see [Prisma docs](https://www.prisma.io/docs/orm/overview/databases)), SQLite is recommended for self-hosting. (Honestly SQLite is great in production as well, but my service uses docker containers, so every push I would lose all the data. Otherwise I'd be using SQLite. :))
 
 ## Installation
 
