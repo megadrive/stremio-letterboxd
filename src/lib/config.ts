@@ -255,7 +255,7 @@ export const parseConfig = (str: string): Config => {
   console.info(
     `Got config: ${path} (${type}) with ${
       Object.keys(opts).length
-    } options from ${str}`
+    } options from ${str}`,
   );
 
   const resolvedConfig: Config = {

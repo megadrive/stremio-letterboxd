@@ -43,20 +43,20 @@ export async function find(name: string, year?: number) {
     const imdbRes = await addonFetch(
       IMDBSEARCH.replace(
         /:query/i,
-        encodeURIComponent(`${name} ${year ?? ""}`.trim())
-      )
+        encodeURIComponent(`${name} ${year ?? ""}`.trim()),
+      ),
     );
     if (!imdbRes.ok) throw `Couldn't fetch IMDBSearch results.`;
 
     const searchResults = (await imdbRes.json()) as IMDBSearchResult;
     console.info(
-      `[imdbfind] got ${searchResults.d.length} results for ${name}`
+      `[imdbfind] got ${searchResults.d.length} results for ${name}`,
     );
     const results = searchResults.d.reduce<IMDBResult[]>((acc, curr) => {
       console.info(
         `        ${onlyAlphaNumeric(
-          curr.l.toLowerCase()
-        )} !== ${onlyAlphaNumeric(name.toLowerCase())}`
+          curr.l.toLowerCase(),
+        )} !== ${onlyAlphaNumeric(name.toLowerCase())}`,
       );
       if (
         onlyAlphaNumeric(curr.l.toLowerCase()) !==

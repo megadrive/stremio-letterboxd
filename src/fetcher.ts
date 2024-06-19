@@ -66,7 +66,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
   log(
     `[cinemeta] need to fetch ${toFetch.length} metas, ${
       imdb_ids.length - toFetch.length
-    } are in cache`
+    } are in cache`,
   );
 
   if (toFetch.length !== 0) {
@@ -84,13 +84,13 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       const rv: CinemetaMovieResponseLive["meta"][] = [];
 
       const fetchChunk = async (
-        chunk: string[]
+        chunk: string[],
       ): Promise<typeof rv | null[]> => {
         try {
           const res = await addonFetch(
             `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
-              ","
-            )}.json`
+              ",",
+            )}.json`,
           );
 
           if (!res.ok) {
@@ -112,7 +112,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
           log(`[cinemeta] getting chunk ${rv.length}`);
           const res = await fetchChunk(chunk);
           const filtered = res.filter(
-            Boolean
+            Boolean,
           ) as CinemetaMovieResponseLive["meta"][];
           rv.push(...filtered);
         } catch {
@@ -145,7 +145,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
             info: JSON.stringify(d),
           },
         });
-      })
+      }),
     )
       .then(() => log("[cinemeta] updated cache"))
       .catch((error) => {
@@ -177,7 +177,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
  */
 async function upsertLetterboxdUserWithMovies(
   username: string,
-  movies: StremioMetaPreview[]
+  movies: StremioMetaPreview[],
 ) {
   const log = logBase.extend("upsertLetterboxdUserWithMovies");
   log(`Caching ${username} to database.`);
@@ -235,9 +235,9 @@ async function getDBCachedUser(username: string) {
   }
 
   log(
-    `[${username}]: got metadata ${movie_info.length} -> ${movie_info.map((m) =>
-      m ? m.name : undefined
-    )}`
+    `[${username}]: got metadata ${movie_info.length} -> ${movie_info.map(
+      (m) => (m ? m.name : undefined),
+    )}`,
   );
 
   return { ...user, movies: movie_info };
@@ -249,7 +249,7 @@ export async function fetchFilmsSinglePage(
   options: Partial<Parameters<typeof fetchFilms>[1] & { page: number }> = {
     preferLetterboxdPosters: false,
     page: 1,
-  }
+  },
 ) {
   const log = logBase.extend("fetch:single");
   log(`[${letterboxdPath}] getting page ${options.page}`);
@@ -301,7 +301,7 @@ export async function fetchFilms(
   options: {
     head?: boolean;
     preferLetterboxdPosters?: boolean;
-  } = { preferLetterboxdPosters: false }
+  } = { preferLetterboxdPosters: false },
 ): Promise<StremioMetaPreview[]> {
   const log = logBase.extend("fetch");
 
@@ -331,7 +331,7 @@ export async function fetchFilms(
       let pages = +$(".paginate-page").last().text();
       if (pages > env.ADDON_MAX_PAGES_FETCHED) {
         logFresh(
-          `Pages detected: ${pages}, rounding down to ${env.ADDON_MAX_PAGES_FETCHED}`
+          `Pages detected: ${pages}, rounding down to ${env.ADDON_MAX_PAGES_FETCHED}`,
         );
         pages = env.ADDON_MAX_PAGES_FETCHED;
       }
@@ -371,14 +371,14 @@ export async function fetchFilms(
           logFresh(
             `[${letterboxdPath}]: updated user ${letterboxdPath}. ${
               user.updatedAt
-            } with ${(JSON.parse(user.movie_ids) as string[]).length} movies.`
-          )
+            } with ${(JSON.parse(user.movie_ids) as string[]).length} movies.`,
+          ),
         )
         .catch((err) => logFresh(err));
 
       // if we/the user prefer letterboxd posters, use those instead
       logFresh(
-        `[${letterboxdPath}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
+        `[${letterboxdPath}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`,
       );
 
       return metasToReturn;
@@ -400,7 +400,7 @@ export async function fetchFilms(
     // }
 
     const cached_movies = await getCinemetaInfoMany(
-      JSON.parse(cachedUser.movie_ids) as string[]
+      JSON.parse(cachedUser.movie_ids) as string[],
     );
 
     // if less than 1 page, just fetch a fresh set of data
@@ -421,8 +421,8 @@ export async function fetchFilms(
         log(
           `[${letterboxdPath}] fresh data fetched in ${formatTimeBetween(
             freshStartTime,
-            Date.now()
-          )} seconds`
+            Date.now(),
+          )} seconds`,
         );
         return;
       })
@@ -434,8 +434,8 @@ export async function fetchFilms(
     log(
       `[${letterboxdPath}] cached time: ${formatTimeBetween(
         cachedStartTime,
-        Date.now()
-      )}`
+        Date.now(),
+      )}`,
     );
     return cached_movies;
   } catch (error) {

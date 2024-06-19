@@ -25,7 +25,7 @@ const logBase = logger("server");
 if (env.isProd || env.isProduction) {
   publishToCentral("https://letterboxd.almosteffective.com/").then(() => {
     logBase(
-      `Published to stremio official repository as ${manifest.name} with ID ${manifest.id} and version ${manifest.version}`
+      `Published to stremio official repository as ${manifest.name} with ID ${manifest.id} and version ${manifest.version}`,
     );
   });
 } else {
@@ -46,7 +46,7 @@ app.get("/:id/configure", (req, res) => {
   const base = !env.isProduction ? "http://localhost:4321/" : "";
 
   return res.redirect(
-    `${base}/configure?id=${encodeURIComponent(req.params.id)}`
+    `${base}/configure?id=${encodeURIComponent(req.params.id)}`,
   );
 });
 
@@ -78,14 +78,14 @@ app.get("/:providedConfig/manifest.json", async (req, res) => {
     log(error);
   }
   const config = parseConfig(
-    cachedConfig ? cachedConfig.config : providedConfig
+    cachedConfig ? cachedConfig.config : providedConfig,
   );
   if (!config) {
     return res.status(500).json();
   }
 
   const cloned_manifest = JSON.parse(
-    JSON.stringify(manifest)
+    JSON.stringify(manifest),
   ) as ManifestExpanded;
   cloned_manifest.id = `${
     env.isDevelopment ? "dev-" : ""
@@ -155,7 +155,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   }
   // if we have a cacched config, use it, otherwise use the provided one
   const config = parseConfig(
-    cachedConfig ? cachedConfig.config : providedConfig
+    cachedConfig ? cachedConfig.config : providedConfig,
   );
 
   const username = config.username;
@@ -264,7 +264,7 @@ app.get("/getConfig/:id", async (req, res) => {
       },
     });
     const config = parseConfig(
-      cachedConfig ? cachedConfig.config : req.params.id
+      cachedConfig ? cachedConfig.config : req.params.id,
     );
     return res.json(config);
   } catch (error) {
@@ -353,7 +353,7 @@ app.get("/verify/:base64", async (req, res) => {
   // Verify we get metas from the URL
   try {
     const catalogUrl = `${userConfig.base}/${encodeURIComponent(
-      config
+      config,
     )}/catalog/letterboxd/${encodeURIComponent(path)}/letterboxdhead=1.json`;
     log(`Can get metas? ${catalogUrl}`);
     const fetchRes = await fetch(catalogUrl);
@@ -435,5 +435,5 @@ app.get("/check/:id", async (req, res) => {
 });
 
 app.listen(PORT, () =>
-  console.log(`Stremio-Letterboxd available at http://localhost:${PORT}`)
+  console.log(`Stremio-Letterboxd available at http://localhost:${PORT}`),
 );
