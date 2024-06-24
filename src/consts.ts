@@ -6,6 +6,13 @@ export const TOO_MANY_MOVIES = FILMS_PER_PAGE * 10;
 export const ONE_HOUR = 3600000;
 const THIRTY_SECONDS = 30000;
 
+export const HTTP_CODES = {
+  OK: 200,
+  BAD_REQUEST: 400,
+  NOT_FOUND: 404,
+  INTERNAL_SERVER_ERROR: 500,
+};
+
 export const config = {
   // TODO: Determine if the below is redundant
   /* In milliseconds. When the cached user data is stale. */
