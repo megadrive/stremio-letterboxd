@@ -306,6 +306,15 @@ app.get("/verify/:base64", async (req, res) => {
     return res.status(500).send();
   }
 
+  // Ensure URLs are only allowed
+  if (
+    !userConfig.url.startsWith("https://letterboxd.com/") ||
+    !userConfig.url.startsWith("https://boxd.it/")
+  ) {
+    log("URL is not a letterboxd url");
+    return res.status(500).send();
+  }
+
   // Resolve final URL (boxd.it -> letterboxd)
   if (userConfig.url.startsWith("https://boxd.it/")) {
     log("converting boxd.it url");
