@@ -1,10 +1,19 @@
 import { Toaster, toast } from "react-hot-toast";
 
 function List({ id, name, url }: { id: string; name: string; url: string }) {
+  function installList() {
+    window.location.href = installUrl;
+  }
+
   const base = window.location.origin.includes(":4321")
     ? "http://localhost:3030"
     : window.location.origin;
-  const installUrl = `${base}/${encodeURIComponent(id)}/manifest.json`;
+
+  const installUrl = `${base}/${encodeURIComponent(id)}/manifest.json`.replace(
+    /https?/,
+    "stremio",
+  );
+
   return (
     <div className="grid gap-2 grid-cols-2">
       <div className="text-right">
@@ -15,12 +24,14 @@ function List({ id, name, url }: { id: string; name: string; url: string }) {
       <div className="grid grid-flow-col grid-cols-2 gap-1">
         <button
           className="border border-white rounded hover:bg-white hover:text-tailwind"
-          onClick={() => (window.location.href = installUrl)}
+          type="button"
+          onClick={installList}
         >
           Install
         </button>
         <button
           className="border border-transparent hover:border-white"
+          type="button"
           onClick={() =>
             navigator.clipboard
               .writeText(installUrl)
