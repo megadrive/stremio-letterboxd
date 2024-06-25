@@ -1,5 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef } from "react";
 import { Toaster, toast } from "react-hot-toast";
+
+const Switch = forwardRef<HTMLInputElement>(function Switch(_, ref) {
+  return (
+    <label className="relative inline-flex cursor-pointer items-center">
+      <input id="switch" type="checkbox" className="peer sr-only" ref={ref} />
+      <label htmlFor="switch" className="hidden" />
+      <div className="peer h-6 w-11 rounded-full border bg-slate-200 after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300" />
+    </label>
+  );
+});
 
 export default function Inputbox() {
   const [url, setUrl] = useState("");
@@ -10,6 +20,7 @@ export default function Inputbox() {
   const [config, setConfig] = useState<{ path: string; catalogName: string }>();
   const urlInput = useRef<HTMLInputElement>(null);
   const customListNameInput = useRef<HTMLInputElement>(null);
+  const switchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -95,7 +106,7 @@ export default function Inputbox() {
         JSON.stringify({
           url,
           base,
-          posters: false,
+          posters: switchRef.current?.checked,
           customListName: customListName.length ? customListName : undefined,
         }),
       );
@@ -202,6 +213,10 @@ export default function Inputbox() {
                 : ""
             }
           />
+        </div>
+        <div className="flex flex-row gap-1">
+          <Switch ref={switchRef} />
+          Use Letterboxd Posters?
         </div>
         <div className="grid gap-1 grid-cols-2 grid-rows-2">
           <button

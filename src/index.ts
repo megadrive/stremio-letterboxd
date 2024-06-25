@@ -372,7 +372,7 @@ app.get("/verify/:base64", async (req, res) => {
     }
   }
 
-  const unencoded = `${path}${opts.length ? `|${opts}` : ""}`;
+  const unencoded = `${path}${opts.length ? `|${opts.join("|")}` : ""}`;
   const config = encodeURIComponent(unencoded);
 
   // Verify we get metas from the URL
