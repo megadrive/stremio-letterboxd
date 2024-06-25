@@ -403,9 +403,20 @@ app.get("/verify/:base64", async (req, res) => {
  *
  * @todo will be used when letterboxd posters later
  */
-app.get("/poster/:poster_url", async (req, res) => {
+app.get("/poster/:letterboxdPath/:letterboxdId", async (req, res) => {
+  const { letterboxdPath, letterboxdId } = req.params;
+
+  const poster = await prisma.letterboxdPoster.findFirst({
+    where: {
+      letterboxdPath: decodeURIComponent(letterboxdPath),
+      letterboxdId,
+    },
+  });
+  if (!poster) {
+    return res.status(HTTP_CODES.NOT_FOUND).send();
+  }
   res.appendHeader("Referer", "https://letterboxd.com/");
-  res.redirect(req.params.poster_url);
+  return res.redirect(poster.url);
 });
 
 app.listen(PORT, () =>

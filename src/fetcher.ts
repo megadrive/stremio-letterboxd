@@ -22,9 +22,9 @@ import { env } from "./env.js";
 const logBase = logger("fetcher");
 
 /** Gets many IMDB ID from films */
-async function getImdbIDs(films: string[]) {
+async function getImdbIDs(films: string[], userId: string) {
   const IDs: string[] = [];
-  const filmPromises = films.map((f) => find(f));
+  const filmPromises = films.map((f) => find(f, userId));
   const results = await Promise.allSettled(filmPromises);
   for (const result of results) {
     if (result.status === "fulfilled" && result.value) {
@@ -281,7 +281,7 @@ export async function fetchFilmsSinglePage(
 
   log(`[${letterboxdPath}] got ${filmSlugs.length} films`);
 
-  const imdbIds = await getImdbIDs(filmSlugs);
+  const imdbIds = await getImdbIDs(filmSlugs, letterboxdPath);
   const films_with_metadata = await getCinemetaInfoMany(imdbIds);
 
   log(`[${letterboxdPath}] got ${imdbIds.length} imdb IDs`);
