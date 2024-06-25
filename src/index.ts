@@ -16,6 +16,10 @@ import { prisma } from "./prisma.js";
 import type { StremioMeta, StremioMetaPreview } from "./consts.js";
 import { HTTP_CODES } from "./consts.js";
 import { publishToCentral } from "./lib/publishToStremioOfficialRepository.js";
+import { ListManager } from "./providers/listManager.js";
+
+const listManager = new ListManager();
+listManager.startPolling();
 
 const app = express();
 
@@ -47,6 +51,13 @@ function toStremioMetaPreview(metas: StremioMeta[]): StremioMetaPreview[] {
   });
 }
 
+/** Recommends a list */
+app.get("/recommend", async (_req, res) => {
+  const recommendedList = listManager.recommend();
+  if (!recommendedList) return res.status(HTTP_CODES.NOT_FOUND).send();
+  return res.status(HTTP_CODES.OK).json(recommendedList);
+});
+
 /** Redirects to /configure */
 app.get("/", (_req, res) => {
   return res.redirect("/configure");
@@ -62,7 +73,7 @@ app.get("/:id/configure", (req, res) => {
 });
 
 /** Provide a base Manifest.json for Stremio Community and Stremio Unofficial Addons */
-app.get("/manifest.json", (req, res) => {
+app.get("/manifest.json", (_req, res) => {
   const cloned_manifest = Object.assign({}, manifest);
   cloned_manifest.description =
     "!! Letterboxd requires configuration! Click Configure instead or go to https://letterboxd.almosteffective.com/ !!";

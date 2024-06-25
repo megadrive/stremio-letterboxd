@@ -31,7 +31,7 @@ export default function Inputbox() {
           const configToProvide = encodeURIComponent(
             `${gotConfig.path}${
               gotConfig.catalogName ? `|cn=${gotConfig.catalogName}` : ""
-            }`
+            }`,
           );
           setManifest(`${base}/${configToProvide}/manifest.json`);
         })
@@ -43,6 +43,27 @@ export default function Inputbox() {
         });
     }
   }, []);
+
+  async function recommendList() {
+    const base = window.location.origin.includes(":4321")
+      ? "http://localhost:3030"
+      : window.location.origin;
+    try {
+      const res = await fetch(`${base}/recommend`, {
+        headers: { "cache-control": "no-cache" },
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch list page: ${res.statusText}`);
+      }
+      const json = (await res.json()) as string;
+      const recommendedUrl = `https://letterboxd.com${json}`;
+      setUrl(recommendedUrl);
+      if (urlInput.current) urlInput.current.value = recommendedUrl;
+      setManifestUrl("");
+    } catch (error) {
+      console.warn(error);
+    }
+  }
 
   function updateInputUrl() {
     if (urlInput.current?.value) {
@@ -76,7 +97,7 @@ export default function Inputbox() {
           base,
           posters: false,
           customListName: customListName.length ? customListName : undefined,
-        })
+        }),
       );
       // if the url is the same, we don't need to verify it again
       const res = await fetch(`${base}/verify/${toVerify}`, {
@@ -135,7 +156,7 @@ export default function Inputbox() {
           A Letterboxd URL containing a list of posters (including any
           sorting!):
         </div>
-        <div>
+        <div className="flex flex-row gap-1">
           <input
             type="text"
             placeholder="https://letterboxd.com/almosteffective/watchlist"
@@ -152,6 +173,14 @@ export default function Inputbox() {
                 : ""
             }
           />
+          <button
+            className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
+            onClick={recommendList}
+            disabled={inProgress}
+            type="button"
+          >
+            {inProgress === false ? "Recommend" : "Validating..."}
+          </button>
         </div>
         <div className="text-base">
           Set a custom list if you'd like (leave empty to auto-generate):
