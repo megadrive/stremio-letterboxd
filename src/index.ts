@@ -254,16 +254,6 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   }
 });
 
-/**
- * Unused.
- * @deprecated
- */
-app.get("/generate/:url", (req, res) => {
-  const id = parseLetterboxdURLToID(decodeURIComponent(req.params.url));
-
-  res.send(id);
-});
-
 /** Get the cached config for the provided config ID. */
 app.get("/getConfig/:id", async (req, res) => {
   const log = logBase.extend("getConfig");
@@ -409,32 +399,6 @@ app.get("/verify/:base64", async (req, res) => {
 });
 
 /**
- * Don't think this is used anywhere.
- * @deprecated
- */
-app.get("/url/:url", async (req, res) => {
-  const { url } = req.params;
-  const letterboxdUrl = decodeURIComponent(url);
-
-  if (!letterboxdUrl) return res.status(HTTP_CODES.NOT_FOUND).send();
-  try {
-    const urlRes = await fetch(letterboxdUrl, { redirect: "follow" });
-    // failure, bad boxd.it url returns the same url
-    if (
-      !urlRes.url.includes("letterboxd.com") ||
-      urlRes.url === letterboxdUrl
-    ) {
-      return res.status(HTTP_CODES.NOT_FOUND).send();
-    }
-    return res.status(HTTP_CODES.OK).json(urlRes.url);
-  } catch {
-    console.warn(`Couldn't parse Boxd.it URL ${letterboxdUrl}`);
-  }
-
-  return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).send();
-});
-
-/**
  * Redirects a Letterboxd poster, setting the Referer header.
  *
  * @todo will be used when letterboxd posters later
@@ -442,25 +406,6 @@ app.get("/url/:url", async (req, res) => {
 app.get("/poster/:poster_url", async (req, res) => {
   res.appendHeader("Referer", "https://letterboxd.com/");
   res.redirect(req.params.poster_url);
-});
-
-/**
- * Checks username or list validity on Letterboxd.
- * Expects :id to be in the format `username(|listid)?`
- *
- * @deprecated Superseded by /verify, but keeping here for now.
- */
-app.get("/check/:id", async (req, res) => {
-  const [username, listId] = req.params.id.split("|");
-  const url = `https://letterboxd.com/${username}${
-    listId ? `/list/${listId}` : ""
-  }`;
-  const fres = await fetch(url, {
-    headers: {
-      Referer: "https://letterboxd.com/",
-    },
-  });
-  res.status(fres.ok ? HTTP_CODES.OK : HTTP_CODES.NOT_FOUND).end("");
 });
 
 app.listen(PORT, () =>
