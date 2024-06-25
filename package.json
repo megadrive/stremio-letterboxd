@@ -8,8 +8,9 @@
     "dev:copy-static": "copyfiles \"static/*\" dist && mkdirp \"./static/lists\"",
     "prisma": "prisma",
     "prisma:push-db": "prisma db push",
-    "dev": "tsc && npm run dev:copy-static && node ./dist/index.js",
+    "dev": "tsc && npm run dev:copy-static && npm run prisma:push-db && node ./dist/index.js",
     "start": "tsc && npm run dev:copy-static && npm run prisma:push-db && node ./dist/index.js",
+    "start:all": "concurrently \"npm run start\" \"npm run astro:dev\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx prisma generate && npm run astro:build && copyfiles -u 2 \"./web/dist/**/*\" \"./static\"",
     "astro:build": "cd ./web && npm run build",
@@ -17,7 +18,7 @@
     "clean": "node clean.js"
   },
   "engines": {
-    "node": ">= 22.2"
+    "node": ">= 20.x"
   },
   "keywords": [],
   "author": "",
@@ -37,6 +38,7 @@
     "@prisma/client": "^5.15.0",
     "@types/debug": "^4.1.12",
     "cheerio": "^1.0.0-rc.12",
+    "concurrently": "^8.2.2",
     "copyfiles": "^2.4.1",
     "cors": "^2.8.5",
     "cross-fetch": "^4.0.0",
