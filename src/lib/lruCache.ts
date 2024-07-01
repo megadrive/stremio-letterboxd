@@ -6,6 +6,8 @@ import {
   type StremioMeta,
   type StremioMetaPreview,
 } from "../consts.js";
+import { logger } from "../logger.js";
+const log = logger("lruCache");
 
 const cache = new LRUCache<string, StremioMetaPreview[]>({
   max: 100,
@@ -24,6 +26,7 @@ export const lruCache = {
     // if metas provided, save early and quit
     if (providedMetas?.length) {
       cache.set(id, providedMetas);
+      log(`[lrucache:save] saved ${id} with ${providedMetas.length} metas`);
       return true;
     }
 

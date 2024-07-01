@@ -1,8 +1,10 @@
 ---
-import Inputbox from "../inputbox"
-import Popular from "../popular"
-import {Image} from 'astro:assets'
-import LogoImage from '../logo.png'
+import Inputbox from "../inputbox";
+import Popular from "../popular";
+import { Image } from "astro:assets";
+import LogoImage from "../logo.png";
+
+const linkClasses = "hover:underline font-semibold";
 ---
 
 <html lang="en">
@@ -24,7 +26,11 @@ import LogoImage from '../logo.png'
 			</div>
 			<br/>
 			<div class="text-center">
-				<small class="hover:underline"><a href="https://letterboxd-dev.almosteffective.com/">Do you live on the edge? Try the in-development version! Guaranteed to break!</a></small>
+				<small >
+					Do you live on the edge? <a href="https://letterboxd-dev.almosteffective.com/" class={linkClasses}>Try the in-development version! Guaranteed to break!</a><br />
+					Coded with 🤟 by <a href="https://github.com/megadrive" class={linkClasses}>@megadrive</a> on <a href="https://github.com/megadrive/stremio-letterboxd" class={linkClasses}>GitHub</a></a><br />
+					Like what I'm doing? <a href="https://www.buymeacoffee.com/megadrive" target="_blank" class={linkClasses}>Buy me a coffee! ☕</a>
+				</small>
 			</div>
 		</div>
 	</body>
