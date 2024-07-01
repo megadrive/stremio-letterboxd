@@ -408,7 +408,7 @@ app.get("/poster/:letterboxdPath/:letterboxdId", async (req, res) => {
 
   const poster = await prisma.letterboxdPoster.findFirst({
     where: {
-      letterboxdPath: decodeURIComponent(letterboxdPath),
+      // letterboxdPath: decodeURIComponent(letterboxdPath),
       letterboxdId,
     },
   });

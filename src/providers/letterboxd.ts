@@ -83,7 +83,7 @@ const updatePoster = async (letterboxdId: string, letterboxdPath: string) => {
       },
       create: {
         letterboxdId: stringifiedId,
-        letterboxdPath,
+        // letterboxdPath,
         url: poster,
       },
       update: {
