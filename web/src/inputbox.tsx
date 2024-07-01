@@ -214,10 +214,11 @@ export default function Inputbox() {
             }
           />
         </div>
-        <div className="flex flex-row gap-1">
+        {/* Removed until feature is ready. */}
+        {/*
           <Switch ref={switchRef} />
           Use Letterboxd Posters?
-        </div>
+        </div> */}
         <div className="grid gap-1 grid-cols-2 grid-rows-2">
           <button
             className="col-span-2 grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
