@@ -19,21 +19,29 @@ const base = env.isProd || env.isProduction ? "/" : "http://localhost:3030/";
 const getHtml = async (
   letterboxdSlug: string,
   overrideUrl?: string,
-): Promise<ReturnType<typeof cheerio>> => {
-  const modifiedSlug = letterboxdSlug.replace(/ /g, "-");
-  const url = !overrideUrl
-    ? `https://letterboxd.com/film/${modifiedSlug}`
-    : overrideUrl.replace(/\{letterboxdSlug\}/g, modifiedSlug);
-  const res = await addonFetch(url, {
-    keepalive: false,
-  });
-  if (!res.ok) {
-    throw Error(`[${modifiedSlug}]: Couldn't get Letterboxd info: ${url}`);
+): Promise<ReturnType<typeof cheerio> | undefined> => {
+  const log = logBase.extend("getHtml");
+
+  try {
+    const modifiedSlug = letterboxdSlug.replace(/ /g, "-");
+    const url = !overrideUrl
+      ? `https://letterboxd.com/film/${modifiedSlug}`
+      : overrideUrl.replace(/\{letterboxdSlug\}/g, modifiedSlug);
+    const res = await addonFetch(url, {
+      keepalive: false,
+    });
+    if (!res.ok) {
+      throw Error(`[${modifiedSlug}]: Couldn't get Letterboxd info: ${url}`);
+    }
+
+    const html = await res.text();
+    const $ = cheerio(html);
+    return $;
+  } catch (error) {
+    log(`[letterboxd] Couldn't get Letterboxd info: ${letterboxdSlug}`);
   }
 
-  const html = await res.text();
-  const $ = cheerio(html);
-  return $;
+  return undefined;
 };
 
 /**
@@ -43,7 +51,7 @@ const getHtml = async (
  */
 const updatePoster = async (letterboxdId: string, letterboxdPath: string) => {
   const log = logBase.extend("updatePoster");
-  const stringifiedId = `${letterboxdId}`;
+  const stringifiedId = `${letterboxdId.replace(/ /g, "-")}`;
   try {
     const letterboxd = await prisma.letterboxdPoster.findUnique({
       where: {
@@ -72,6 +80,13 @@ const updatePoster = async (letterboxdId: string, letterboxdPath: string) => {
       `${base}poster/${encodeURIComponent(letterboxdPath)}/${stringifiedId}`,
       // `https://letterboxd.com/ajax/poster/film/{letterboxdSlug}/std/1000x1500/?k=${generateKey()}`,
     );
+
+    if (!$) {
+      log(
+        `Couldn't get poster from page for ${letterboxdId}: no html for cheerio to parse`,
+      );
+      return undefined;
+    }
 
     const poster = $("img").first().attr("src");
     if (!poster) {
@@ -143,6 +158,8 @@ export async function find(
   try {
     const logLtoImdb = log.extend("lboxdtoimdb");
     const $ = await getHtml(letterboxdSlug);
+
+    if (!$) return undefined;
 
     const imdbUrl = $('a[data-track-action="IMDb"]').attr("href");
     const rimdb = /tt[0-9]+/;

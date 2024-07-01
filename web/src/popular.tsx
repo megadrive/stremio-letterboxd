@@ -53,13 +53,13 @@ export default function Popular() {
       <div className="grid gap-1">
         <List
           id="/films/popular/this/week/|cn=Popular This Week"
-          name="Weekly"
+          name="This Week"
           url="https://letterboxd.com/films/popular/this/week/"
         />
         <List
           id="/films/popular/this/month/|cn=Popular This Month"
-          name="Monthly"
-          url="https://letterboxd.com/films/popular/this/monthly/"
+          name="This Month"
+          url="https://letterboxd.com/films/popular/this/month/"
         />
       </div>
     </div>

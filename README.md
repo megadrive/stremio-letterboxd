@@ -12,4 +12,4 @@ I am open to pull requests, but please be patient as I have a family and a full 
 
 Report bugs and feature requests on the [issue tracker](https://github.com/almosteffective/stremio-letterboxd/issues).
 
-If you dig the addon and would like to support it, please consider [donating](https://ko-fi.com/almosteffective) towards hosting costs. Thank you! 🎉
+If you dig the addon and would like to support it, please consider [donating](https://buymeacoffee.com/almosteffective) towards hosting costs. Thank you! 🎉
