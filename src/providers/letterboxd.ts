@@ -3,12 +3,22 @@ import { load as cheerio } from "cheerio";
 import { prisma } from "../prisma.js";
 import type { StremioMetaPreview } from "../consts.js";
 import { logger } from "../logger.js";
+import { env } from "../env.js";
 
 const logBase = logger("providers:letterboxd");
 
+function generateKey() {
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  );
+}
+
+const base = env.isProd || env.isProduction ? "/" : "http://localhost:3030/";
+
 const getHtml = async (
   letterboxdSlug: string,
-  overrideUrl?: string
+  overrideUrl?: string,
 ): Promise<ReturnType<typeof cheerio>> => {
   const modifiedSlug = letterboxdSlug.replace(/ /g, "-");
   const url = !overrideUrl
@@ -31,7 +41,7 @@ const getHtml = async (
  * @param letterboxdId Letterboxd slug
  * @returns
  */
-const updatePoster = async (letterboxdId: string) => {
+const updatePoster = async (letterboxdId: string, letterboxdPath: string) => {
   const log = logBase.extend("updatePoster");
   const stringifiedId = `${letterboxdId}`;
   try {
@@ -54,14 +64,13 @@ const updatePoster = async (letterboxdId: string) => {
     }
 
     log(
-      `${
-        create ? "Creating a new poster" : "Updating poster"
-      } for ${letterboxdId}`
+      `${create ? "Creating a new poster" : "Updating poster"} for ${letterboxdId}`,
     );
 
     const $ = await getHtml(
       stringifiedId,
-      "https://letterboxd.com/ajax/poster/film/{letterboxdSlug}/std/1000x1500/?k=53eb16aa"
+      `${base}poster/${encodeURIComponent(letterboxdPath)}/${stringifiedId}`,
+      // `https://letterboxd.com/ajax/poster/film/{letterboxdSlug}/std/1000x1500/?k=${generateKey()}`,
     );
 
     const poster = $("img").first().attr("src");
@@ -74,6 +83,7 @@ const updatePoster = async (letterboxdId: string) => {
       },
       create: {
         letterboxdId: stringifiedId,
+        // letterboxdPath,
         url: poster,
       },
       update: {
@@ -94,7 +104,8 @@ const updatePoster = async (letterboxdId: string) => {
 };
 
 export async function find(
-  letterboxdSlug: string
+  letterboxdSlug: string,
+  userId: string,
 ): Promise<{ letterboxd: string; imdb: string; poster?: string } | undefined> {
   const log = logBase.extend("find");
   try {
@@ -109,7 +120,7 @@ export async function find(
     }
     if (db.poster) {
       // await a poster, then continue
-      const poster = await updatePoster(letterboxdSlug);
+      const poster = await updatePoster(letterboxdSlug, userId);
       rv = { poster };
     }
 
@@ -149,11 +160,11 @@ export async function find(
         },
       })
       .then(() =>
-        logLtoImdb(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`)
+        logLtoImdb(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`),
       )
       .catch((err) => {
         logLtoImdb(
-          `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id}`
+          `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id}`,
         );
         logLtoImdb(err.message);
       });
@@ -214,7 +225,7 @@ export async function find_old(letterboxdSlug: string) {
   try {
     const url = `https://letterboxd.com/ajax/poster/film/${letterboxdSlug.replace(
       / /gi,
-      "-"
+      "-",
     )}/std/125x187/?k=${Date.now()}`;
     const res = await addonFetch(url);
     if (!res.ok) {

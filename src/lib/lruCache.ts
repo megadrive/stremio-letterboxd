@@ -16,7 +16,7 @@ const cache = new LRUCache<string, StremioMetaPreview[]>({
 export const lruCache = {
   save: async (id: string, providedMetas?: StremioMetaPreview[]) => {
     console.info(
-      `[lrucache:save] Start saving ${id} with ${providedMetas?.length} movies provided.`
+      `[lrucache:save] Start saving ${id} with ${providedMetas?.length} movies provided.`,
     );
     const consoleTime = `lrucache:save ${id}`;
     console.time(consoleTime);

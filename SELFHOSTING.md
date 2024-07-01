@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js
-- A database (anything that Prisma supports, see [Prisma docs](https://www.prisma.io/docs/database-engines/list-of-database-engines)), SQLite is recommended for self-hosting.
+- A database (anything that Prisma supports, see [Prisma docs](https://www.prisma.io/docs/orm/overview/databases)), SQLite is recommended for self-hosting. (Honestly SQLite is great in production as well, but my service uses docker containers, so every push I would lose all the data. Otherwise I'd be using SQLite. :))
 
 ## Installation
 
@@ -13,7 +13,7 @@
 4. Run `npm run build` to build the project
 5. Run `npm run start` to start the addon, it will then be available at `http://localhost:PORT`
 
-If you ever need to start fresh, delete `node_modules` and `package-lock.json`, from both `/` and `/astro` then run `npm install` again.
+If you ever need to start fresh, run `node clean.js` then run `npm install` again.
 
 ## Configuration
 
