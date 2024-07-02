@@ -281,6 +281,13 @@ app.get("/getConfig/:id", async (req, res) => {
  * {url: string, posters: boolean, base: string, customListName: string}
  */
 app.get("/verify/:base64", async (req, res) => {
+  const ERROR_CODES = {
+    NO_URL: 1,
+    NO_BASE: 2,
+    BAD_URL: 3,
+    CATASTROPHIC: 100,
+  } as const;
+
   type VerifyConfig = {
     url: string;
     base: string;
@@ -289,7 +296,7 @@ app.get("/verify/:base64", async (req, res) => {
   };
   const log = logBase.extend("verify");
   // Resolve config
-  const { base64 } = req.params;
+  const base64 = req.params.base64;
   let decoded: string;
   let userConfig: VerifyConfig;
   try {
@@ -298,7 +305,9 @@ app.get("/verify/:base64", async (req, res) => {
     userConfig = JSON.parse(decoded) as VerifyConfig;
   } catch {
     log("Could not convert base64 to string or convert to userConfig", base64);
-    return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json();
+    return res
+      .status(HTTP_CODES.INTERNAL_SERVER_ERROR)
+      .json(`Error code ${ERROR_CODES.CATASTROPHIC}`);
   }
 
   log("Got userconfig:", userConfig);
@@ -306,7 +315,9 @@ app.get("/verify/:base64", async (req, res) => {
   // Early exit if no url provided
   if (!userConfig.url || userConfig.url.length === 0) {
     log("no url in userconfig");
-    return res.status(HTTP_CODES.BAD_REQUEST).send();
+    return res
+      .status(HTTP_CODES.BAD_REQUEST)
+      .json(`Error code ${ERROR_CODES.NO_URL}`);
   }
 
   // Ensure it's a whitelisted domain
@@ -314,20 +325,22 @@ app.get("/verify/:base64", async (req, res) => {
   try {
     if (!whitelistedDomains.includes(new URL(userConfig.url).hostname)) {
       log("URL is not whitelisted");
-      return res.status(HTTP_CODES.BAD_REQUEST).send();
+      throw new Error(`Error code ${ERROR_CODES.BAD_URL}`);
     }
   } catch (error) {
     log("URL is not whitelisted");
-    return res.status(HTTP_CODES.BAD_REQUEST).send();
+    return res
+      .status(HTTP_CODES.BAD_REQUEST)
+      .json(`Error code ${ERROR_CODES.BAD_URL}`);
   }
 
   // Ensure URLs are only allowed
   if (
-    !userConfig.url.startsWith("https://letterboxd.com/") ||
+    !userConfig.url.startsWith("https://letterboxd.com/") &&
     !userConfig.url.startsWith("https://boxd.it/")
   ) {
     log("URL is not a letterboxd url");
-    return res.status(500).send();
+    return res.status(500).json(`Error code ${ERROR_CODES.BAD_URL}`);
   }
 
   // Resolve final URL (boxd.it -> letterboxd)

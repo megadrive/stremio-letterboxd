@@ -102,19 +102,20 @@ export default function Inputbox() {
       ? "http://localhost:3030"
       : window.location.origin;
     try {
-      const toVerify = btoa(
-        JSON.stringify({
-          url,
-          base,
-          posters: switchRef.current?.checked,
-          customListName: customListName.length ? customListName : undefined,
-        }),
-      );
+      const toVerify = JSON.stringify({
+        url,
+        base,
+        posters: switchRef.current?.checked,
+        customListName: customListName.length ? customListName : undefined,
+      });
       // if the url is the same, we don't need to verify it again
-      const res = await fetch(`${base}/verify/${toVerify}`, {
+
+      const res = await fetch(`${base}/verify/${btoa(toVerify)}`, {
         headers: {
-          "Cache-Control": "max-age=3600, stale-while-revalidate=600",
+          "Content-Type": "application/json",
         },
+        // method: "POST",
+        cache: "no-cache",
       });
       if (!res.ok) {
         const message = await res.json();
