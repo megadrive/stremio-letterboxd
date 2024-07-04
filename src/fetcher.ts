@@ -302,7 +302,7 @@ export async function fetchFilms(
     head?: boolean;
     preferLetterboxdPosters?: boolean;
   } = { preferLetterboxdPosters: false },
-): Promise<StremioMetaPreview[]> {
+): Promise<StremioMeta[]> {
   const log = logBase.extend("fetch");
 
   // early exit, don't continue if the username doesn't match what we expect

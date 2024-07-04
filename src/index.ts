@@ -230,21 +230,27 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       head: Boolean(parsedExtras?.letterboxdhead),
     });
 
-    // limit what we return, to limit the amount of data we send to the user
-    // @ts-ignore LOL. I know. FIX THIS LATER
-    films = toStremioMetaPreview(films);
     if (!parsedExtras?.letterboxdhead) {
       lruCache.save(config.pathSafe, films);
     }
 
     if (config.posters) {
       log(`Replacing Letterboxd posters for ${config.path}`);
+      // @ts-ignore LOL. I know. FIX THIS LATER
       films = await replacePosters(films);
     }
 
     log(`[${config.path}] serving fresh`);
     log(`[${config.path}] serving ${films.length}`);
     console.timeEnd(consoleTime);
+
+    // limit what we return, to limit the amount of data we send to the user
+    if (!env.ADDON_FULL_METADATA) {
+      log("Limiting metas to Stremio metas");
+      const filmsPreviewData = toStremioMetaPreview(films);
+      return res.json({ metas: paginate(filmsPreviewData) });
+    }
+
     return res.json({ metas: paginate(films) });
   } catch (error) {
     // Return empty
@@ -388,21 +394,25 @@ app.get("/verify/:base64", async (req, res) => {
   const config = encodeURIComponent(unencoded);
 
   // Verify we get metas from the URL
-  try {
-    const catalogUrl = `${userConfig.base}/${encodeURIComponent(
-      config,
-    )}/catalog/letterboxd/${encodeURIComponent(path)}/letterboxdhead=1.json`;
-    log(`Can get metas? ${catalogUrl}`);
-    const fetchRes = await fetch(catalogUrl);
-    if (!fetchRes.ok) {
+  if (!env.ADDON_SKIP_MANIFEST_VALIDATION) {
+    try {
+      const catalogUrl = `${userConfig.base}/${encodeURIComponent(
+        config,
+      )}/catalog/letterboxd/${encodeURIComponent(path)}/letterboxdhead=1.json`;
+      log(`Can get metas? ${catalogUrl}`);
+      const fetchRes = await fetch(catalogUrl);
+      if (!fetchRes.ok) {
+        log(`Couldn't get metas`);
+        return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json();
+      }
+    } catch (error) {
       log(`Couldn't get metas`);
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json();
+      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json(error.message);
     }
-  } catch (error) {
-    log(`Couldn't get metas`);
-    return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json(error.message);
+    log("Got metas!");
+  } else {
+    log("Skipping manifest validation");
   }
-  log("Got metas!");
 
   // change protocol to stremio, only if https
   userConfig.base = userConfig.base.startsWith("https")

@@ -1,4 +1,4 @@
-import { cleanEnv, num, str, url } from "envalid";
+import { bool, cleanEnv, num, str, url } from "envalid";
 
 export const env = cleanEnv(process.env, {
   /** Database URL, must relate to a Prisma-supported database. See /prisma.schema for more info. */
@@ -10,4 +10,8 @@ export const env = cleanEnv(process.env, {
    * Note that popular lists will only grab the first page.
    * */
   ADDON_MAX_PAGES_FETCHED: num({ default: 35 }),
+  /** Whether to return the full metadata for each film, or just the minimum. */
+  ADDON_FULL_METADATA: bool({ default: false }),
+  /** Skip validating metas on manifest generation. Useful for testing and self-hosting.*/
+  ADDON_SKIP_MANIFEST_VALIDATION: bool({ default: false }),
 });

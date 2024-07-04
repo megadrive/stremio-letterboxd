@@ -9,14 +9,14 @@ import {
 import { logger } from "../logger.js";
 const log = logger("lruCache");
 
-const cache = new LRUCache<string, StremioMetaPreview[]>({
+const cache = new LRUCache<string, StremioMeta[]>({
   max: 100,
   ttl: ONE_HOUR,
   allowStale: true,
 });
 
 export const lruCache = {
-  save: async (id: string, providedMetas?: StremioMetaPreview[]) => {
+  save: async (id: string, providedMetas?: StremioMeta[]) => {
     console.info(
       `[lrucache:save] Start saving ${id} with ${providedMetas?.length} movies provided.`,
     );

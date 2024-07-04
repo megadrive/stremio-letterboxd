@@ -1,7 +1,7 @@
 import { addonFetch } from "../lib/fetch.js";
 import { load as cheerio } from "cheerio";
 import { prisma } from "../prisma.js";
-import type { StremioMetaPreview } from "../consts.js";
+import type { StremioMeta } from "../consts.js";
 import { logger } from "../logger.js";
 import { env } from "../env.js";
 
@@ -194,7 +194,7 @@ export async function find(
   return undefined;
 }
 
-export const replacePosters = async (metas: StremioMetaPreview[]) => {
+export const replacePosters = async (metas: StremioMeta[]) => {
   const log = logBase.extend("replacePosters");
   try {
     const letterboxdImdbIDs = await prisma.letterboxdIMDb.findMany({
