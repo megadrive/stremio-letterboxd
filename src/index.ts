@@ -135,6 +135,28 @@ app.get("/:providedConfig/manifest.json", async (req, res) => {
 
 /** Provide the catalog for the provided config. */
 app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
+  /**
+   *
+   * @param code
+   * @param message
+   * @returns Empty JSON with the provided message
+   */
+  const resError = (
+    code: (typeof HTTP_CODES)[keyof typeof HTTP_CODES],
+    message: string,
+  ) => {
+    res.setHeader(
+      "Cache-Control",
+      "max-age=60, stale-while-revalidate=30, s-maxage=60",
+    );
+    return res.status(code).json({ message, metas: [] });
+  };
+
+  res.setHeader(
+    "Cache-Control",
+    `max-age=3600, stale-while-revalidate=${3600 / 2}, s-maxage=3600`,
+  );
+
   // We would use {id} if we had more than one list.
   const { providedConfig, type, id, extra } = req.params;
   const parsedExtras = (() => {
@@ -161,7 +183,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     }
   } catch (error) {
     log(error);
-    return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({ metas: [] });
+    return resError(HTTP_CODES.INTERNAL_SERVER_ERROR, "No config found");
   }
   // if we have a cacched config, use it, otherwise use the provided one
   const config = parseConfig(
@@ -182,13 +204,13 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   // We still keep movie here for legacy purposes, so current users don't break.
   if (type !== "movie" && type !== "letterboxd") {
     log(`Wrong type: ${type}, giving nothing.`);
-    return res.status(HTTP_CODES.BAD_REQUEST).json({ metas: [] });
+    return resError(HTTP_CODES.BAD_REQUEST, "Wrong type");
   }
 
   try {
     if ((await doesLetterboxdResourceExist(config.path)) === false) {
       log(`${config.path} doesn't exist`);
-      return res.status(HTTP_CODES.NOT_FOUND).send();
+      return resError(HTTP_CODES.NOT_FOUND, "Not found");
     }
 
     const sCache = lruCache.get(config.pathSafe);
@@ -256,7 +278,10 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     // Return empty
     log(error);
     console.timeEnd(consoleTime);
-    return res.json({ metas: [] });
+    return resError(
+      HTTP_CODES.INTERNAL_SERVER_ERROR,
+      error?.message ?? "Internal error",
+    );
   }
 });
 
@@ -273,9 +298,15 @@ app.get("/getConfig/:id", async (req, res) => {
     const config = parseConfig(
       cachedConfig ? cachedConfig.config : req.params.id,
     );
+    // cache for 1 day, should very rarely change anyway
+    res.setHeader("Cache-Control", "max-age=86400");
     return res.json(config);
   } catch (error) {
     log(error);
+    res.setHeader(
+      "Cache-Control",
+      "max-age=60, stale-while-revalidate=30, s-maxage=60",
+    );
     return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).send();
   }
 });
