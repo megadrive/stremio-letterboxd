@@ -397,6 +397,25 @@ app.get("/verify/:base64", async (req, res) => {
   }
 
   const path = new URL(userConfig.url).pathname;
+
+  // see if we already have an ID for this letterboxd path
+  const cachedConfig = await prisma.config.findFirst({
+    where: {
+      config: encodeURIComponent(path),
+    },
+  });
+
+  if (cachedConfig) {
+    log("Serving cached config with long max-age");
+    res.setHeader(
+      "Cache-Control",
+      "max-age=86400, stale-while-revalidate=3600",
+    );
+    return res
+      .status(HTTP_CODES.OK)
+      .json(`${userConfig.base}/${cachedConfig.id}/manifest.json`);
+  }
+
   const opts = [];
   if (userConfig.posters) {
     opts.push("p");
@@ -450,7 +469,7 @@ app.get("/verify/:base64", async (req, res) => {
     ? userConfig.base.replace(/https/, "stremio")
     : userConfig.base;
 
-  const cachedConfig = await prisma.config.create({
+  const newConfig = await prisma.config.create({
     data: {
       config,
     },
@@ -458,7 +477,7 @@ app.get("/verify/:base64", async (req, res) => {
 
   return res
     .status(HTTP_CODES.OK)
-    .json(`${userConfig.base}/${cachedConfig.id}/manifest.json`);
+    .json(`${userConfig.base}/${newConfig.id}/manifest.json`);
 });
 
 /**
