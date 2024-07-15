@@ -15,6 +15,13 @@
 
 If you ever need to start fresh, run `node clean.js` then run `npm install` again.
 
+## Upgrading
+
+1. Run `git pull` to update to the latest codebase
+2. Run `node clean.js` to clean all working directories.
+3. Run `npm run build` to re-build the project
+4. Run `npm run start` to start the addon, it will then be available at `http://localhost:PORT`
+
 ## Configuration
 
 The server is configured via environment variables. The following variables are required:
