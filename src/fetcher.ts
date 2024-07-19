@@ -248,18 +248,36 @@ export async function fetchFilmsSinglePage(
   letterboxdPath: Parameters<typeof fetchFilms>[0],
   options: Partial<Parameters<typeof fetchFilms>[1] & { page: number }> = {
     preferLetterboxdPosters: false,
+    ignoreUnreleased: false,
     page: 1,
   },
 ) {
   const log = logBase.extend("fetch:single");
   log(`[${letterboxdPath}] getting page ${options.page}`);
+  // Sets referer to the previous page
   const rawHtml = await (
-    await addonFetch(generateURL(letterboxdPath, options.page))
+    await addonFetch(generateURL(letterboxdPath, options.page), {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
+        Referer: generateURL(
+          letterboxdPath,
+          options?.page ? options.page - 1 : undefined,
+        ),
+      },
+    })
   ).text();
   let $$ = cheerio(rawHtml);
 
   const getFilmSlugs = () => {
     return $$(".poster")
+      .filter(function () {
+        if (options.ignoreUnreleased) {
+          const releaseYear = $$(this).data().filmReleaseYear as string;
+          if (+releaseYear < new Date().getFullYear()) return false;
+        }
+        return true;
+      })
       .map(function () {
         const slug = $$(this).data().filmSlug as string;
         if (!slug || typeof slug !== "string") return slug;
@@ -298,12 +316,20 @@ export async function fetchFilmsSinglePage(
  */
 export async function fetchFilms(
   letterboxdPath: string,
-  options: {
+  opts?: {
     head?: boolean;
     preferLetterboxdPosters?: boolean;
-  } = { preferLetterboxdPosters: false },
+    ignoreUnreleased?: boolean;
+  },
 ): Promise<StremioMeta[]> {
   const log = logBase.extend("fetch");
+
+  const optsDefaults = {
+    head: undefined,
+    preferLetterboxdPosters: false,
+    ignoreUnreleased: false,
+  };
+  const options = { ...optsDefaults, ...opts };
 
   // early exit, don't continue if the username doesn't match what we expect
   log(`[${letterboxdPath}] Checking path`);
@@ -347,7 +373,12 @@ export async function fetchFilms(
       // grab the pages
       const promises = [];
       for (let page = 1; page <= pages; page++) {
-        promises.push(fetchFilmsSinglePage(letterboxdPath, { page }));
+        promises.push(
+          fetchFilmsSinglePage(letterboxdPath, {
+            page,
+            ignoreUnreleased: options.ignoreUnreleased,
+          }),
+        );
       }
       // const results = await Promise.allSettled(promises);
       const results = await Promise.all(promises.splice(0, 1));

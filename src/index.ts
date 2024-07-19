@@ -330,6 +330,7 @@ app.get("/verify/:base64", async (req, res) => {
     base: string;
     posters: boolean;
     customListName: string;
+    ignoreUnreleased: boolean;
   };
   const log = logBase.extend("verify");
   // Resolve config
@@ -419,6 +420,9 @@ app.get("/verify/:base64", async (req, res) => {
   const opts = [];
   if (userConfig.posters) {
     opts.push("p");
+  }
+  if (userConfig.ignoreUnreleased) {
+    opts.push("iu");
   }
   if (userConfig?.customListName?.length) {
     opts.push(`cn=${userConfig.customListName}`);

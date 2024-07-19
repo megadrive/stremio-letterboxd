@@ -12,15 +12,21 @@ const Switch = forwardRef<HTMLInputElement>(function Switch(_, ref) {
 });
 
 export default function Inputbox() {
+  const [formDirty, setFormDirty] = useState(false);
   const [url, setUrl] = useState("");
   const [inProgress, setInProgress] = useState(false);
   const [manifest, setManifest] = useState("");
   const [customListName, setCustomListName] = useState("");
+  const [ignoreUnreleased, setIgnoreUnreleased] = useState(false);
   const [manifestUrl, setManifestUrl] = useState("");
-  const [config, setConfig] = useState<{ path: string; catalogName: string }>();
+  const [config, setConfig] = useState<{
+    path: string;
+    catalogName: string;
+    ignoreUnreleased: boolean;
+  }>();
   const urlInput = useRef<HTMLInputElement>(null);
   const customListNameInput = useRef<HTMLInputElement>(null);
-  const switchRef = useRef<HTMLInputElement>(null);
+  const unreleasedSwitchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -39,10 +45,11 @@ export default function Inputbox() {
 
           setConfig(gotConfig);
           setCustomListName(gotConfig.catalogName);
+          setIgnoreUnreleased(gotConfig.ignoreUnreleased);
           const configToProvide = encodeURIComponent(
             `${gotConfig.path}${
               gotConfig.catalogName ? `|cn=${gotConfig.catalogName}` : ""
-            }`,
+            }${gotConfig.ignoreUnreleased ? "|iu" : ""}`,
           );
           setManifest(`${base}/${configToProvide}/manifest.json`);
         })
@@ -92,6 +99,14 @@ export default function Inputbox() {
     }
   }
 
+  function updateIgnoreUnreleased() {
+    if (unreleasedSwitchRef.current?.checked) {
+      setIgnoreUnreleased(true);
+    } else {
+      setIgnoreUnreleased(false);
+    }
+  }
+
   /**
    * Resolves a URL after redirects. Returns undefined if an error occurs or not a letterboxd URL.
    * @param url URL to resolve
@@ -105,10 +120,13 @@ export default function Inputbox() {
       const toVerify = JSON.stringify({
         url,
         base,
-        posters: switchRef.current?.checked,
+        posters: unreleasedSwitchRef.current?.checked,
         customListName: customListName.length ? customListName : undefined,
+        ignoreUnreleased,
       });
       // if the url is the same, we don't need to verify it again
+
+      console.log({ toVerify });
 
       const res = await fetch(`${base}/verify/${btoa(toVerify)}`, {
         headers: {
@@ -217,9 +235,18 @@ export default function Inputbox() {
         </div>
         {/* Removed until feature is ready. */}
         {/*
+        <div>
           <Switch ref={switchRef} />
           Use Letterboxd Posters?
         </div> */}
+
+        <div className="flex gap-1">
+          <Switch ref={unreleasedSwitchRef} />
+          <label className="text-base">
+            Ignore films from after {new Date().getFullYear()}?
+          </label>
+        </div>
+
         <div className="grid gap-1 grid-cols-2 grid-rows-2">
           <button
             className="col-span-2 grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"

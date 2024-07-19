@@ -16,6 +16,8 @@ type Config = {
   username?: string;
   /** Best guess at a catalog name. */
   catalogName: string;
+  /** Whether to ignore unreleased films. */
+  ignoreUnreleased: boolean;
 };
 
 const defaultConfig: Config = {
@@ -24,6 +26,7 @@ const defaultConfig: Config = {
   type: "unset",
   posters: false,
   catalogName: "Unnamed Catalog",
+  ignoreUnreleased: false,
 };
 
 /**
@@ -61,6 +64,7 @@ const parseOldConfig = (str: string): Config => {
     name: listId ? listId.replace(/[^A-Za-z]/g, " ") : "watchlist",
     username,
     catalogName,
+    ignoreUnreleased: false,
   };
 };
 
@@ -79,12 +83,13 @@ export const parseConfig = (str: string): Config => {
    * Expected input: %2Ffcbarcelona%2Flist%2Fmovies-everyone-should-watch-at-least-once%2F%2Cp
    * p = posters
    */
-  const decoded = decodeURIComponent(str);
+  const decoded = decodeURIComponent(convertedConfigString);
   const split = decoded.split(/\|/g);
   const [path, ...providedOpts] = split;
   const opts: {
     posters: Config["posters"];
     catalogName?: Config["catalogName"];
+    ignoreUnreleased?: Config["ignoreUnreleased"];
   } = { posters: false };
   if (providedOpts) {
     for (const o of providedOpts) {
@@ -268,6 +273,7 @@ export const parseConfig = (str: string): Config => {
     posters: opts.posters,
     username,
     catalogName,
+    ignoreUnreleased: opts.ignoreUnreleased ?? false,
   };
 
   return resolvedConfig;
