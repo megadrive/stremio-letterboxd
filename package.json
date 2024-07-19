@@ -32,7 +32,7 @@
     "@types/stremio-addon-sdk": "^1.6.10",
     "del": "^7.1.0",
     "prisma": "^5.15.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.5.3"
   },
   "dependencies": {
     "@prisma/client": "^5.15.0",
