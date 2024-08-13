@@ -14,4 +14,6 @@ export const env = cleanEnv(process.env, {
   ADDON_FULL_METADATA: bool({ default: false }),
   /** Skip validating metas on manifest generation. Useful for testing and self-hosting.*/
   ADDON_SKIP_MANIFEST_VALIDATION: bool({ default: false }),
+
+  ADDON_LETTERBOXD_METADATA: bool({ default: false }),
 });

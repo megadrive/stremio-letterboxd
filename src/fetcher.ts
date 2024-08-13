@@ -66,7 +66,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
   log(
     `[cinemeta] need to fetch ${toFetch.length} metas, ${
       imdb_ids.length - toFetch.length
-    } are in cache`,
+    } are in cache`
   );
 
   if (toFetch.length !== 0) {
@@ -84,13 +84,13 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
       const rv: CinemetaMovieResponseLive["meta"][] = [];
 
       const fetchChunk = async (
-        chunk: string[],
+        chunk: string[]
       ): Promise<typeof rv | null[]> => {
         try {
           const res = await addonFetch(
             `https://v3-cinemeta.strem.io/catalog/movie/last-videos/lastVideosIds=${chunk.join(
-              ",",
-            )}.json`,
+              ","
+            )}.json`
           );
 
           if (!res.ok) {
@@ -112,7 +112,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
           log(`[cinemeta] getting chunk ${rv.length}`);
           const res = await fetchChunk(chunk);
           const filtered = res.filter(
-            Boolean,
+            Boolean
           ) as CinemetaMovieResponseLive["meta"][];
           rv.push(...filtered);
         } catch {
@@ -145,7 +145,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
             info: JSON.stringify(d),
           },
         });
-      }),
+      })
     )
       .then(() => log("[cinemeta] updated cache"))
       .catch((error) => {
@@ -177,7 +177,7 @@ async function getCinemetaInfoMany(imdb_ids: `tt${number}`[] | string[]) {
  */
 async function upsertLetterboxdUserWithMovies(
   username: string,
-  movies: StremioMetaPreview[],
+  movies: StremioMetaPreview[]
 ) {
   const log = logBase.extend("upsertLetterboxdUserWithMovies");
   log(`Caching ${username} to database.`);
@@ -235,9 +235,9 @@ async function getDBCachedUser(username: string) {
   }
 
   log(
-    `[${username}]: got metadata ${movie_info.length} -> ${movie_info.map(
-      (m) => (m ? m.name : undefined),
-    )}`,
+    `[${username}]: got metadata ${movie_info.length} -> ${movie_info.map((m) =>
+      m ? m.name : undefined
+    )}`
   );
 
   return { ...user, movies: movie_info };
@@ -250,7 +250,7 @@ export async function fetchFilmsSinglePage(
     preferLetterboxdPosters: false,
     ignoreUnreleased: false,
     page: 1,
-  },
+  }
 ) {
   const log = logBase.extend("fetch:single");
   log(`[${letterboxdPath}] getting page ${options.page}`);
@@ -262,7 +262,7 @@ export async function fetchFilmsSinglePage(
           "Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
         Referer: generateURL(
           letterboxdPath,
-          options?.page ? options.page - 1 : undefined,
+          options?.page ? options.page - 1 : undefined
         ),
       },
     })
@@ -300,7 +300,12 @@ export async function fetchFilmsSinglePage(
   log(`[${letterboxdPath}] got ${filmSlugs.length} films`);
 
   const imdbIds = await getImdbIDs(filmSlugs, letterboxdPath);
-  const films_with_metadata = await getCinemetaInfoMany(imdbIds);
+  let films_with_metadata: StremioMeta[];
+  if (env.ADDON_LETTERBOXD_METADATA) {
+    films_with_metadata = await getLetterboxdInfoMany(filmSlugs);
+  } else {
+    films_with_metadata = await getCinemetaInfoMany(imdbIds);
+  }
 
   log(`[${letterboxdPath}] got ${imdbIds.length} imdb IDs`);
 
@@ -311,8 +316,134 @@ export async function fetchFilmsSinglePage(
 }
 
 /**
+ * Get information for films from Letterboxd rather than Cinemeta. Experimental.
+ * @
+ */
+async function getLetterboxdInfoMany(
+  letterboxdSlugs: string[]
+): Promise<StremioMeta[]> {
+  const log = logBase.extend("getLetterboxdInfoMany");
+  try {
+    const URL_TEMPLATE = "https://letterboxd.com/film";
+
+    const rv: Awaited<ReturnType<typeof getLetterboxdInfoMany>> = [];
+
+    const promises = letterboxdSlugs.map(async (slug) => {
+      try {
+        const res = await addonFetch(
+          `${URL_TEMPLATE}/${slug.replace(/ /g, "-")}`
+        );
+        if (!res.ok) throw Error(res.statusText);
+
+        const html = await res.text();
+        const $ = cheerio(html);
+
+        const tagline = $("h4.tagline").text();
+        const synopsis = $("div.truncate").text();
+        const description = `${tagline}\n\n${synopsis}`;
+        const runtime =
+          $("p.text-link.text-footer").text().split("mins")[0] ?? 0;
+        const imdbId = (() => {
+          const imdbUrl = $("a[data-track-action=IMDb]").prop("href");
+          const match = imdbUrl?.match(/(tt[0-9]+)/);
+
+          if (!match) return undefined;
+
+          return match[1];
+        })();
+        if (!imdbId) {
+          log(`Couldn't find IMDB ID for ${slug}`);
+          return;
+        }
+        const name = $("meta[property='og:title']").attr("content");
+        if (!name) {
+          log(`Couldn't find name for ${slug}`);
+          return;
+        }
+
+        const genres = (() => {
+          const texts = $("#tab-genres div").first().find("a");
+          const foundGenres: string[] = [];
+
+          texts.each((i, el) => {
+            const text = $(el).text();
+            if (text.length > 0) foundGenres.push(text);
+          });
+
+          return foundGenres;
+        })();
+
+        const castlist = (() => {
+          const cast: string[] = [];
+          $(".cast-list a").each((i, el) => {
+            cast.push($(el).text());
+          });
+          return cast;
+        })();
+        // limit to the first 3
+        castlist.length = 3;
+
+        const poster = await (async () => {
+          try {
+            const res = await addonFetch(
+              `https://letterboxd.com/ajax/poster/film/${slug.replace(
+                / /g,
+                "-"
+              )}/std/1000x1500/`
+            );
+            if (!res.ok) throw Error(res.statusText);
+            const $$ = cheerio(await res.text());
+
+            const posterUrl = $$("img").first().attr("src");
+            return posterUrl;
+          } catch (error) {
+            log(`Couldn't fetch Letterboxd poster for ${slug}`);
+            log(error);
+          }
+
+          return undefined;
+        })();
+
+        return {
+          id: imdbId,
+          name,
+          description,
+          cast: castlist,
+          type: "movie",
+          genres,
+          poster,
+          runtime: `${runtime.trim()} mins`,
+        } satisfies StremioMeta;
+      } catch (error) {
+        log(`Couldn't fetch Letterboxd page for extra data: ${slug}`);
+        log(error);
+      }
+
+      throw Error("Couldn't fetch Letterboxd page for extra data");
+    });
+
+    const results = await Promise.allSettled(promises);
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) {
+        rv.push({
+          ...result.value,
+          type: "movie",
+        });
+      }
+    }
+
+    return rv;
+  } catch (error) {
+    log("Couldn't get Letterboxd info.");
+    log(error);
+  }
+
+  return [];
+}
+
+/**
  * fetch a Letterboxd user's watchlist
- * .TODO Make this return early with the first page, then spawn a child process to grab the rest.
+ * @TODO Make this return early with the first page, then spawn a child process to grab the rest.
  */
 export async function fetchFilms(
   letterboxdPath: string,
@@ -320,7 +451,7 @@ export async function fetchFilms(
     head?: boolean;
     preferLetterboxdPosters?: boolean;
     ignoreUnreleased?: boolean;
-  },
+  }
 ): Promise<StremioMeta[]> {
   const log = logBase.extend("fetch");
 
@@ -357,7 +488,7 @@ export async function fetchFilms(
       let pages = +$(".paginate-page").last().text();
       if (pages > env.ADDON_MAX_PAGES_FETCHED) {
         logFresh(
-          `Pages detected: ${pages}, rounding down to ${env.ADDON_MAX_PAGES_FETCHED}`,
+          `Pages detected: ${pages}, rounding down to ${env.ADDON_MAX_PAGES_FETCHED}`
         );
         pages = env.ADDON_MAX_PAGES_FETCHED;
       }
@@ -377,7 +508,7 @@ export async function fetchFilms(
           fetchFilmsSinglePage(letterboxdPath, {
             page,
             ignoreUnreleased: options.ignoreUnreleased,
-          }),
+          })
         );
       }
       // const results = await Promise.allSettled(promises);
@@ -402,14 +533,14 @@ export async function fetchFilms(
           logFresh(
             `[${letterboxdPath}]: updated user ${letterboxdPath}. ${
               user.updatedAt
-            } with ${(JSON.parse(user.movie_ids) as string[]).length} movies.`,
-          ),
+            } with ${(JSON.parse(user.movie_ids) as string[]).length} movies.`
+          )
         )
         .catch((err) => logFresh(err));
 
       // if we/the user prefer letterboxd posters, use those instead
       logFresh(
-        `[${letterboxdPath}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`,
+        `[${letterboxdPath}] prefer letterboxd posters? ${options.preferLetterboxdPosters}`
       );
 
       return metasToReturn;
@@ -431,7 +562,7 @@ export async function fetchFilms(
     // }
 
     const cached_movies = await getCinemetaInfoMany(
-      JSON.parse(cachedUser.movie_ids) as string[],
+      JSON.parse(cachedUser.movie_ids) as string[]
     );
 
     // if less than 1 page, just fetch a fresh set of data
@@ -452,8 +583,8 @@ export async function fetchFilms(
         log(
           `[${letterboxdPath}] fresh data fetched in ${formatTimeBetween(
             freshStartTime,
-            Date.now(),
-          )} seconds`,
+            Date.now()
+          )} seconds`
         );
         return;
       })
@@ -465,8 +596,8 @@ export async function fetchFilms(
     log(
       `[${letterboxdPath}] cached time: ${formatTimeBetween(
         cachedStartTime,
-        Date.now(),
-      )}`,
+        Date.now()
+      )}`
     );
     return cached_movies;
   } catch (error) {

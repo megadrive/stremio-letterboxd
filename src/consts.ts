@@ -36,68 +36,73 @@ export const LetterboxdRegex =
 export const LetterboxdUsernameOrListRegex =
   /([A-Za-z0-9_])(|([A-Za-z0-9\-_]+))?/i;
 
-export type StremioMeta = {
-  id: string;
-  type: "movie" | "series" | "channel" | "tv";
-  name: string;
-  genres: string[];
-  poster?: string;
-  posterShape?: "square" | "poster" | "landscape";
-  background?: string;
-  logo?: string;
-  description?: string;
-  releaseInfo?: string;
-  director?: string[];
-  cast?: string[];
-  imdbRating?: string;
-  released?: string;
-  /** @deprecated */
-  trailers?: { source: string; type: "Trailer" | "Clip" | string }[];
-  links?: {
-    name: string;
-    category: string;
-    url: string;
-  }[];
-  videos?: {
-    id: string;
-    title: string;
-    released: string;
-    thumbnail?: string;
-    streams: Record<string, string | number>[];
-    available?: boolean;
-    episode?: number;
-    season?: number;
-    trailers?: Record<string, string | number>[];
-    overview?: string;
-  }[];
-  runtime?: string;
-  language?: string;
-  country?: string;
-  awards?: string;
-  website?: string;
-  behaviorHints?: Partial<{
-    defaultVideoID: string;
-    hasScheduledVideos: boolean;
-  }>;
-};
+import type { MetaDetail } from "stremio-addon-sdk";
+export type StremioMeta = MetaDetail;
 
-export type StremioMetaPreview = Pick<
-  StremioMeta,
-  "id" | "type" | "name" | "poster"
-> &
-  Partial<
-    Pick<
-      StremioMeta,
-      | "genres"
-      | "imdbRating"
-      | "releaseInfo"
-      | "director"
-      | "cast"
-      | "links"
-      | "description"
-      | "trailers"
-    >
-  >;
+// export type StremioMeta = {
+//   id: string;
+//   type: "movie" | "series" | "channel" | "tv";
+//   name: string;
+//   genres: string[];
+//   poster?: string;
+//   posterShape?: "square" | "poster" | "landscape";
+//   background?: string;
+//   logo?: string;
+//   description?: string;
+//   releaseInfo?: string;
+//   director?: string[];
+//   cast?: string[];
+//   imdbRating?: string;
+//   released?: string;
+//   /** @deprecated */
+//   trailers?: { source: string; type: "Trailer" | "Clip" | string }[];
+//   links?: {
+//     name: string;
+//     category: string;
+//     url: string;
+//   }[];
+//   videos?: {
+//     id: string;
+//     title: string;
+//     released: string;
+//     thumbnail?: string;
+//     streams: Record<string, string | number>[];
+//     available?: boolean;
+//     episode?: number;
+//     season?: number;
+//     trailers?: Record<string, string | number>[];
+//     overview?: string;
+//   }[];
+//   runtime?: string;
+//   language?: string;
+//   country?: string;
+//   awards?: string;
+//   website?: string;
+//   behaviorHints?: Partial<{
+//     defaultVideoID: string;
+//     hasScheduledVideos: boolean;
+//   }>;
+// };
+
+import type { MetaPreview } from "stremio-addon-sdk";
+export type StremioMetaPreview = MetaPreview;
+// export type StremioMetaPreview = Pick<
+//   StremioMeta,
+//   "id" | "type" | "name" | "poster"
+// > &
+//   Partial<
+//     Pick<
+//       StremioMeta,
+//       | "genres"
+//       | "imdbRating"
+//       | "releaseInfo"
+//       | "director"
+//       | "cast"
+//       | "links"
+//       | "description"
+//       | "trailers"
+//     >
+//   >;
 
 export type CinemetaMovieResponseLive = {
   meta: {

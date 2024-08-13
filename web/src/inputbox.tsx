@@ -240,12 +240,13 @@ export default function Inputbox() {
           Use Letterboxd Posters?
         </div> */}
 
+        {/* Removed until feature is ready.
         <div className="flex gap-1">
           <Switch ref={unreleasedSwitchRef} />
           <label className="text-base">
             Ignore films from after {new Date().getFullYear()}?
           </label>
-        </div>
+        </div> */}
 
         <div className="grid gap-1 grid-cols-2 grid-rows-2">
           <button
