@@ -28,7 +28,7 @@ const logBase = logger("server");
 if (env.isProd || env.isProduction) {
   publishToCentral("https://letterboxd.almosteffective.com/").then(() => {
     logBase(
-      `Published to stremio official repository as ${manifest.name} with ID ${manifest.id} and version ${manifest.version}`,
+      `Published to stremio official repository as ${manifest.name} with ID ${manifest.id} and version ${manifest.version}`
     );
   });
 } else {
@@ -68,7 +68,7 @@ app.get("/:id/configure", (req, res) => {
   const base = !env.isProduction ? "http://localhost:4321/" : "";
 
   return res.redirect(
-    `${base}/configure?id=${encodeURIComponent(req.params.id)}`,
+    `${base}/configure?id=${encodeURIComponent(req.params.id)}`
   );
 });
 
@@ -99,14 +99,14 @@ app.get("/:providedConfig/manifest.json", async (req, res) => {
     log(error);
   }
   const config = parseConfig(
-    cachedConfig ? cachedConfig.config : providedConfig,
+    cachedConfig ? cachedConfig.config : providedConfig
   );
   if (!config) {
     return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json();
   }
 
   const cloned_manifest = JSON.parse(
-    JSON.stringify(manifest),
+    JSON.stringify(manifest)
   ) as ManifestExpanded;
   cloned_manifest.id = `${
     env.isDevelopment ? "dev-" : ""
@@ -143,18 +143,18 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
    */
   const resError = (
     code: (typeof HTTP_CODES)[keyof typeof HTTP_CODES],
-    message: string,
+    message: string
   ) => {
     res.setHeader(
       "Cache-Control",
-      "max-age=60, stale-while-revalidate=30, s-maxage=60",
+      "max-age=60, stale-while-revalidate=30, s-maxage=60"
     );
     return res.status(code).json({ message, metas: [] });
   };
 
   res.setHeader(
     "Cache-Control",
-    `max-age=3600, stale-while-revalidate=${3600 / 2}, s-maxage=3600`,
+    `max-age=3600, stale-while-revalidate=${3600 / 2}, s-maxage=3600`
   );
 
   // We would use {id} if we had more than one list.
@@ -166,10 +166,11 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     const matched = [...extra.matchAll(rextras)];
     const rv: Record<string, string> = {};
     for (const match of matched) {
-      rv[match[1]] = match[2];
+      rv[match[1]] = match[2] ?? true;
     }
     return rv;
   })();
+  console.log({ parsedExtras });
   const log = logBase.extend(`catalog:${id}`);
   let cachedConfig: Awaited<ReturnType<typeof prisma.config.findFirst>>;
   try {
@@ -187,7 +188,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   }
   // if we have a cacched config, use it, otherwise use the provided one
   const config = parseConfig(
-    cachedConfig ? cachedConfig.config : providedConfig,
+    cachedConfig ? cachedConfig.config : providedConfig
   );
 
   const username = config.username;
@@ -234,12 +235,12 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     if (sCache) {
       log("serving cached");
       res.setHeader("Content-Type", "application/json");
-      let metas: typeof sCache = sCache;
+      const metas: typeof sCache = sCache;
 
-      if (config.posters) {
-        log(`Replacing Letterboxd posters for ${config.path}`);
-        metas = await replacePosters(sCache);
-      }
+      // if (config.posters) {
+      //   log(`Replacing Letterboxd posters for ${config.path}`);
+      //   metas = await replacePosters(sCache);
+      // }
 
       console.timeEnd(consoleTime);
       return res.json({
@@ -250,16 +251,31 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
     let films = await fetchFilms(config.path, {
       head: Boolean(parsedExtras?.letterboxdhead),
+      rpdbPosters: Boolean(parsedExtras?.rpdbApiKey),
+      rpdbApiKey: parsedExtras?.rpdbApiKey,
     });
 
     if (!parsedExtras?.letterboxdhead) {
       lruCache.save(config.pathSafe, films);
     }
 
-    if (config.posters) {
-      log(`Replacing Letterboxd posters for ${config.path}`);
-      // @ts-ignore LOL. I know. FIX THIS LATER
-      films = await replacePosters(films);
+    if (config.posterChoice) {
+      switch (config.posterChoice) {
+        case "cinemeta":
+          console.log(`Leaving Cinemeta posters for ${config.path}`);
+          break;
+        case "letterboxd":
+          console.log(`Replacing Letterboxd posters for ${config.path}`);
+          films = await replacePosters(films);
+          break;
+        case "rpdb":
+          console.log(`Replacing RPDB posters for ${config.path}`);
+          films = films.map((film) => {
+            film.poster = `https://api.ratingposterdb.com/${env.ADDON_RPDB_APIKEY}/imdb/poster-default/${film.id}.jpg`;
+            return film;
+          });
+          break;
+      }
     }
 
     log(`[${config.path}] serving fresh`);
@@ -280,7 +296,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     console.timeEnd(consoleTime);
     return resError(
       HTTP_CODES.INTERNAL_SERVER_ERROR,
-      error?.message ?? "Internal error",
+      error?.message ?? "Internal error"
     );
   }
 });
@@ -296,7 +312,7 @@ app.get("/getConfig/:id", async (req, res) => {
       },
     });
     const config = parseConfig(
-      cachedConfig ? cachedConfig.config : req.params.id,
+      cachedConfig ? cachedConfig.config : req.params.id
     );
     // cache for 1 day, should very rarely change anyway
     res.setHeader("Cache-Control", "max-age=86400");
@@ -305,7 +321,7 @@ app.get("/getConfig/:id", async (req, res) => {
     log(error);
     res.setHeader(
       "Cache-Control",
-      "max-age=60, stale-while-revalidate=30, s-maxage=60",
+      "max-age=60, stale-while-revalidate=30, s-maxage=60"
     );
     return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).send();
   }
@@ -331,6 +347,7 @@ app.get("/verify/:base64", async (req, res) => {
     posters: boolean;
     customListName: string;
     ignoreUnreleased: boolean;
+    posterChoice: "cinemeta" | "letterboxd" | "rpdb";
   };
   const log = logBase.extend("verify");
   // Resolve config
@@ -410,7 +427,7 @@ app.get("/verify/:base64", async (req, res) => {
     log("Serving cached config with long max-age");
     res.setHeader(
       "Cache-Control",
-      "max-age=86400, stale-while-revalidate=3600",
+      "max-age=86400, stale-while-revalidate=3600"
     );
     return res
       .status(HTTP_CODES.OK)
@@ -418,8 +435,11 @@ app.get("/verify/:base64", async (req, res) => {
   }
 
   const opts = [];
-  if (userConfig.posters) {
-    opts.push("p");
+  if (userConfig.posterChoice) {
+    opts.push(`p=${userConfig.posterChoice}`);
+  } else {
+    // cinemeta is the default, set if omitted for some reason
+    opts.push("p=cinemeta");
   }
   if (userConfig.ignoreUnreleased) {
     opts.push("iu");
@@ -451,7 +471,7 @@ app.get("/verify/:base64", async (req, res) => {
   if (!env.ADDON_SKIP_MANIFEST_VALIDATION) {
     try {
       const catalogUrl = `${userConfig.base}/${encodeURIComponent(
-        config,
+        config
       )}/catalog/letterboxd/${encodeURIComponent(path)}/letterboxdhead=1.json`;
       log(`Can get metas? ${catalogUrl}`);
       const fetchRes = await fetch(catalogUrl);
@@ -505,6 +525,20 @@ app.get("/poster/:letterboxdPath/:letterboxdId", async (req, res) => {
   return res.redirect(poster.url);
 });
 
-app.listen(PORT, () =>
-  console.log(`Stremio-Letterboxd available at http://localhost:${PORT}`),
-);
+app.get("/rpdb-poster/:imdbId", async (req, res) => {
+  const { imdbId } = req.params;
+  if (!env.ADDON_RPDB_APIKEY || env.ADDON_RPDB_APIKEY.length === 0 || !imdbId) {
+    return res.status(HTTP_CODES.NOT_FOUND).send();
+  }
+
+  res.header("Cache-Control", "public, max-age=31536000, immutable");
+
+  return res.redirect(
+    `https://api.ratingposterdb.com/${env.ADDON_RPDB_APIKEY}/imdb/poster-default/${imdbId}.jpg`
+  );
+});
+
+app.listen(PORT, () => {
+  console.log(`Stremio-Letterboxd available at http://localhost:${PORT}`);
+  console.info("env;", env);
+});

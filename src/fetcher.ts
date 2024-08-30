@@ -302,9 +302,25 @@ export async function fetchFilmsSinglePage(
   const imdbIds = await getImdbIDs(filmSlugs, letterboxdPath);
   let films_with_metadata: StremioMeta[];
   if (env.ADDON_LETTERBOXD_METADATA) {
-    films_with_metadata = await getLetterboxdInfoMany(filmSlugs);
+    films_with_metadata = await getLetterboxdInfoMany(filmSlugs, {
+      skipPoster: !!options?.rpdbApiKey?.length,
+    });
   } else {
     films_with_metadata = await getCinemetaInfoMany(imdbIds);
+  }
+
+  if (options?.rpdbApiKey?.length) {
+    const base = env.RAILWAY_PUBLIC_DOMAIN.length
+      ? env.RAILWAY_PUBLIC_DOMAIN
+      : "";
+    if (env.ADDON_RPDB_APIKEY) {
+      films_with_metadata = films_with_metadata.map((film) => {
+        return {
+          ...film,
+          poster: `${base}/rpdb-poster/${film.id}`,
+        };
+      });
+    }
   }
 
   log(`[${letterboxdPath}] got ${imdbIds.length} imdb IDs`);
@@ -320,7 +336,10 @@ export async function fetchFilmsSinglePage(
  * @
  */
 async function getLetterboxdInfoMany(
-  letterboxdSlugs: string[]
+  letterboxdSlugs: string[],
+  opts: {
+    skipPoster?: boolean;
+  }
 ): Promise<StremioMeta[]> {
   const log = logBase.extend("getLetterboxdInfoMany");
   try {
@@ -384,6 +403,8 @@ async function getLetterboxdInfoMany(
         castlist.length = 3;
 
         const poster = await (async () => {
+          if (opts.skipPoster) return undefined;
+
           try {
             const res = await addonFetch(
               `https://letterboxd.com/ajax/poster/film/${slug.replace(
@@ -451,6 +472,8 @@ export async function fetchFilms(
     head?: boolean;
     preferLetterboxdPosters?: boolean;
     ignoreUnreleased?: boolean;
+    rpdbPosters?: boolean;
+    rpdbApiKey?: string;
   }
 ): Promise<StremioMeta[]> {
   const log = logBase.extend("fetch");
@@ -508,6 +531,8 @@ export async function fetchFilms(
           fetchFilmsSinglePage(letterboxdPath, {
             page,
             ignoreUnreleased: options.ignoreUnreleased,
+            rpdbPosters: options.rpdbPosters,
+            rpdbApiKey: options.rpdbApiKey,
           })
         );
       }

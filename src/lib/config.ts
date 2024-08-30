@@ -8,8 +8,8 @@ type Config = {
   /** Type of the resource. */
   type: "unset" | "watchlist" | "list" | "person";
   reserved?: boolean;
-  /** Replace posters with Letterboxd ones. */
-  posters: boolean;
+  /** Replace posters with the user provided choice. */
+  posterChoice: "cinemeta" | "letterboxd" | "rpdb";
   /** A user's list identifier. */
   listId?: string;
   /** A user's username. */
@@ -24,7 +24,7 @@ const defaultConfig: Config = {
   path: "/",
   pathSafe: "-",
   type: "unset",
-  posters: false,
+  posterChoice: "cinemeta",
   catalogName: "Unnamed Catalog",
   ignoreUnreleased: false,
 };
@@ -34,6 +34,7 @@ const defaultConfig: Config = {
  * @deprecated
  */
 const parseOldConfig = (str: string): Config => {
+  console.info("parsing old config");
   const decoded = decodeURIComponent(str);
   const split = decoded.split(/\|/g); // "almosteffective|maybe" -> ["almosteffective", "maybe"]
   const [username, listId] = split;
@@ -58,7 +59,7 @@ const parseOldConfig = (str: string): Config => {
   return {
     path,
     pathSafe: path.replace(/[^A-Za-z0-9]/g, "-"),
-    posters: false,
+    posterChoice: "cinemeta",
     type,
     listId,
     name: listId ? listId.replace(/[^A-Za-z]/g, " ") : "watchlist",
@@ -87,24 +88,28 @@ export const parseConfig = (str: string): Config => {
   const split = decoded.split(/\|/g);
   const [path, ...providedOpts] = split;
   const opts: {
-    posters: Config["posters"];
+    posterChoice: Config["posterChoice"];
     catalogName?: Config["catalogName"];
     ignoreUnreleased?: Config["ignoreUnreleased"];
-  } = { posters: false };
+  } = { posterChoice: "cinemeta" };
   if (providedOpts) {
     for (const o of providedOpts) {
       const opt = decodeURIComponent(o);
-      // if a = is included, parse as a string
-      if (!opt.includes("=")) {
-        // parse as a boolean, then continue
-        opts.posters = o === "p";
-        continue;
-      }
-
       // parse as a string
       const [k, v] = o.split("=");
       if (k === "cn") {
         opts.catalogName = v;
+      }
+      if (k === "p") {
+        switch (v) {
+          case "cinemeta":
+          case "letterboxd":
+          case "rpdb":
+            opts.posterChoice = v;
+            break;
+          default:
+            opts.posterChoice = "cinemeta";
+        }
       }
     }
   }
@@ -260,7 +265,7 @@ export const parseConfig = (str: string): Config => {
   console.info(
     `Got config: ${path} (${type}) with ${
       Object.keys(opts).length
-    } options from ${str}`,
+    } options from ${str}`
   );
 
   const resolvedConfig: Config = {
@@ -270,7 +275,7 @@ export const parseConfig = (str: string): Config => {
     type,
     listId,
     name,
-    posters: opts.posters,
+    posterChoice: opts.posterChoice,
     username,
     catalogName,
     ignoreUnreleased: opts.ignoreUnreleased ?? false,

@@ -1,15 +1,8 @@
-import { useEffect, useRef, useState, forwardRef } from "react";
+import { useEffect, useRef, useState, forwardRef, createRef } from "react";
 import { Toaster, toast } from "react-hot-toast";
 
-const Switch = forwardRef<HTMLInputElement>(function Switch(_, ref) {
-  return (
-    <label className="relative inline-flex cursor-pointer items-center">
-      <input id="switch" type="checkbox" className="peer sr-only" ref={ref} />
-      <label htmlFor="switch" className="hidden" />
-      <div className="peer h-6 w-11 rounded-full border bg-slate-200 after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300" />
-    </label>
-  );
-});
+const posterChoices = ["cinemeta", "letterboxd", "rpdb"] as const;
+type PosterChoice = (typeof posterChoices)[number];
 
 export default function Inputbox() {
   const [formDirty, setFormDirty] = useState(false);
@@ -19,14 +12,17 @@ export default function Inputbox() {
   const [customListName, setCustomListName] = useState("");
   const [ignoreUnreleased, setIgnoreUnreleased] = useState(false);
   const [manifestUrl, setManifestUrl] = useState("");
+  const [posterChoice, setPosterChoice] = useState<PosterChoice>("cinemeta");
   const [config, setConfig] = useState<{
     path: string;
     catalogName: string;
     ignoreUnreleased: boolean;
+    posterChoice: PosterChoice;
   }>();
   const urlInput = useRef<HTMLInputElement>(null);
   const customListNameInput = useRef<HTMLInputElement>(null);
   const unreleasedSwitchRef = useRef<HTMLInputElement>(null);
+  const posterChoiceRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -107,6 +103,22 @@ export default function Inputbox() {
     }
   }
 
+  function updatePosterChoice() {
+    if (posterChoiceRef.current?.value) {
+      switch (posterChoiceRef.current.value) {
+        case "cinemeta":
+        case "letterboxd":
+        case "rpdb":
+          setPosterChoice(posterChoiceRef.current.value);
+          break;
+        default:
+          setPosterChoice("cinemeta");
+      }
+    } else {
+      setPosterChoice("cinemeta");
+    }
+  }
+
   /**
    * Resolves a URL after redirects. Returns undefined if an error occurs or not a letterboxd URL.
    * @param url URL to resolve
@@ -123,6 +135,7 @@ export default function Inputbox() {
         posters: unreleasedSwitchRef.current?.checked,
         customListName: customListName.length ? customListName : undefined,
         ignoreUnreleased,
+        posterChoice,
       });
       // if the url is the same, we don't need to verify it again
 
@@ -247,6 +260,19 @@ export default function Inputbox() {
             Ignore films from after {new Date().getFullYear()}?
           </label>
         </div> */}
+
+        <div>
+          What posters do you want to use?
+          <select
+            className="border border-black text-tailwind rounded text-xl px-2 py-1"
+            ref={posterChoiceRef}
+            onChange={updatePosterChoice}
+          >
+            <option value="cinemeta">Cinemeta (default)</option>
+            <option value="letterboxd">Letterboxd</option>
+            <option value="rpdb">RPDB</option>
+          </select>
+        </div>
 
         <div className="grid gap-1 grid-cols-2 grid-rows-2">
           <button
