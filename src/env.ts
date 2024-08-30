@@ -19,5 +19,5 @@ export const env = cleanEnv(process.env, {
 
   ADDON_RPDB_APIKEY: str(),
 
-  RAILWAY_PUBLIC_DOMAIN: url({ devDefault: "http://localhost:3030" }),
+  RAILWAY_PUBLIC_DOMAIN: str({ devDefault: "http://localhost:3030" }),
 });
