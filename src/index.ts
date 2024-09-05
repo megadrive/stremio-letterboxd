@@ -5,7 +5,7 @@ import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
 import { fetchFilms } from "./fetcher.js";
-import { doesLetterboxdResourceExist } from "./util.js";
+import { convertHTMLEntities, doesLetterboxdResourceExist } from "./util.js";
 import { env } from "./env.js";
 import { parseLetterboxdURLToID } from "./util.js";
 import { lruCache } from "./lib/lruCache.js";
@@ -120,7 +120,7 @@ app.get("/:providedConfig/manifest.json", async (req, res) => {
       id: config.path,
       /** @ts-ignore next-line */
       type: "letterboxd",
-      name: config.catalogName,
+      name: convertHTMLEntities(config.catalogName),
       extra: [
         {
           name: "skip",
@@ -195,8 +195,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
   if (parsedExtras?.letterboxdhead) {
     // Perform a HEAD-style request to confirm the resource exists and has at least 1 movie.
-    const metas = await fetchFilms(config.path, { head: true });
-    return res.status(HTTP_CODES.OK).json(metas);
+    return res.status(HTTP_CODES.OK).json();
   }
 
   const consoleTime = `[${config.path}] catalog`;

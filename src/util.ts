@@ -60,7 +60,7 @@ export const isOld = (datetime: Date, howOld: number): boolean => {
 /** Format two Date.now()s in 0m 00s format. */
 export const formatTimeBetween = (
   from: ReturnType<(typeof Date)["now"]>,
-  to = Date.now(),
+  to = Date.now()
 ) => {
   const seconds = (to - from) / 1000;
   if (seconds < 60) {
@@ -73,7 +73,7 @@ export const formatTimeBetween = (
 export const IDUtil = {
   /** Splits an ID. */
   split: (
-    id: string,
+    id: string
   ): {
     username: string;
     listId?: string;
@@ -91,3 +91,10 @@ export const IDUtil = {
 
 export const PrependWithDev = (s: string, seperator = ".") =>
   !env.isProduction ? `dev${seperator}${s}` : s;
+
+/**
+ * Converts HTML entities to their actual characters from a string.
+ * For example: &amp; becomes &, &quot; becomes ", etc.
+ */
+export const convertHTMLEntities = (str: string) =>
+  str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
