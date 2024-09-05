@@ -268,11 +268,15 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
           films = await replacePosters(films);
           break;
         case "rpdb":
-          console.log(`Replacing RPDB posters for ${config.path}`);
-          films = films.map((film) => {
-            film.poster = `https://api.ratingposterdb.com/${env.ADDON_RPDB_APIKEY}/imdb/poster-default/${film.id}.jpg`;
-            return film;
-          });
+          {
+            console.log(`Replacing RPDB posters for ${config.path}`);
+            console.log({ config });
+            const apiKey = config.rpdbApiKey ?? env.ADDON_RPDB_APIKEY;
+            films = films.map((film) => {
+              film.poster = `https://api.ratingposterdb.com/${apiKey}/imdb/poster-default/${film.id}.jpg`;
+              return film;
+            });
+          }
           break;
       }
     }
@@ -347,6 +351,7 @@ app.get("/verify/:base64", async (req, res) => {
     customListName: string;
     ignoreUnreleased: boolean;
     posterChoice: "cinemeta" | "letterboxd" | "rpdb";
+    rpdbApiKey?: string;
   };
   const log = logBase.extend("verify");
   // Resolve config
@@ -439,6 +444,9 @@ app.get("/verify/:base64", async (req, res) => {
   } else {
     // cinemeta is the default, set if omitted for some reason
     opts.push("p=cinemeta");
+  }
+  if (opts.includes("p=rpdb") && userConfig.rpdbApiKey) {
+    opts.push(`rpdb=${userConfig.rpdbApiKey}`);
   }
   if (userConfig.ignoreUnreleased) {
     opts.push("iu");

@@ -10,6 +10,8 @@ type Config = {
   reserved?: boolean;
   /** Replace posters with the user provided choice. */
   posterChoice: "cinemeta" | "letterboxd" | "rpdb";
+  /** RPDB API key. */
+  rpdbApiKey?: string;
   /** A user's list identifier. */
   listId?: string;
   /** A user's username. */
@@ -89,6 +91,7 @@ export const parseConfig = (str: string): Config => {
   const [path, ...providedOpts] = split;
   const opts: {
     posterChoice: Config["posterChoice"];
+    rpdbApiKey?: Config["rpdbApiKey"];
     catalogName?: Config["catalogName"];
     ignoreUnreleased?: Config["ignoreUnreleased"];
   } = { posterChoice: "cinemeta" };
@@ -110,6 +113,9 @@ export const parseConfig = (str: string): Config => {
           default:
             opts.posterChoice = "cinemeta";
         }
+      }
+      if (opts.posterChoice === "rpdb" && k === "rpdb") {
+        opts.rpdbApiKey = v;
       }
     }
   }
@@ -276,6 +282,7 @@ export const parseConfig = (str: string): Config => {
     listId,
     name,
     posterChoice: opts.posterChoice,
+    rpdbApiKey: opts.rpdbApiKey,
     username,
     catalogName,
     ignoreUnreleased: opts.ignoreUnreleased ?? false,
