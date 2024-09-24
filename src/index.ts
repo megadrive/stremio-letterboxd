@@ -193,11 +193,6 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
   const username = config.username;
 
-  if (parsedExtras?.letterboxdhead) {
-    // Perform a HEAD-style request to confirm the resource exists and has at least 1 movie.
-    return res.status(HTTP_CODES.OK).json();
-  }
-
   const consoleTime = `[${config.path}] catalog`;
   console.time(consoleTime);
 
@@ -249,14 +244,9 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     }
 
     let films = await fetchFilms(config.path, {
-      head: Boolean(parsedExtras?.letterboxdhead),
       rpdbPosters: Boolean(parsedExtras?.rpdbApiKey),
       rpdbApiKey: parsedExtras?.rpdbApiKey,
     });
-
-    if (!parsedExtras?.letterboxdhead) {
-      lruCache.save(config.pathSafe, films);
-    }
 
     if (config.posterChoice) {
       switch (config.posterChoice) {
@@ -477,22 +467,22 @@ app.get("/verify/:base64", async (req, res) => {
   // Verify we get metas from the URL
   if (!env.ADDON_SKIP_MANIFEST_VALIDATION) {
     try {
-      const catalogUrl = `${userConfig.base}/${encodeURIComponent(
-        config
-      )}/catalog/letterboxd/${encodeURIComponent(path)}/letterboxdhead=1.json`;
-      log(`Can get metas? ${catalogUrl}`);
-      const fetchRes = await fetch(catalogUrl);
-      if (!fetchRes.ok) {
-        log(`Couldn't get metas`);
+      log(`Verifying list exists: ${userConfig.url}`);
+      const listExists = await doesLetterboxdResourceExist(
+        userConfig.url,
+        true
+      );
+      if (!listExists) {
+        log(`List doesn't exist: ${userConfig.url}`);
         return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json();
       }
     } catch (error) {
-      log(`Couldn't get metas`);
+      log(`List doesn't exist: ${userConfig.url}`);
       return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json(error.message);
     }
-    log("Got metas!");
+    log(`List exists: ${userConfig.url}`);
   } else {
-    log("Skipping manifest validation");
+    log(`Skipping manifest validation: ${userConfig.url}`);
   }
 
   // change protocol to stremio, only if https

@@ -17,9 +17,12 @@ export const generateURL = (path: string, page = 1, isAjaxRequest = false) => {
   return `https://letterboxd.com/${split.join("/")}/page/${page}`;
 };
 
-export async function doesLetterboxdResourceExist(path: string) {
+export async function doesLetterboxdResourceExist(
+  path: string,
+  isFullUrl = false
+) {
   try {
-    const generatedURL = generateURL(path);
+    const generatedURL = isFullUrl ? path : generateURL(path);
     const res = await fetch(generatedURL);
     if (res.ok) return true;
     throw new Error(res.statusText);
