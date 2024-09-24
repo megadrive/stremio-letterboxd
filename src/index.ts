@@ -75,8 +75,13 @@ app.get("/:id/configure", (req, res) => {
 /** Provide a base Manifest.json for Stremio Community and Stremio Unofficial Addons */
 app.get("/manifest.json", (_req, res) => {
   const cloned_manifest = Object.assign({}, manifest);
-  cloned_manifest.description =
-    "!! Letterboxd requires configuration! Click Configure instead or go to https://letterboxd.almosteffective.com/ !!";
+  // set these to true as the addon is configured yet.
+  cloned_manifest.behaviorHints = {
+    configurable: true,
+    configurationRequired: true,
+  };
+  // cloned_manifest.description =
+  //   "!! Letterboxd requires configuration! Click Configure instead or go to https://letterboxd.almosteffective.com/ !!";
   res.setHeader("Content-Type", "application/json");
   res.json(cloned_manifest);
 });
