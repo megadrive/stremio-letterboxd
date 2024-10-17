@@ -10,7 +10,12 @@ function useCount() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch(`${base}/stats`)
+      fetch(`${base}/stats`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "max-age=0, stale-while-revalidate=5",
+        },
+      })
         .then((res) => res.json())
         .then((json) => {
           if (!json) return;
@@ -19,7 +24,7 @@ function useCount() {
         .catch((error) => {
           console.warn(error);
         });
-    }, 5000);
+    }, 500);
     return () => clearInterval(interval);
   }, [base]);
 
