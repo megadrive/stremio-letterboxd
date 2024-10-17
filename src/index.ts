@@ -540,6 +540,16 @@ app.get("/rpdb-poster/:imdbId", async (req, res) => {
   );
 });
 
+app.get("/stats", async (_req, res) => {
+  try {
+    const listCount = await prisma.config.count();
+
+    return res.status(HTTP_CODES.OK).json({ lists: listCount });
+  } catch (error) {
+    return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).send();
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Stremio-Letterboxd available at http://localhost:${PORT}`);
   console.info("env;", env);

@@ -3,6 +3,7 @@ import Inputbox from "../inputbox";
 import Popular from "../popular";
 import { Image } from "astro:assets";
 import LogoImage from "../logo.png";
+import Stats from "../stats";
 
 const linkClasses = "hover:underline font-semibold";
 ---
@@ -18,9 +19,11 @@ const linkClasses = "hover:underline font-semibold";
 	<body class="bg-tailwind text-white">
 		<div class="container mx-auto max-w-4xl">
 			<div class="text-center"><Image src={LogoImage} title="Letterboxd logo" alt="Letterboxd logo" class="mx-auto" /></div>
-			<div class="text-center">Add Letterboxd lists as catalogs!</div>
+			<div class="text-center">
+				Add Letterboxd lists as catalogs!
+				<Stats client:only="react" />
+			</div>
 			<Inputbox client:only="react" />
-			<br/>
 			<div class="text-center">
 				<Popular client:only="react" />
 			</div>
