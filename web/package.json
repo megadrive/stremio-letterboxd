@@ -10,13 +10,13 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/check": "^0.5.10",
-    "@astrojs/react": "^3.1.0",
-    "@astrojs/tailwind": "^5.1.0",
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/react": "^3.6.2",
+    "@astrojs/tailwind": "^5.1.2",
     "@hookform/resolvers": "^3.9.0",
     "@types/react": "^18.2.70",
     "@types/react-dom": "^18.2.22",
-    "astro": "^4.5.9",
+    "astro": "^4.16.6",
     "astro-tunnel": "^0.1.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
