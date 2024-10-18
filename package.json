@@ -9,6 +9,7 @@
     "prisma": "prisma",
     "prisma:push-db": "prisma db push",
     "dev": "tsc && npm run dev:copy-static && npm run prisma:push-db && node ./dist/index.js",
+    "dev:all": "concurrently \"npx tsx src/index.ts\" \"npm run astro:dev\"",
     "start": "tsc && npm run dev:copy-static && npm run prisma:push-db && node ./dist/index.js",
     "start:all": "concurrently \"npm run start\" \"npm run astro:dev\"",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -32,6 +33,7 @@
     "@types/stremio-addon-sdk": "^1.6.10",
     "del": "^7.1.0",
     "prisma": "^5.15.0",
+    "tsx": "^4.19.1",
     "typescript": "^5.5.3"
   },
   "dependencies": {
