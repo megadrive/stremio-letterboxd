@@ -38,7 +38,7 @@ if (env.isProd || env.isProduction) {
 const PORT = env.PORT;
 
 app.use(cors());
-app.use(express.static("static"));
+app.use(express.static("dist/public"));
 
 function toStremioMetaPreview(metas: StremioMeta[]): StremioMetaPreview[] {
   return metas.map((film) => {
