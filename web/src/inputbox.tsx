@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +25,7 @@ export default function Inputbox() {
     rpdbApiKey?: string;
   }>();
   const [manifestUrl, setManifestUrl] = useState("");
-  const { register, handleSubmit, formState, setValue, resetField, watch } =
+  const { register, handleSubmit, formState, setValue, watch } =
     useForm<FormData>({
       resolver: zodResolver(schema),
     });
@@ -55,7 +55,7 @@ export default function Inputbox() {
               gotConfig.catalogName ? `|cn=${gotConfig.catalogName}` : ""
             }${gotConfig.ignoreUnreleased ? "|iu" : ""}${
               gotConfig.posterChoice ? `|p=${gotConfig.posterChoice}` : ""
-            }${gotConfig.rpdbApiKey ? `|rpdb=${gotConfig.rpdbApiKey}` : ""}`,
+            }${gotConfig.rpdbApiKey ? `|rpdb=${gotConfig.rpdbApiKey}` : ""}`
           );
           setManifestUrl(`${base}/${configToProvide}/manifest.json`);
         })
@@ -226,7 +226,9 @@ export default function Inputbox() {
           </div>
 
           <div
-            className={`grid grid-cols-1 gap-1 sm:grid-cols-2 ${watchedPosterChoice === "rpdb" ? "" : "hidden"}`}
+            className={`grid grid-cols-1 gap-1 sm:grid-cols-2 ${
+              watchedPosterChoice === "rpdb" ? "" : "hidden"
+            }`}
           >
             <div className="text-base self-center text-center sm:text-left">
               Your RPDb API Key (optional):
