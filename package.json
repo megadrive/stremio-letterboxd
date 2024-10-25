@@ -17,7 +17,7 @@
     "astro:build": "cd ./web && npm run build",
     "astro:dev": "cd ./web && npx astro dev",
     "clean": "node clean.js",
-    "build:new": "npm run clean && tsc && npm run astro:build && copyfiles -u 2 \"./web/dist/**/*\" \"./dist/public\""
+    "build:new": "npm run clean && tsc && prisma db push && npm run astro:build && copyfiles -u 2 \"./web/dist/**/*\" \"./dist/public\""
   },
   "engines": {
     "node": ">= 20.x"
