@@ -13,11 +13,10 @@
     "start": "tsc && npm run dev:copy-static && npm run prisma:push-db && node ./dist/index.js",
     "start:all": "concurrently \"npm run start\" \"npm run astro:dev\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx prisma generate && npm run astro:build && copyfiles -u 2 \"./web/dist/**/*\" \"./static\"",
+    "build": "npm run clean && tsc && prisma db push && npm run astro:build && copyfiles -u 2 \"./web/dist/**/*\" \"./dist/public\"",
     "astro:build": "cd ./web && npm run build",
     "astro:dev": "cd ./web && npx astro dev",
-    "clean": "node clean.js",
-    "build:new": "npm run clean && tsc && prisma db push && npm run astro:build && copyfiles -u 2 \"./web/dist/**/*\" \"./dist/public\""
+    "clean": "node clean.js"
   },
   "engines": {
     "node": ">= 20.x"
@@ -29,6 +28,7 @@
     "@biomejs/biome": "1.8.1",
     "@total-typescript/ts-reset": "^0.5.1",
     "@types/cors": "^2.8.17",
+    "@types/debug": "^4.1.12",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.6",
     "@types/stremio-addon-sdk": "^1.6.10",
@@ -39,7 +39,6 @@
   },
   "dependencies": {
     "@prisma/client": "^5.15.0",
-    "@types/debug": "^4.1.12",
     "cheerio": "^1.0.0-rc.12",
     "concurrently": "^8.2.2",
     "copyfiles": "^2.4.1",
