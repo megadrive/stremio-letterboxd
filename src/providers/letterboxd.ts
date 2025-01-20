@@ -18,7 +18,7 @@ const base = env.isProd || env.isProduction ? "/" : "http://localhost:3030/";
 
 const getHtml = async (
   letterboxdSlug: string,
-  overrideUrl?: string,
+  overrideUrl?: string
 ): Promise<ReturnType<typeof cheerio> | undefined> => {
   const log = logBase.extend("getHtml");
 
@@ -72,18 +72,20 @@ const updatePoster = async (letterboxdId: string, letterboxdPath: string) => {
     }
 
     log(
-      `${create ? "Creating a new poster" : "Updating poster"} for ${letterboxdId}`,
+      `${
+        create ? "Creating a new poster" : "Updating poster"
+      } for ${letterboxdId}`
     );
 
     const $ = await getHtml(
       stringifiedId,
-      `${base}poster/${encodeURIComponent(letterboxdPath)}/${stringifiedId}`,
+      `${base}poster/${encodeURIComponent(letterboxdPath)}/${stringifiedId}`
       // `https://letterboxd.com/ajax/poster/film/{letterboxdSlug}/std/1000x1500/?k=${generateKey()}`,
     );
 
     if (!$) {
       log(
-        `Couldn't get poster from page for ${letterboxdId}: no html for cheerio to parse`,
+        `Couldn't get poster from page for ${letterboxdId}: no html for cheerio to parse`
       );
       return undefined;
     }
@@ -120,7 +122,7 @@ const updatePoster = async (letterboxdId: string, letterboxdPath: string) => {
 
 export async function find(
   letterboxdSlug: string,
-  userId: string,
+  userId: string
 ): Promise<{ letterboxd: string; imdb: string; poster?: string } | undefined> {
   const log = logBase.extend("find");
   try {
@@ -177,11 +179,11 @@ export async function find(
         },
       })
       .then(() =>
-        logLtoImdb(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`),
+        logLtoImdb(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`)
       )
       .catch((err) => {
         logLtoImdb(
-          `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id}`,
+          `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id}`
         );
         logLtoImdb(err.message);
       });
@@ -194,7 +196,10 @@ export async function find(
   return undefined;
 }
 
-export const replacePosters = async (metas: StremioMeta[]) => {
+export const replacePosters = async (
+  metas: StremioMeta[],
+  options: { ratings?: boolean } = {}
+) => {
   const log = logBase.extend("replacePosters");
   try {
     const letterboxdImdbIDs = await prisma.letterboxdIMDb.findMany({
@@ -214,14 +219,24 @@ export const replacePosters = async (metas: StremioMeta[]) => {
 
     return metas.map((meta) => {
       const found = letterboxdImdbIDs.findIndex((v) => v.imdb === meta.id);
+
       if (found === -1) {
         log("No letterboxd poster found to replace.");
         return meta;
       }
 
-      if (letterboxdImdbIDs[found].poster.length === 0) {
-        log(`No letterboxd posters in database for ${meta.id}`);
-        return meta;
+      if (!options.ratings) {
+        if (letterboxdImdbIDs[found].poster.length === 0) {
+          log(`No letterboxd posters in database for ${meta.id}`);
+          return meta;
+        }
+      } else {
+        return {
+          ...meta,
+          poster: `https://letterboxd-posters-with-ratings.almosteffective.com/${letterboxdImdbIDs[
+            found
+          ].letterboxd.replace(/ /g, "-")}`,
+        };
       }
 
       return {
@@ -242,7 +257,7 @@ export async function find_old(letterboxdSlug: string) {
   try {
     const url = `https://letterboxd.com/ajax/poster/film/${letterboxdSlug.replace(
       / /gi,
-      "-",
+      "-"
     )}/std/125x187/?k=${Date.now()}`;
     const res = await addonFetch(url);
     if (!res.ok) {

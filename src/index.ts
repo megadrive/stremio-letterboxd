@@ -115,7 +115,7 @@ app.get("/:providedConfig/manifest.json", async (req, res) => {
   ) as ManifestExpanded;
   cloned_manifest.id = `${
     env.isDevelopment ? "dev-" : ""
-  }com.github.megadrive.letterboxd-watchlist-${config.pathSafe}`;
+  }com.github.megadrive.letterboxd-watchlist-${providedConfig}`;
   cloned_manifest.name = `Letterboxd - ${config.catalogName}`;
 
   cloned_manifest.description = `Provides a list of films at https://letterboxd.com${config.path} as a catalog.`;
@@ -253,6 +253,8 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       rpdbApiKey: parsedExtras?.rpdbApiKey,
     });
 
+    console.warn("``````````````````````````````````````````````````");
+    console.error(config);
     if (config.posterChoice) {
       switch (config.posterChoice) {
         case "cinemeta":
@@ -261,6 +263,10 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
         case "letterboxd":
           console.log(`Replacing Letterboxd posters for ${config.path}`);
           films = await replacePosters(films);
+          break;
+        case "letterboxd-ratings":
+          console.log(`Replacing Letterboxd ratings for ${config.path}`);
+          films = await replacePosters(films, { ratings: true });
           break;
         case "rpdb":
           {
@@ -275,6 +281,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
           break;
       }
     }
+    console.warn("``````````````````````````````````````````````````");
 
     log(`[${config.path}] serving fresh`);
     log(`[${config.path}] serving ${films.length}`);

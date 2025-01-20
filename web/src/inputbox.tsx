@@ -4,14 +4,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "astro/zod";
 
-const posterChoices = ["cinemeta", "letterboxd", "rpdb"] as const;
+const posterChoices = [
+  "cinemeta",
+  "letterboxd",
+  "letterboxd-ratings",
+  "rpdb",
+] as const;
 type PosterChoice = (typeof posterChoices)[number];
 
 const schema = z.object({
   url: z.string().url(),
   customListName: z.string().optional(),
   ignoreUnreleased: z.boolean().optional(),
-  posterChoice: z.enum(["cinemeta", "letterboxd", "rpdb"]).optional(),
+  posterChoice: z
+    .enum(["cinemeta", "letterboxd", "letterboxd-ratings", "rpdb"])
+    .optional(),
   rpdbApiKey: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
@@ -55,7 +62,7 @@ export default function Inputbox() {
               gotConfig.catalogName ? `|cn=${gotConfig.catalogName}` : ""
             }${gotConfig.ignoreUnreleased ? "|iu" : ""}${
               gotConfig.posterChoice ? `|p=${gotConfig.posterChoice}` : ""
-            }${gotConfig.rpdbApiKey ? `|rpdb=${gotConfig.rpdbApiKey}` : ""}`,
+            }${gotConfig.rpdbApiKey ? `|rpdb=${gotConfig.rpdbApiKey}` : ""}`
           );
           setManifestUrl(`${base}/${configToProvide}/manifest.json`);
         })
@@ -220,13 +227,18 @@ export default function Inputbox() {
               >
                 <option value="cinemeta">Cinemeta (default)</option>
                 <option value="letterboxd">Letterboxd</option>
+                <option value="letterboxd-ratings">
+                  Letterboxd with ratings
+                </option>
                 <option value="rpdb">RPDB</option>
               </select>
             </div>
           </div>
 
           <div
-            className={`grid grid-cols-1 gap-1 sm:grid-cols-2 ${watchedPosterChoice === "rpdb" ? "" : "hidden"}`}
+            className={`grid grid-cols-1 gap-1 sm:grid-cols-2 ${
+              watchedPosterChoice === "rpdb" ? "" : "hidden"
+            }`}
           >
             <div className="text-base self-center text-center sm:text-left">
               Your RPDb API Key (optional):
