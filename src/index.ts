@@ -497,6 +497,17 @@ app.get("/verify/:base64", async (req, res) => {
     log(`Skipping manifest validation: ${userConfig.url}`);
   }
 
+  // exit early if RPDB is not enabled and RPDB has been requested
+  if (
+    userConfig.posterChoice === "rpdb" &&
+    (!env.ADDON_RPDB_APIKEY || env.ADDON_RPDB_APIKEY.length === 0)
+  ) {
+    log("RPDB is not enabled, exiting early");
+    return res
+      .status(HTTP_CODES.BAD_REQUEST)
+      .send("RPDB is not enabled in the addon.");
+  }
+
   // change protocol to stremio, only if https
   userConfig.base = userConfig.base.startsWith("https")
     ? userConfig.base.replace(/https/, "stremio")
