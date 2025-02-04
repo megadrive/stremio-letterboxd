@@ -17,7 +17,7 @@ export const env = cleanEnv(process.env, {
 
   ADDON_LETTERBOXD_METADATA: bool({ default: false }),
 
-  ADDON_RPDB_APIKEY: str(),
+  ADDON_RPDB_APIKEY: str({ default: "" }),
 
-  RAILWAY_PUBLIC_DOMAIN: str({ devDefault: "http://localhost:3030" }),
+  RAILWAY_PUBLIC_DOMAIN: str({ default: "http://localhost:3030" }),
 });
