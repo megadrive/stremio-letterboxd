@@ -101,3 +101,32 @@ export const PrependWithDev = (s: string, seperator = ".") =>
  */
 export const convertHTMLEntities = (str: string) =>
   str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
+
+/**
+ * Converts an extras string to an object.
+ * @param extras Extras string from the catalog request.
+ * @returns The parsed extras object or undefined if no extras were provided.
+ */
+export const parseExtrasFromCatalogRequest = (extras?: string) => {
+  if (!extras) return undefined;
+
+  const rextras = /([A-Za-z]+)+=([A-Za-z0-9]+)/g;
+  const matched = [...extras.matchAll(rextras)];
+  const rv: Record<string, string> = {};
+  for (const match of matched) {
+    rv[match[1]] = match[2] ?? true;
+  }
+  return rv;
+};
+
+export const paginateArray = (arr: unknown[], skip = 100): unknown[] => {
+  const amt = arr.length;
+  let skipAmt = 0;
+
+  if (!skip) {
+    skipAmt = amt;
+  }
+
+  const sliced = arr.slice(skipAmt, amt);
+  return sliced;
+};

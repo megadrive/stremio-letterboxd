@@ -4,8 +4,12 @@ dotenv();
 import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
-import { fetchFilms } from "./fetcher.js";
-import { convertHTMLEntities, doesLetterboxdResourceExist } from "./util.js";
+import { fetchFilms, fetchFilmsSinglePage } from "./fetcher.js";
+import {
+  convertHTMLEntities,
+  doesLetterboxdResourceExist,
+  parseExtrasFromCatalogRequest,
+} from "./util.js";
 import { env } from "./env.js";
 import { parseLetterboxdURLToID } from "./util.js";
 import { lruCache } from "./lib/lruCache.js";
@@ -164,17 +168,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
 
   // We would use {id} if we had more than one list.
   const { providedConfig, type, id, extra } = req.params;
-  const parsedExtras = (() => {
-    if (!extra) return undefined;
-
-    const rextras = /([A-Za-z]+)+=([A-Za-z0-9]+)/g;
-    const matched = [...extra.matchAll(rextras)];
-    const rv: Record<string, string> = {};
-    for (const match of matched) {
-      rv[match[1]] = match[2] ?? true;
-    }
-    return rv;
-  })();
+  const parsedExtras = parseExtrasFromCatalogRequest(extra);
   console.log({ parsedExtras });
   const log = logBase.extend(`catalog:${id}`);
   let cachedConfig: Awaited<ReturnType<typeof prisma.config.findFirst>>;
@@ -201,7 +195,7 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
   const consoleTime = `[${config.path}] catalog`;
   console.time(consoleTime);
 
-  // We still keep movie here for legacy purposes, so current users don't break.
+  // We still keep movie here for legacy purposes, so legacy users don't break.
   if (type !== "movie" && type !== "letterboxd") {
     log(`Wrong type: ${type}, giving nothing.`);
     return resError(HTTP_CODES.BAD_REQUEST, "Wrong type");
@@ -218,40 +212,31 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       log(`No cache found for ${username}`);
     }
 
-    // slice is zero based, stremio is 1 based
-    const paginate = (arr: unknown[], skip?: number): unknown[] => {
-      const amt = parsedExtras?.skip ? +parsedExtras.skip + 99 : 199;
-      let skipAmt = 0;
+    /**
+     * Letterboxd pages have different amounts of films depending on the page,
+     * so we need to figure out the page based on the films.
+     */
+    let pageToFetch = 1;
+    if (parsedExtras?.skip) {
+      const skip = +parsedExtras.skip; // convert to number
 
-      if (!skip) {
-        skipAmt = +(parsedExtras?.skip ?? 0);
+      const skipAmts = {
+        watchlist: 5 * 7,
+        list: 100,
+      } as const;
+
+      console.error(`skipping ${skip} films`);
+      if (config.type === "watchlist") {
+        pageToFetch = Math.ceil(skip / skipAmts.watchlist);
+      } else {
+        pageToFetch = Math.ceil(skip / skipAmts.list);
       }
-
-      const sliced = arr.slice(skipAmt, amt);
-      return sliced;
-    };
-
-    if (sCache) {
-      log("serving cached");
-      res.setHeader("Content-Type", "application/json");
-      const metas: typeof sCache = sCache;
-
-      // if (config.posters) {
-      //   log(`Replacing Letterboxd posters for ${config.path}`);
-      //   metas = await replacePosters(sCache);
-      // }
-
-      console.timeEnd(consoleTime);
-      return res.json({
-        count: metas.length,
-        metas: paginate(metas),
-      });
     }
 
-    let films = await fetchFilms(config.path, {
-      rpdbPosters: Boolean(parsedExtras?.rpdbApiKey),
-      rpdbApiKey: parsedExtras?.rpdbApiKey,
+    const singlePageOfFilms = await fetchFilmsSinglePage(config.path, {
+      page: pageToFetch,
     });
+    let films = singlePageOfFilms.films;
 
     console.warn("``````````````````````````````````````````````````");
     console.error(config);
@@ -291,10 +276,10 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
     if (!env.ADDON_FULL_METADATA) {
       log("Limiting metas to Stremio metas");
       const filmsPreviewData = toStremioMetaPreview(films);
-      return res.json({ metas: paginate(filmsPreviewData) });
+      return res.json({ metas: filmsPreviewData });
     }
 
-    return res.json({ metas: paginate(films) });
+    return res.json({ metas: films });
   } catch (error) {
     // Return empty
     log(error);
