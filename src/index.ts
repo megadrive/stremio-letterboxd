@@ -216,21 +216,22 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
      * Letterboxd pages have different amounts of films depending on the page,
      * so we need to figure out the page based on the films.
      */
-    let pageToFetch = 1;
+    let pageToFetch = 0;
     if (parsedExtras?.skip) {
       const skip = +parsedExtras.skip; // convert to number
 
       const skipAmts = {
-        watchlist: 5 * 7,
+        watchlist: 28,
         list: 100,
       } as const;
 
-      console.error(`skipping ${skip} films`);
+      log(`skipping ${skip} films`);
       if (config.type === "watchlist") {
         pageToFetch = Math.ceil(skip / skipAmts.watchlist);
       } else {
         pageToFetch = Math.ceil(skip / skipAmts.list);
       }
+      pageToFetch++;
 
       console.info({ type: config.type, skip, pageToFetch });
     }

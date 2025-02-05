@@ -390,7 +390,8 @@ async function getLetterboxdInfoMany(
           return;
         }
 
-        const name = $("meta[property='og:title']").attr("content");
+        // const name = $("meta[property='og:title']").attr("content");
+        const name = $("h1.filmtitle").text();
         if (!name) {
           log(`Couldn't find name for ${slug}`);
           return;
