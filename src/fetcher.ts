@@ -28,7 +28,7 @@ async function getImdbIDs(films: string[], userId: string) {
   const results = await Promise.allSettled(filmPromises);
   for (const result of results) {
     if (result.status === "fulfilled" && result.value) {
-      IDs.push(result.value.imdb);
+      IDs.push(result.value.imdb ?? result.value.tmdb);
     }
   }
 
@@ -302,12 +302,17 @@ export async function fetchFilmsSinglePage(
   const imdbIds = await getImdbIDs(filmSlugs, letterboxdPath);
   let films_with_metadata: StremioMeta[];
   if (env.ADDON_LETTERBOXD_METADATA) {
+    log(`[${letterboxdPath}] getting metadata from Letterboxd`);
     films_with_metadata = await getLetterboxdInfoMany(filmSlugs, {
       skipPoster: !!options?.rpdbApiKey?.length,
     });
   } else {
+    log(`[${letterboxdPath}] getting metadata from Cinemeta`);
     films_with_metadata = await getCinemetaInfoMany(imdbIds);
   }
+  log(
+    `[${letterboxdPath}] got metadata for ${films_with_metadata.length} films`
+  );
 
   if (options?.rpdbApiKey?.length) {
     const base = env.RAILWAY_PUBLIC_DOMAIN.length
@@ -370,10 +375,21 @@ async function getLetterboxdInfoMany(
 
           return match[1];
         })();
-        if (!imdbId) {
-          log(`Couldn't find IMDB ID for ${slug}`);
+        const tmdbId = (() => {
+          const tmdbUrl = $("a[data-track-action='TMDb']").prop("href");
+          console.info(tmdbUrl);
+          return tmdbUrl
+            ? tmdbUrl
+                .split("/")
+                .reverse()
+                .filter((e) => e.length)[0]
+            : undefined;
+        })();
+        if (!imdbId && !tmdbId) {
+          log(`Couldn't find IMDB ID or TMDB ID for ${slug}`);
           return;
         }
+
         const name = $("meta[property='og:title']").attr("content");
         if (!name) {
           log(`Couldn't find name for ${slug}`);
@@ -426,7 +442,7 @@ async function getLetterboxdInfoMany(
         })();
 
         return {
-          id: imdbId,
+          id: imdbId ?? `tmdb:${tmdbId}`,
           name,
           description,
           cast: castlist,

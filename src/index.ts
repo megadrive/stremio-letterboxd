@@ -231,6 +231,8 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       } else {
         pageToFetch = Math.ceil(skip / skipAmts.list);
       }
+
+      console.info({ type: config.type, skip, pageToFetch });
     }
 
     const singlePageOfFilms = await fetchFilmsSinglePage(config.path, {

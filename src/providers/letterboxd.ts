@@ -123,7 +123,10 @@ const updatePoster = async (letterboxdId: string, letterboxdPath: string) => {
 export async function find(
   letterboxdSlug: string,
   userId: string
-): Promise<{ letterboxd: string; imdb: string; poster?: string } | undefined> {
+): Promise<
+  | { letterboxd: string; imdb: string; poster?: string; tmdb?: string }
+  | undefined
+> {
   const log = logBase.extend("find");
   try {
     let rv: { poster?: string } = {};
@@ -166,6 +169,14 @@ export async function find(
     const imdbUrl = $('a[data-track-action="IMDb"]').attr("href");
     const rimdb = /tt[0-9]+/;
 
+    const tmdbUrl = $('a[data-track-action="TMDb"]').attr("href");
+    const tmdbId = tmdbUrl
+      ? tmdbUrl
+          .split("/")
+          .reverse()
+          .filter((e) => e.length)[0]
+      : undefined;
+
     const match = imdbUrl?.match(rimdb);
     if (!match) return undefined;
 
@@ -176,14 +187,15 @@ export async function find(
         data: {
           letterboxd: letterboxdSlug,
           imdb: id,
+          tmdb: tmdbId,
         },
       })
       .then(() =>
-        logLtoImdb(`Created letterboxd->imdb: ${[letterboxdSlug, id]}`)
+        logLtoImdb(`Created letterboxd->imdb: ${[letterboxdSlug, id, tmdbId]}`)
       )
       .catch((err) => {
         logLtoImdb(
-          `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id}`
+          `Prisma error creating letterboxd->imdb: ${letterboxdSlug} -> ${id} (tmdb: ${tmdbId})`
         );
         logLtoImdb(err.message);
       });
