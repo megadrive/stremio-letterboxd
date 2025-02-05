@@ -34,8 +34,9 @@ model Movie {
 }
 
 model LetterboxdIMDb {
-  letterboxd String @id
-  imdb       String @unique
+  letterboxd String  @id
+  imdb       String  @unique
+  tmdb       String? @unique
 
   posterId String?
   poster   LetterboxdPoster[]
