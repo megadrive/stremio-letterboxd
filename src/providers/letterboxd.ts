@@ -234,7 +234,6 @@ export const replacePosters = async (
 
       if (found === -1) {
         log("No letterboxd poster found to replace.");
-        return meta;
       }
 
       if (options.ratings) {
@@ -248,6 +247,8 @@ export const replacePosters = async (
 
       if (options.alternativePoster) {
         log(`${meta.id} prefers alternative poster`);
+        const { id, poster, altPoster } = meta;
+        console.info({ id, poster, altPoster });
         if (meta.altPoster) {
           log(`Using alternative poster for ${meta.id}`);
           meta.poster = meta.altPoster;
