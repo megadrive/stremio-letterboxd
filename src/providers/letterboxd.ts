@@ -247,7 +247,9 @@ export const replacePosters = async (
       }
 
       if (options.alternativePoster) {
+        log(`${meta.id} prefers alternative poster`);
         if (meta.altPoster) {
+          log(`Using alternative poster for ${meta.id}`);
           meta.poster = meta.altPoster;
           meta.altPoster = undefined;
         }
@@ -255,15 +257,15 @@ export const replacePosters = async (
         meta.altPoster = undefined;
       }
 
-      if (letterboxdImdbIDs[found].poster.length === 0) {
-        log(`No letterboxd posters in database for ${meta.id}`);
-        return meta;
+      if (letterboxdImdbIDs[found].poster.length) {
+        return {
+          ...meta,
+          poster: letterboxdImdbIDs[found].poster[0].url,
+        };
       }
 
-      return {
-        ...meta,
-        poster: letterboxdImdbIDs[found].poster[0].url,
-      };
+      log(`No letterboxd posters in database for ${meta.id}`);
+      return meta;
     });
   } catch (error) {
     log("Couldn't update with Letterboxd posters");
