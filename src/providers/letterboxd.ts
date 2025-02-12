@@ -253,6 +253,7 @@ export const replacePosters = async (
           log(`Using alternative poster for ${meta.id}`);
           meta.poster = meta.altPoster;
           meta.altPoster = undefined;
+          return meta;
         }
       } else {
         meta.altPoster = undefined;
