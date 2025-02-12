@@ -256,6 +256,12 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
           console.log(`Replacing Letterboxd ratings for ${config.path}`);
           films = await replacePosters(films, { ratings: true });
           break;
+        case "letterboxd-custom-from-list":
+          console.log(
+            `Replacing Letterboxd posters with custom from list for ${config.path}`
+          );
+          films = await replacePosters(films, { alternativePoster: true });
+          break;
         case "rpdb":
           {
             console.log(`Replacing RPDB posters for ${config.path}`);

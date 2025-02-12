@@ -9,7 +9,12 @@ type Config = {
   type: "unset" | "watchlist" | "list" | "person";
   reserved?: boolean;
   /** Replace posters with the user provided choice. */
-  posterChoice: "cinemeta" | "letterboxd" | "letterboxd-ratings" | "rpdb";
+  posterChoice:
+    | "cinemeta"
+    | "letterboxd"
+    | "letterboxd-ratings"
+    | "letterboxd-custom-from-list"
+    | "rpdb";
   /** RPDB API key. */
   rpdbApiKey?: string;
   /** A user's list identifier. */
@@ -108,6 +113,7 @@ export const parseConfig = (str: string): Config => {
           case "cinemeta":
           case "letterboxd":
           case "letterboxd-ratings":
+          case "letterboxd-custom-from-list":
           case "rpdb":
             opts.posterChoice = v;
             break;

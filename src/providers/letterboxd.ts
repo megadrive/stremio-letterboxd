@@ -209,8 +209,8 @@ export async function find(
 }
 
 export const replacePosters = async (
-  metas: StremioMeta[],
-  options: { ratings?: boolean } = {}
+  metas: (StremioMeta & { altPoster?: string })[],
+  options: { ratings?: boolean; alternativePoster?: boolean } = {}
 ) => {
   const log = logBase.extend("replacePosters");
   try {
@@ -237,18 +237,27 @@ export const replacePosters = async (
         return meta;
       }
 
-      if (!options.ratings) {
-        if (letterboxdImdbIDs[found].poster.length === 0) {
-          log(`No letterboxd posters in database for ${meta.id}`);
-          return meta;
-        }
-      } else {
+      if (options.ratings) {
         return {
           ...meta,
           poster: `https://letterboxd-posters-with-ratings.almosteffective.com/${letterboxdImdbIDs[
             found
           ].letterboxd.replace(/ /g, "-")}`,
         };
+      }
+
+      if (options.alternativePoster) {
+        if (meta.altPoster) {
+          meta.poster = meta.altPoster;
+          meta.altPoster = undefined;
+        }
+      } else {
+        meta.altPoster = undefined;
+      }
+
+      if (letterboxdImdbIDs[found].poster.length === 0) {
+        log(`No letterboxd posters in database for ${meta.id}`);
+        return meta;
       }
 
       return {

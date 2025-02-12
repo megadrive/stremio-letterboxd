@@ -15,7 +15,7 @@ export const env = cleanEnv(process.env, {
   /** Skip validating metas on manifest generation. Useful for testing and self-hosting.*/
   ADDON_SKIP_MANIFEST_VALIDATION: bool({ default: false }),
 
-  ADDON_LETTERBOXD_METADATA: bool({ default: false }),
+  ADDON_LETTERBOXD_METADATA: bool({ default: true }),
 
   ADDON_RPDB_APIKEY: str({ default: "" }),
 

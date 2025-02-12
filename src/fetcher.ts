@@ -269,7 +269,7 @@ export async function fetchFilmsSinglePage(
   ).text();
   let $$ = cheerio(rawHtml);
 
-  const getFilmSlugs = () => {
+  const getFilmInfo = () => {
     return $$(".poster")
       .filter(function () {
         if (options.ignoreUnreleased) {
@@ -279,31 +279,38 @@ export async function fetchFilmsSinglePage(
         return true;
       })
       .map(function () {
-        const slug = $$(this).data().filmSlug as string;
-        if (!slug || typeof slug !== "string") return slug;
-        return slug.replace(/-/g, " ");
+        let slug = $$(this).data().filmSlug as string;
+        if (!slug || typeof slug !== "string")
+          return { slug, altPoster: undefined };
+
+        const altPoster = $$(this).data().altPoster as string;
+
+        return { slug: slug.replace(/-/g, " "), altPoster };
       })
       .toArray();
   };
 
   // Get the film slugs from Letterboxd
-  let filmSlugs = getFilmSlugs();
-  if (filmSlugs.length === 0) {
+  let filmInfos = getFilmInfo();
+  if (filmInfos.length === 0) {
     // try making an ajax request instead
     const ajaxRaw = await (
       await addonFetch(generateURL(letterboxdPath, options.page, true))
     ).text();
     $$ = cheerio(ajaxRaw);
-    filmSlugs = getFilmSlugs();
+    filmInfos = getFilmInfo();
   }
 
-  log(`[${letterboxdPath}] got ${filmSlugs.length} films`);
+  log(`[${letterboxdPath}] got ${filmInfos.length} films`);
 
-  const imdbIds = await getImdbIDs(filmSlugs, letterboxdPath);
+  const imdbIds = await getImdbIDs(
+    filmInfos.map((f) => f.slug),
+    letterboxdPath
+  );
   let films_with_metadata: StremioMeta[];
   if (env.ADDON_LETTERBOXD_METADATA) {
     log(`[${letterboxdPath}] getting metadata from Letterboxd`);
-    films_with_metadata = await getLetterboxdInfoMany(filmSlugs, {
+    films_with_metadata = await getLetterboxdInfoMany(filmInfos, {
       skipPoster: !!options?.rpdbApiKey?.length,
     });
   } else {
@@ -341,18 +348,18 @@ export async function fetchFilmsSinglePage(
  * @
  */
 async function getLetterboxdInfoMany(
-  letterboxdSlugs: string[],
+  letterboxdSlugs: { slug: string; altPoster?: string }[],
   opts: {
     skipPoster?: boolean;
   }
 ): Promise<StremioMeta[]> {
   const log = logBase.extend("getLetterboxdInfoMany");
   try {
-    const URL_TEMPLATE = "https://letterboxd.com/film";
-
     const rv: Awaited<ReturnType<typeof getLetterboxdInfoMany>> = [];
 
-    const promises = letterboxdSlugs.map(async (slug) => {
+    const promises = letterboxdSlugs.map(async (info) => {
+      const URL_TEMPLATE = "https://letterboxd.com/film";
+      const { slug, altPoster } = info;
       try {
         const res = await addonFetch(
           `${URL_TEMPLATE}/${slug.replace(/ /g, "-")}`
@@ -419,16 +426,15 @@ async function getLetterboxdInfoMany(
         // limit to the first 3
         castlist.length = 3;
 
-        const poster = await (async () => {
+        const fetchPoster = async (url: string) => {
           if (opts.skipPoster) return undefined;
-
+          let POSTER_URL = url;
+          POSTER_URL = POSTER_URL.replace(
+            "{slug}",
+            slug.replace(/ /g, "-")
+          ).replace("{altPoster}", altPoster ?? "");
           try {
-            const res = await addonFetch(
-              `https://letterboxd.com/ajax/poster/film/${slug.replace(
-                / /g,
-                "-"
-              )}/std/1000x1500/`
-            );
+            const res = await addonFetch(POSTER_URL);
             if (!res.ok) throw Error(res.statusText);
             const $$ = cheerio(await res.text());
 
@@ -440,7 +446,14 @@ async function getLetterboxdInfoMany(
           }
 
           return undefined;
-        })();
+        };
+
+        const cleanedSlug = slug.replace(/ /g, "-");
+        const POSTER_URL = `https://letterboxd.com/ajax/poster/film/${cleanedSlug}/std/1000x1500/`;
+        const POSTER_URL_ALT = `https://letterboxd.com/ajax/poster/film/${cleanedSlug}/std/${altPoster}/125x187/?k=_ce684b46`;
+
+        const poster = await fetchPoster(POSTER_URL);
+        const altPosterId = await fetchPoster(POSTER_URL_ALT);
 
         return {
           id: imdbId ?? `tmdb:${tmdbId}`,
@@ -450,8 +463,9 @@ async function getLetterboxdInfoMany(
           type: "movie",
           genres,
           poster,
+          altPoster: altPosterId,
           runtime: `${runtime.trim()} mins`,
-        } satisfies StremioMeta;
+        } satisfies StremioMeta & { altPoster?: string };
       } catch (error) {
         log(`Couldn't fetch Letterboxd page for extra data: ${slug}`);
         log(error);

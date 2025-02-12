@@ -8,6 +8,7 @@ const posterChoices = [
   "cinemeta",
   "letterboxd",
   "letterboxd-ratings",
+  "letterboxd-custom-from-list",
   "rpdb",
 ] as const;
 type PosterChoice = (typeof posterChoices)[number];
@@ -16,9 +17,7 @@ const schema = z.object({
   url: z.string().url(),
   customListName: z.string().optional(),
   ignoreUnreleased: z.boolean().optional(),
-  posterChoice: z
-    .enum(["cinemeta", "letterboxd", "letterboxd-ratings", "rpdb"])
-    .optional(),
+  posterChoice: z.enum(posterChoices).optional(),
   rpdbApiKey: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
@@ -229,6 +228,9 @@ export default function Inputbox() {
                 <option value="letterboxd">Letterboxd</option>
                 <option value="letterboxd-ratings">
                   Letterboxd with ratings
+                </option>
+                <option value="letterboxd-custom-from-list">
+                  Letterboxd Custom List
                 </option>
                 <option value="rpdb">RPDB</option>
               </select>
