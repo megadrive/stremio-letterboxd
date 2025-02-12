@@ -19,5 +19,8 @@ export const env = cleanEnv(process.env, {
 
   ADDON_RPDB_APIKEY: str({ default: "" }),
 
+  ADDON_LETTERBOXD_POSTER_WIDTH: num({ default: 1000 }),
+  ADDON_LETTERBOXD_POSTER_HEIGHT: num({ default: 1500 }),
+
   RAILWAY_PUBLIC_DOMAIN: str({ default: "http://localhost:3030" }),
 });

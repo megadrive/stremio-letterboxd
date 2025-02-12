@@ -449,8 +449,8 @@ async function getLetterboxdInfoMany(
         };
 
         const cleanedSlug = slug.replace(/ /g, "-");
-        const POSTER_URL = `https://letterboxd.com/ajax/poster/film/${cleanedSlug}/std/1000x1500/`;
-        const POSTER_URL_ALT = `https://letterboxd.com/ajax/poster/film/${cleanedSlug}/std/${altPoster}/125x187/?k=_ce684b46`;
+        const POSTER_URL = `https://letterboxd.com/ajax/poster/film/${cleanedSlug}/std/${env.ADDON_LETTERBOXD_POSTER_WIDTH}x${env.ADDON_LETTERBOXD_POSTER_HEIGHT}/`;
+        const POSTER_URL_ALT = `https://letterboxd.com/ajax/poster/film/${cleanedSlug}/std/${altPoster}/${env.ADDON_LETTERBOXD_POSTER_WIDTH}x${env.ADDON_LETTERBOXD_POSTER_HEIGHT}/`;
 
         const poster = await fetchPoster(POSTER_URL);
         const altPosterId = await fetchPoster(POSTER_URL_ALT);
