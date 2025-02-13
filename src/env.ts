@@ -14,13 +14,16 @@ export const env = cleanEnv(process.env, {
   ADDON_FULL_METADATA: bool({ default: false }),
   /** Skip validating metas on manifest generation. Useful for testing and self-hosting.*/
   ADDON_SKIP_MANIFEST_VALIDATION: bool({ default: false }),
-
+  /** Whether to publish to the Stremio official repository, requires to be in production. */
+  ADDON_PUBLISH_TO_STREMIO: bool({ default: false }),
+  /** Grab metadata from Letterboxd instead of Cinemeta. */
   ADDON_LETTERBOXD_METADATA: bool({ default: true }),
-
+  /** RPDB API key, used for RPDB posters. If empty, RPDB posters will not be used. */
   ADDON_RPDB_APIKEY: str({ default: "" }),
 
   ADDON_LETTERBOXD_POSTER_WIDTH: num({ default: 1000 }),
   ADDON_LETTERBOXD_POSTER_HEIGHT: num({ default: 1500 }),
 
+  /** Used for public instance. Used in development primarily. */
   RAILWAY_PUBLIC_DOMAIN: str({ default: "http://localhost:3030" }),
 });

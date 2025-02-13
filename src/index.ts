@@ -4,7 +4,7 @@ dotenv();
 import manifest, { type ManifestExpanded } from "./manifest.js";
 import cors from "cors";
 import express from "express";
-import { fetchFilms, fetchFilmsSinglePage } from "./fetcher.js";
+import { fetchFilmsSinglePage } from "./fetcher.js";
 import {
   convertHTMLEntities,
   doesLetterboxdResourceExist,
@@ -29,7 +29,7 @@ const app = express();
 
 const logBase = logger("server");
 
-if (env.isProd || env.isProduction) {
+if (env.isProduction && env.ADDON_PUBLISH_TO_STREMIO) {
   publishToCentral("https://letterboxd.almosteffective.com/").then(() => {
     logBase(
       `Published to stremio official repository as ${manifest.name} with ID ${manifest.id} and version ${manifest.version}`
@@ -42,7 +42,6 @@ if (env.isProd || env.isProduction) {
 const PORT = env.PORT;
 
 app.use(cors());
-app.use(express.static("dist/public"));
 
 function toStremioMetaPreview(metas: StremioMeta[]): StremioMetaPreview[] {
   return metas.map((film) => {
