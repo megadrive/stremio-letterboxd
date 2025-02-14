@@ -18,6 +18,7 @@ import { find } from "./providers/letterboxd.js";
 import { find as findImdb } from "./providers/imdbSuggests.js";
 import { logger } from "./logger.js";
 import { env } from "./env.js";
+import { features } from "./featureFlags.js";
 
 const logBase = logger("fetcher");
 
@@ -455,8 +456,13 @@ async function getLetterboxdInfoMany(
         const poster = await fetchPoster(POSTER_URL);
         const altPosterId = await fetchPoster(POSTER_URL_ALT);
 
+        let id = imdbId ?? `tmdb:${tmdbId}`;
+        if (features.tmdbRedirect && id.startsWith("tmdb:")) {
+          id = `letterboxd-tmdb:${tmdbId}`;
+        }
+
         return {
-          id: imdbId ?? `tmdb:${tmdbId}`,
+          id,
           name,
           description,
           cast: castlist,

@@ -1,4 +1,6 @@
 import { bool, cleanEnv, num, str, url } from "envalid";
+import { config } from "dotenv";
+config();
 
 export const env = cleanEnv(process.env, {
   /** Database URL, must relate to a Prisma-supported database. See /prisma.schema for more info. */
@@ -23,6 +25,9 @@ export const env = cleanEnv(process.env, {
 
   ADDON_LETTERBOXD_POSTER_WIDTH: num({ default: 1000 }),
   ADDON_LETTERBOXD_POSTER_HEIGHT: num({ default: 1500 }),
+
+  ADDON_FEATURE_TMDB_REDIRECT: bool({ default: true }),
+  ADDON_FEATURE_TMDB_FETCH: bool({ default: false }),
 
   /** Used for public instance. Used in development primarily. */
   RAILWAY_PUBLIC_DOMAIN: str({ default: "http://localhost:3030" }),

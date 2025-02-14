@@ -1,4 +1,5 @@
 import type { Manifest } from "stremio-addon-sdk";
+import { features } from "./featureFlags.js";
 
 export type ManifestExpanded = Manifest & {
   behaviorHints?: { configurable?: boolean; configurationRequired?: boolean };
@@ -21,5 +22,17 @@ const manifest: ManifestExpanded = {
   },
   contactEmail: "stremio@almosteffective.com",
 };
+
+// feature flags
+if (features.tmdbRedirect) {
+  manifest.resources = [
+    ...manifest.resources,
+    {
+      name: "meta",
+      types: ["movie"],
+      idPrefixes: ["letterboxd-tmdb:"],
+    },
+  ] as ManifestExpanded["resources"];
+}
 
 export default manifest;

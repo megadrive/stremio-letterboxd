@@ -21,6 +21,7 @@ import type { StremioMeta, StremioMetaPreview } from "./consts.js";
 import { HTTP_CODES } from "./consts.js";
 import { publishToCentral } from "./lib/publishToStremioOfficialRepository.js";
 import { ListManager } from "./providers/listManager.js";
+import { features } from "./featureFlags.js";
 
 const listManager = new ListManager();
 listManager.startPolling();
@@ -125,7 +126,7 @@ app.get("/:providedConfig/manifest.json", async (req, res) => {
 
   cloned_manifest.catalogs = [
     {
-      id: config.path,
+      id: `${providedConfig}:${config.path}`,
       /** @ts-ignore next-line */
       type: "letterboxd",
       name: convertHTMLEntities(config.catalogName),
@@ -297,6 +298,31 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       error?.message ?? "Internal error"
     );
   }
+});
+
+app.get("/:providedConfig/meta/:type/:id.json", async (req, res) => {
+  const { type, id } = req.params;
+  const tmdbId = id.replace("letterboxd-tmdb:", "");
+
+  if (type !== "movie") {
+    return res.status(HTTP_CODES.NOT_FOUND).send();
+  }
+  if (!id.startsWith("letterboxd-tmdb:")) {
+    return res.status(HTTP_CODES.NOT_FOUND).send();
+  }
+
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  if (features.tmdbRedirect) {
+    res.redirect(
+      `https://94c8cb9f702d-tmdb-addon.baby-beamup.club/%7B%22include_adult%22%3A%22true%22%2C%22language%22%3A%22en-US%22%7D/meta/movie/tmdb%3A${tmdbId}.json`
+    );
+  }
+
+  if (features.tmdbFetch) {
+    res.status(500).send("Not implemented");
+  }
+
+  return;
 });
 
 /** Get the cached config for the provided config ID. */
