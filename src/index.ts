@@ -22,6 +22,7 @@ import { HTTP_CODES } from "./consts.js";
 import { publishToCentral } from "./lib/publishToStremioOfficialRepository.js";
 import { ListManager } from "./providers/listManager.js";
 import { features } from "./featureFlags.js";
+import { tmdb } from "./providers/tmdb.js";
 
 const listManager = new ListManager();
 listManager.startPolling();
@@ -319,7 +320,25 @@ app.get("/:providedConfig/meta/:type/:id.json", async (req, res) => {
   }
 
   if (features.tmdbFetch) {
-    res.status(500).send("Not implemented");
+    if (!env.ADDON_TMDB_APIKEY) {
+      res.status(500).send("No API key set.");
+      return;
+    }
+
+    const meta = await tmdb.getMovie(tmdbId);
+    if (!meta) {
+      res.status(500).send({ meta: undefined });
+      return;
+    }
+
+    if (!env.ADDON_FULL_METADATA) {
+      const minimalMeta = toStremioMetaPreview([meta])[0];
+
+      res.status(200).json({ meta: minimalMeta });
+      return;
+    }
+
+    res.status(200).json({ meta: meta });
   }
 
   return;

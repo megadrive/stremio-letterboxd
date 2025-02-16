@@ -28,6 +28,7 @@ export const env = cleanEnv(process.env, {
 
   ADDON_FEATURE_TMDB_REDIRECT: bool({ default: true }),
   ADDON_FEATURE_TMDB_FETCH: bool({ default: false }),
+  ADDON_TMDB_APIKEY: str({ default: "" }),
 
   /** Used for public instance. Used in development primarily. */
   RAILWAY_PUBLIC_DOMAIN: str({ default: "http://localhost:3030" }),
