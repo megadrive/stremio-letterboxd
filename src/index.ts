@@ -28,6 +28,7 @@ const listManager = new ListManager();
 listManager.startPolling();
 
 const app = express();
+app.use(express.static("./dist/public"));
 
 const logBase = logger("server");
 
