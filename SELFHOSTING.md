@@ -9,12 +9,11 @@
 
 1. Clone the repo
 2. Change environment variables in `.env`. See [Configuration](#configuration).
-3. Change /prisma/schema.prisma line 6 to reflect the database you want to use.
-4. Run `npm install` to install dependencies
-5. Run `npm run build` to build the project
-6. Run `npm run start` to start the addon, it will then be available at `http://localhost:PORT`
+3. Run `npm install` to install dependencies
+4. Run `npm run build` to build the project
+5. Run `npm run start` to start the addon, it will then be available at `http://localhost:PORT`
 
-If you ever need to start fresh, run `npm run cleanbuild`. This will run the npm scripts: `clean`, `clean:node_modules` and `build`.
+If you ever need to start fresh, run `node clean.js` then run `npm install` again.
 
 ## Upgrading
 

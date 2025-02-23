@@ -12,11 +12,9 @@
     "start": "node ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run clean && tsc && npm run prisma:push-db && npm run astro:build && copyfiles -u 2 \"./web/dist/**/*\" \"./dist/public\" && copyfiles ./static/* ./dist/public",
-    "cleanbuild": "npm run clean && npm run cleanbuild && npm run build",
     "astro:build": "cd ./web && npm run build",
     "astro:dev": "cd ./web && npx astro dev",
-    "clean": "node clean.js",
-    "clean:node_modules": "del node_modules && del ./web/node_modules"
+    "clean": "node clean.js"
   },
   "engines": {
     "node": ">= 20.x"
