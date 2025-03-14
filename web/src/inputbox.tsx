@@ -43,33 +43,31 @@ export default function Inputbox() {
 
     // get the config if the ID exists.
     if (providedConfigId) {
-      formState.disabled = true;
       const base = window.location.origin.includes(":4321")
         ? "http://localhost:3030"
         : window.location.origin;
+      console.info("Got a provided config ID", base);
       fetch(`${base}/getConfig/${encodeURIComponent(providedConfigId)}`)
         .then((res) => res.json())
         .then((gotConfig: typeof config) => {
           if (!gotConfig) throw new Error("No config found");
 
+          console.info(formState);
+
           setConfig(gotConfig);
           setValue("customListName", gotConfig.catalogName);
           setValue("ignoreUnreleased", gotConfig.ignoreUnreleased);
           setValue("rpdbApiKey", gotConfig.rpdbApiKey);
-          const configToProvide = encodeURIComponent(
-            `${gotConfig.path}${
-              gotConfig.catalogName ? `|cn=${gotConfig.catalogName}` : ""
-            }${gotConfig.ignoreUnreleased ? "|iu" : ""}${
-              gotConfig.posterChoice ? `|p=${gotConfig.posterChoice}` : ""
-            }${gotConfig.rpdbApiKey ? `|rpdb=${gotConfig.rpdbApiKey}` : ""}`
-          );
-          setManifestUrl(`${base}/${configToProvide}/manifest.json`);
+          formState.defaultValues = {
+            ...gotConfig,
+          };
+          setManifestUrl(`${base}/${providedConfigId}/manifest.json`);
         })
         .catch((error) => {
           console.warn(error);
         })
         .finally(() => {
-          formState.disabled = false;
+          // formState.disabled = false;
         });
     }
   }, [setValue, formState]);
