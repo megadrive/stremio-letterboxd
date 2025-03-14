@@ -238,10 +238,16 @@ app.get("/:providedConfig/catalog/:type/:id/:extra?", async (req, res) => {
       console.info({ type: config.type, skip, pageToFetch });
     }
 
-    const singlePageOfFilms = await fetchFilmsSinglePage(config.path, {
-      page: pageToFetch,
-    });
-    let films = singlePageOfFilms.films;
+    const tenPagesOfFilms: Awaited<ReturnType<typeof fetchFilmsSinglePage>>[] =
+      [];
+    for (let i = 0; i < 10; i++) {
+      const page = await fetchFilmsSinglePage(config.path, {
+        page: pageToFetch + i,
+      });
+      tenPagesOfFilms.push(page);
+    }
+
+    let films = tenPagesOfFilms.flatMap((page) => page.films);
 
     console.warn("``````````````````````````````````````````````````");
     console.error(config);
