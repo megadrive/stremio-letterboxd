@@ -12,11 +12,19 @@ import { subtitleRouter } from "./routes/subtitle.js";
 import { serveStatic } from "hono/serve-static";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
+import { ListManager } from "./util/listManager.js";
+import { prisma } from "@stremio-addon/database";
 
 const app = new Hono();
 
 app.use(cors());
 app.use(logger());
+
+/**
+ * Start workers
+ */
+const listManager = new ListManager();
+listManager.startPolling();
 
 app.get("/", (c) => {
   return c.redirect("/configure");
@@ -25,6 +33,19 @@ app.get("/", (c) => {
 app.get("/manifest.json", (c) => {
   const manifest = createManifest({ ...addonManifest });
   return c.json(manifest);
+});
+
+app.get("/recommend", async (c) => {
+  const recommendation = listManager.recommend();
+  if (!recommendation) {
+    return c.text("No recommendation available", 500);
+  }
+  return c.json(recommendation);
+});
+
+app.get("/stats", async (c) => {
+  const stats = await prisma.config.findMany();
+  return c.json(stats);
 });
 
 const configRoute = new Hono();

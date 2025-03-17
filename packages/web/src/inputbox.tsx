@@ -1,90 +1,29 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ConfigSchema, type Config } from "@stremio-addon/config";
 import { z } from "astro/zod";
 
-const posterChoices = [
-  "cinemeta",
-  "letterboxd",
-  "letterboxd-ratings",
-  "letterboxd-custom-from-list",
-  "rpdb",
-] as const;
-type PosterChoice = (typeof posterChoices)[number];
-
-const schema = z.object({
-  url: z.string().url(),
-  customListName: z.string().optional(),
-  ignoreUnreleased: z.boolean().optional(),
-  posterChoice: z.enum(posterChoices).optional(),
-  rpdbApiKey: z.string().optional(),
-});
-type FormData = z.infer<typeof schema>;
-
 export default function Inputbox() {
-  const [config, setConfig] = useState<{
-    path: string;
-    catalogName: string;
-    ignoreUnreleased: boolean;
-    posterChoice: PosterChoice;
-    rpdbApiKey?: string;
-  }>();
   const [manifestUrl, setManifestUrl] = useState("");
-  const { register, handleSubmit, formState, setValue, resetField, watch } =
-    useForm<FormData>({
-      resolver: zodResolver(schema),
+  const { register, handleSubmit, formState, setValue, watch } =
+    useForm<Config>({
+      resolver: zodResolver(ConfigSchema),
     });
   const watchedPosterChoice = watch("posterChoice");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const providedConfigId = params.get("id") ?? "";
-
-    // get the config if the ID exists.
-    if (providedConfigId) {
-      const base = window.location.origin.includes(":4321")
-        ? "http://localhost:3030"
-        : window.location.origin;
-      console.info("Got a provided config ID", base);
-      fetch(`${base}/getConfig/${encodeURIComponent(providedConfigId)}`)
-        .then((res) => res.json())
-        .then((gotConfig: typeof config) => {
-          if (!gotConfig) throw new Error("No config found");
-
-          console.info(formState);
-
-          setConfig(gotConfig);
-          setValue("customListName", gotConfig.catalogName);
-          setValue("ignoreUnreleased", gotConfig.ignoreUnreleased);
-          setValue("rpdbApiKey", gotConfig.rpdbApiKey);
-          formState.defaultValues = {
-            ...gotConfig,
-          };
-          setManifestUrl(`${base}/${providedConfigId}/manifest.json`);
-        })
-        .catch((error) => {
-          console.warn(error);
-        })
-        .finally(() => {
-          // formState.disabled = false;
-        });
-    }
-  }, [setValue, formState]);
-
   async function recommendList() {
-    const base = window.location.origin.includes(":4321")
-      ? "http://localhost:3030"
-      : window.location.origin;
     try {
-      const res = await fetch(`${base}/recommend`, {
+      const res = await fetch("/recommend", {
         headers: { "cache-control": "no-cache" },
       });
       if (!res.ok) {
-        throw new Error(`Failed to fetch list page: ${res.statusText}`);
+        throw new Error(`Failed to fetch recommendation: ${res.statusText}`);
       }
-      const json = (await res.json()) as string;
-      const recommendedUrl = `https://letterboxd.com${json}`;
+      const json = await res.json();
+      const recommendation = z.string().parse(json);
+      const recommendedUrl = `https://letterboxd.com${recommendation}`;
       setValue("url", recommendedUrl);
       setManifestUrl("");
     } catch (error) {
@@ -97,46 +36,34 @@ export default function Inputbox() {
    * @param url URL to resolve
    * @returns Resolved URL
    */
-  async function generateManifestURL(data: FormData) {
-    const base = window.location.origin.includes(":4321")
-      ? "http://localhost:3030"
-      : window.location.origin;
+  async function generateManifestURL(data: Config) {
     try {
-      const toVerify = JSON.stringify({
-        url: data.url,
-        base,
-        customListName: data.customListName,
-        ignoreUnreleased: data.ignoreUnreleased,
-        posterChoice: data.posterChoice,
-        rpdbApiKey: data.rpdbApiKey,
-      });
-      // if the url is the same, we don't need to verify it again
-
-      console.log({ toVerify });
-
-      const res = await fetch(`${base}/verify/${btoa(toVerify)}`, {
+      // verify with server
+      const res = await fetch(`/verify`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        // method: "POST",
-        cache: "no-cache",
+        body: JSON.stringify(data),
       });
+
       if (!res.ok) {
-        const message = await res.json();
-        toast.error(message);
-        return;
+        throw new Error("Failed to verify");
       }
-      const manifestUrl = await res.json();
-      console.log({ manifestUrl });
-      setManifestUrl(manifestUrl);
+
+      const manifestUrlResponse = await res.json();
+      const manifestUrl = z
+        .object({ manifestUrl: z.string() })
+        .parse(manifestUrlResponse).manifestUrl;
+
       return manifestUrl;
     } catch (error) {
-      // @ts-ignore
+      // @ts-expect-error Message exists
       toast.error(`Try again in a few seconds: ${error.message}`);
     }
   }
 
-  async function onSubmit(data: FormData) {
+  async function onSubmit(data: Config) {
     setManifestUrl("");
     if (!data.url) {
       toast.error("Please enter a valid URL");
@@ -157,7 +84,7 @@ export default function Inputbox() {
       await navigator.clipboard.writeText(manifestUrl);
       toast.success("Copied, paste in Stremio!");
     } catch (error) {
-      // @ts-ignore
+      // @ts-expect-error Message exists
       toast.error(error.message);
     }
   }
@@ -181,11 +108,6 @@ export default function Inputbox() {
               placeholder="https://letterboxd.com/almosteffective/watchlist"
               {...register("url")}
               className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
-              defaultValue={
-                config?.path
-                  ? `https://letterboxd.com${decodeURIComponent(config.path)}`
-                  : ""
-              }
             />
             <button
               className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
@@ -203,13 +125,8 @@ export default function Inputbox() {
             <input
               type="text"
               placeholder="My Cool List Name"
-              {...register("customListName")}
+              {...register("catalogName")}
               className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
-              defaultValue={
-                config?.catalogName
-                  ? `${decodeURIComponent(config.catalogName)}`
-                  : ""
-              }
             />
           </div>
 
@@ -248,7 +165,9 @@ export default function Inputbox() {
                 type="text"
                 placeholder="RPDb API Key"
                 className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
-                {...register("rpdbApiKey")}
+                {...register("rpdbApiKey", {
+                  deps: ["posterChoice"],
+                })}
               />
             </div>
           </div>
@@ -279,21 +198,6 @@ export default function Inputbox() {
             >
               {formState.isSubmitting === false ? "Copy" : "Validating..."}
             </button>
-          </div>
-          <div className="hidden">
-            <div>
-              <a href={manifestUrl}>{manifestUrl}</a>
-            </div>
-            <div>
-              {window.navigator.userActivation.hasBeenActive
-                ? "User has been active"
-                : "User has not been active"}
-            </div>
-            <div>
-              {window.navigator.userActivation.isActive
-                ? "User is active"
-                : "User is not active"}
-            </div>
           </div>
         </div>
       </form>

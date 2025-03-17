@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { createManifest } from "@/util/manifest.js";
-import { parseConfigFromUrl } from "@/middleware/parseConfigFromUrl.js";
 import { serverEnv } from "@stremio-addon/env";
+import { parseConfigFromUrl } from "@/middleware/parseConfigFromUrl.js";
 
 export const manifestRouter = new Hono();
 
@@ -15,12 +15,23 @@ export const manifestRouter = new Hono();
  * Search: @configuration in packages/config to change the configuration.
  */
 manifestRouter.get("/", parseConfigFromUrl, async (c) => {
-  const config = c.get("config");
+  const config = c.var.config;
+
+  const safeUrl = encodeURIComponent(config.url);
 
   const manifest = createManifest({
-    id: "com.example.addon",
-    name: `Example Addon with config ${Object.keys(config).join(", ")}`,
-    version: `1.0.0${serverEnv.isDev ? "-dev" : ""}`,
+    id: `com.github.megadrive.stremio-letterboxd-${safeUrl}`,
+    // prepend a cute bug for the in-dev version for testing
+    name: `${serverEnv.isDev ? "🐛 " : ""}Letterboxd - ${config.catalogName}`,
+    version: `2.0.0${serverEnv.isDev ? "-dev" : ""}`,
+    catalogs: [
+      {
+        id: safeUrl,
+        name: config.catalogName,
+        // @ts-expect-error Custom type
+        type: "letterboxd",
+      },
+    ],
   });
 
   return c.json(manifest);

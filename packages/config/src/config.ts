@@ -9,7 +9,20 @@ import { z } from "zod";
  * @configuration
  */
 export const ConfigSchema = z.object({
-  variable1: z.string().min(1, { message: "Variable 1 is required" }),
+  url: z
+    .string()
+    .min(1, { message: "A Letterboxd or Boxd.it URL is required." }),
+  catalogName: z.string({ description: "The name of the catalog" }),
+  posterChoice: z
+    .enum([
+      "cinemeta",
+      "letterboxd",
+      "letterboxd-ratings",
+      "letterboxd-custom-from-list",
+      "rpdb",
+    ])
+    .default("letterboxd-custom-from-list"),
+  rpdbApiKey: z.string().optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { type Config, config } from "./config.js";
+import { config } from "./config.js";
 
 export const useConfig = (encodedConfig: string) => {
   const memoedEncodedConfig = useMemo(

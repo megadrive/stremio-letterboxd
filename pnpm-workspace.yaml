@@ -1,5 +1,10 @@
 packages:
   - packages/config
+  - packages/database
   - packages/env
   - packages/server
   - packages/web
+
+catalogs:
+  prisma:
+    prisma: latest

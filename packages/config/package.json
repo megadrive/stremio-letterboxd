@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "pnpm --package=typescript dlx tsc"
+    "build": "pnpm --package=typescript dlx tsc --jsx"
   },
   "keywords": [],
   "author": "",
