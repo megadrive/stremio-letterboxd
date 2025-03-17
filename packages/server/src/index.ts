@@ -14,6 +14,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { ListManager } from "./util/listManager.js";
 import { prisma } from "@stremio-addon/database";
+import { verifyRouter } from "./routes/verify.js";
 
 const app = new Hono();
 
@@ -45,7 +46,7 @@ app.get("/recommend", async (c) => {
 
 app.get("/stats", async (c) => {
   const stats = await prisma.config.findMany();
-  return c.json(stats);
+  return c.json(stats.length);
 });
 
 const configRoute = new Hono();
@@ -54,6 +55,7 @@ configRoute.route("/catalog", catalogRouter);
 configRoute.route("/meta", metaRouter);
 configRoute.route("/stream", streamRouter);
 configRoute.route("/subtitle", subtitleRouter);
+configRoute.route("/verify", verifyRouter);
 
 app.route("/:config", configRoute);
 

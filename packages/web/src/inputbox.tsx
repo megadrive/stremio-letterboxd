@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ConfigSchema, type Config } from "@stremio-addon/config";
+import { config, ConfigSchema, type Config } from "@stremio-addon/config";
 import { z } from "astro/zod";
 
 export default function Inputbox() {
@@ -39,22 +39,15 @@ export default function Inputbox() {
   async function generateManifestURL(data: Config) {
     try {
       // verify with server
-      const res = await fetch(`/verify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const encodedConfig = await config.encode(data);
+      const res = await fetch(`/${encodedConfig}/verify`);
 
       if (!res.ok) {
         throw new Error("Failed to verify");
       }
 
       const manifestUrlResponse = await res.json();
-      const manifestUrl = z
-        .object({ manifestUrl: z.string() })
-        .parse(manifestUrlResponse).manifestUrl;
+      const manifestUrl = z.string().parse(manifestUrlResponse);
 
       return manifestUrl;
     } catch (error) {

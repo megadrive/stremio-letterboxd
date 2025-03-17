@@ -9,5 +9,6 @@ export default defineConfig({
   redirects: {
     "/": "/configure",
   },
+  output: "hybrid",
   integrations: [tailwind(), react(), tunnel()],
 });
