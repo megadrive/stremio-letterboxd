@@ -1,0 +1,26 @@
+{
+  "name": "@stremio-addon/config",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "pnpm --package=typescript dlx tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "shrink-string": "^3.1.9",
+    "zod": "^3.24.2"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10"
+  }
+}

@@ -1,11 +1,4 @@
 node_modules
-# Keep environment variables out of version control
-.env
-
+.env*
+.tsbuildinfo
 dist
-
-*.db
-*.db-journal
-*.sqlite
-
-/static/lists/*.json
