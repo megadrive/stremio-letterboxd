@@ -18,10 +18,10 @@ model Cinemeta {
   updatedAt DateTime @updatedAt
 }
 
-model LetterboxdIMDb {
+model LetterboxdIDMapping {
   letterboxd String  @id
-  imdb       String  @unique
-  tmdb       String? @unique
+  imdb       String? @unique
+  tmdb       String  @unique
 
   @@index([letterboxd, imdb])
 }
