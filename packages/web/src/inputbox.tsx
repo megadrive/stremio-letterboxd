@@ -100,10 +100,10 @@ export default function Inputbox() {
               type="text"
               placeholder="https://letterboxd.com/almosteffective/watchlist"
               {...register("url")}
-              className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
+              className="w-full border border-black bg-white text-[#202830] rounded text-xl px-2 py-1"
             />
             <button
-              className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
+              className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
               onClick={recommendList}
               disabled={formState.isSubmitting}
               type="button"
@@ -117,9 +117,9 @@ export default function Inputbox() {
           <div>
             <input
               type="text"
-              placeholder="My Cool List Name"
+              placeholder="Probably Hugh Jackman's Watchlist"
               {...register("catalogName")}
-              className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
+              className="w-full border border-black bg-white text-[#202830] rounded text-xl px-2 py-1"
             />
           </div>
 
@@ -129,16 +129,16 @@ export default function Inputbox() {
             </div>
             <div>
               <select
-                className="border border-black text-tailwind rounded text-xl px-2 py-1 w-full"
+                className="border border-black text-[#202830] bg-white rounded text-xl px-2 py-1 w-full"
                 {...register("posterChoice")}
               >
-                <option value="cinemeta">Cinemeta (default)</option>
+                <option value="letterboxd-custom-from-list">
+                  Letterboxd List Posters (default)
+                </option>
+                <option value="cinemeta">Cinemeta</option>
                 <option value="letterboxd">Letterboxd</option>
                 <option value="letterboxd-ratings">
                   Letterboxd with ratings
-                </option>
-                <option value="letterboxd-custom-from-list">
-                  Letterboxd Custom List
                 </option>
                 <option value="rpdb">RPDB</option>
               </select>
@@ -157,7 +157,7 @@ export default function Inputbox() {
               <input
                 type="text"
                 placeholder="RPDb API Key"
-                className="w-full border border-black text-tailwind rounded text-xl px-2 py-1"
+                className="w-full border border-black text-[#202830] rounded text-xl px-2 py-1"
                 {...register("rpdbApiKey", {
                   deps: ["posterChoice"],
                 })}
@@ -167,7 +167,7 @@ export default function Inputbox() {
 
           <div className="grid gap-1 grid-cols-2 grid-rows-2">
             <button
-              className="col-span-2 grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
+              className="col-span-2 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
               disabled={formState.isSubmitting}
               type="submit"
             >
@@ -176,7 +176,7 @@ export default function Inputbox() {
                 : "Validating..."}
             </button>
             <button
-              className="grow border border-white bg-white uppercase text-tailwind text-lg p-2 rounded font-bold hover:bg-tailwind hover:text-white hover:underline"
+              className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
               onClick={installAddon}
               hidden={manifestUrl?.length === 0}
               type="button"
@@ -184,7 +184,7 @@ export default function Inputbox() {
               {formState.isSubmitting === false ? "Install" : "Validating..."}
             </button>
             <button
-              className="grow border border-transparent hover:border-white bg-tailwind uppercase text-white text-lg p-2 rounded font-normal"
+              className="grow border border-transparent hover:border-white bg-[#202830] uppercase text-white text-lg p-2 rounded font-normal"
               onClick={copyToClipboard}
               hidden={manifestUrl?.length === 0}
               type="submit"
