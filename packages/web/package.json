@@ -3,9 +3,8 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev --host",
-    "start": "astro dev --host",
-    "build": "npm i && astro check && astro build",
+    "dev": "astro dev",
+    "build": "pnpm i && astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -30,6 +29,10 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/react-dom": "^19.0.4"
+    "@types/react-dom": "^19.0.4",
+    "sharp": "^0.33.5"
+  },
+  "peerDependencies": {
+    "sharp": "^0.33.5"
   }
 }
