@@ -15,14 +15,16 @@ export default function Inputbox() {
 
   async function recommendList() {
     try {
-      const res = await fetch("/recommend", {
+      const res = await fetch("/api/recommend", {
         headers: { "cache-control": "no-cache" },
       });
       if (!res.ok) {
         throw new Error(`Failed to fetch recommendation: ${res.statusText}`);
       }
       const json = await res.json();
-      const recommendation = z.string().parse(json);
+      const { recommendation } = z
+        .object({ recommendation: z.string() })
+        .parse(json);
       const recommendedUrl = `https://letterboxd.com${recommendation}`;
       setValue("url", recommendedUrl);
       setManifestUrl("");
@@ -40,16 +42,9 @@ export default function Inputbox() {
     try {
       // verify with server
       const encodedConfig = await config.encode(data);
-      const res = await fetch(`/${encodedConfig}/verify`);
+      const { origin } = new URL(location.href);
 
-      if (!res.ok) {
-        throw new Error("Failed to verify");
-      }
-
-      const manifestUrlResponse = await res.json();
-      const manifestUrl = z.string().parse(manifestUrlResponse);
-
-      return manifestUrl;
+      return `${origin}/${encodedConfig}/manifest.json`;
     } catch (error) {
       // @ts-expect-error Message exists
       toast.error(`Try again in a few seconds: ${error.message}`);
@@ -167,7 +162,7 @@ export default function Inputbox() {
 
           <div className="grid gap-1 grid-cols-2 grid-rows-2">
             <button
-              className="col-span-2 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
+              className="col-span-2 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold cursor-pointer hover:bg-[#202830] hover:text-white hover:underline"
               disabled={formState.isSubmitting}
               type="submit"
             >

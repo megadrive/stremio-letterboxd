@@ -5,10 +5,10 @@ function useCount() {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    fetch("/stats", {
+    fetch("/api/stats", {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "max-age=0, stale-while-revalidate=5",
+        "Cache-Control": "max-age=0, stale-while-revalidate=30",
       },
     })
       .then((res) => res.json())
