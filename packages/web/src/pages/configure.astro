@@ -4,6 +4,7 @@ import Popular from "../popular";
 import { Image } from "astro:assets";
 import LogoImage from "../logo.png";
 import Stats from "../stats";
+import "../styles/global.css";
 
 const linkClasses = "hover:underline font-semibold";
 ---
@@ -11,11 +12,6 @@ const linkClasses = "hover:underline font-semibold";
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="https://fav.farm/%F0%9F%98%8E"
-    />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Stremio Letterboxd Addon</title>

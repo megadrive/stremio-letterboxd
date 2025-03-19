@@ -1,76 +1,47 @@
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
 import { serverEnv } from "@stremio-addon/env";
-import { addonManifest, createManifest } from "./util/manifest.js";
-import { cors } from "hono/cors";
-import { logger } from "hono/logger";
-import { manifestRouter } from "./routes/manifest.js";
-import { catalogRouter } from "./routes/catalog.js";
-import { metaRouter } from "./routes/meta.js";
-import { streamRouter } from "./routes/stream.js";
-import { subtitleRouter } from "./routes/subtitle.js";
-import { serveStatic } from "hono/serve-static";
-import path from "node:path";
-import { readFile } from "node:fs/promises";
-import { ListManager } from "./util/listManager.js";
-import { prisma } from "@stremio-addon/database";
-import { verifyRouter } from "./routes/verify.js";
+import { addonManifest, createManifest } from "@/util/manifest.js";
+import { manifestRouter } from "@/routes/config/manifest.js";
+import { catalogRouter } from "@/routes/config/catalog.js";
+import { metaRouter } from "@/routes/config/meta.js";
+import { streamRouter } from "@/routes/config/stream.js";
+import { subtitleRouter } from "@/routes/config/subtitle.js";
+import { serveStatic } from "@hono/node-server/serve-static";
+import { createAPIRouter, createApp, createRouter } from "@/util/createHono.js";
+import { exampleAPIRouter } from "@/routes/api/example.js";
 
-const app = new Hono();
+const app = createApp();
 
-app.use(cors());
-app.use(logger());
+app.use(
+  "*",
+  serveStatic({
+    root: "../web/dist/client",
+  })
+);
 
-/**
- * Start workers
- */
-const listManager = new ListManager();
-listManager.startPolling();
-
-app.get("/", (c) => {
-  return c.redirect("/configure");
-});
+if (serverEnv.isProduction) {
+  app.get("/", (c) => {
+    return c.redirect("/configure");
+  });
+}
 
 app.get("/manifest.json", (c) => {
   const manifest = createManifest({ ...addonManifest });
   return c.json(manifest);
 });
 
-app.get("/recommend", async (c) => {
-  const recommendation = listManager.recommend();
-  if (!recommendation) {
-    return c.text("No recommendation available", 500);
-  }
-  return c.json(recommendation);
-});
+const configRouter = createRouter();
+configRouter.route("/manifest.json", manifestRouter);
+configRouter.route("/catalog", catalogRouter);
+configRouter.route("/meta", metaRouter);
+configRouter.route("/stream", streamRouter);
+configRouter.route("/subtitle", subtitleRouter);
 
-app.get("/stats", async (c) => {
-  const stats = await prisma.config.findMany();
-  return c.json(stats.length);
-});
+app.route("/:config", configRouter);
 
-const configRoute = new Hono();
-configRoute.route("/manifest.json", manifestRouter);
-configRoute.route("/catalog", catalogRouter);
-configRoute.route("/meta", metaRouter);
-configRoute.route("/stream", streamRouter);
-configRoute.route("/subtitle", subtitleRouter);
-configRoute.route("/verify", verifyRouter);
-
-app.route("/:config", configRoute);
-
-app.use(
-  "*",
-  serveStatic({
-    root: "../web/dist/client",
-    pathResolve(filePath) {
-      return path.resolve(".", filePath);
-    },
-    getContent(path) {
-      return readFile(path);
-    },
-  })
-);
+const apiRouter = createAPIRouter();
+apiRouter.route("/example", exampleAPIRouter);
+app.route("/api", apiRouter);
 
 serve(
   {
@@ -78,6 +49,8 @@ serve(
     port: serverEnv.PORT,
   },
   (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`);
+    console.log(
+      `Server is running on http://localhost:${info.port} in ${serverEnv.NODE_ENV} mode`
+    );
   }
 );

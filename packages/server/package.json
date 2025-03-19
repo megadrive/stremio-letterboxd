@@ -11,7 +11,11 @@
     "@stremio-addon/database": "workspace:*",
     "@stremio-addon/env": "workspace:*",
     "cheerio": "^1.0.0",
-    "hono": "^4.7.4"
+    "hono": "^4.7.4",
+    "hono-pino": "^0.8.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "stoker": "^1.4.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",

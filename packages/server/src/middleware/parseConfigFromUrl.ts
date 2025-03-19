@@ -1,34 +1,33 @@
-import { config, type Config } from "@stremio-addon/config";
-import { prisma } from "@stremio-addon/database";
+import type { AppBindingsWithConfig } from "@/util/createHono.js";
+import { config } from "@stremio-addon/config";
 import { createMiddleware } from "hono/factory";
+import { FORBIDDEN } from "stoker/http-status-codes";
+import { FORBIDDEN as FORBIDDEN_TEXT } from "stoker/http-status-phrases";
 
-export const parseConfigFromUrl = createMiddleware<{
-  Variables: { config: Config };
-}>(async (c, next) => {
-  const configId = c.req.param("config");
-  if (!configId) return c.json({ error: "No config provided" });
-
-  try {
-    const cachedConfig = await prisma.config.findUnique({
-      where: {
-        id: configId,
-      },
-    });
-
-    if (!cachedConfig) {
-      throw new Error(`Could not find config with id ${configId}`);
-    }
-
-    // decode the found config
-    const decodedConfig = await config.decode(cachedConfig.config);
-
-    if (!decodedConfig) {
-      throw new Error(`Could not decode config with id ${configId}`);
-    }
-  } catch (error) {
-    console.error(error);
-    return c.text("", 500);
+class ConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigError";
   }
+}
 
-  await next();
-});
+export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
+  async (c, next) => {
+    const configString = c.req.param("config");
+
+    try {
+      if (configString) {
+        const conf = await config.decode(configString);
+        if (!conf) throw new ConfigError("Invalid config");
+        c.set("config", conf);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        c.var.logger.error(error);
+      }
+      c.text(FORBIDDEN_TEXT, FORBIDDEN);
+    }
+
+    await next();
+  }
+);
