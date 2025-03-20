@@ -2,14 +2,18 @@ import { useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { config, ConfigSchema, type Config } from "@stremio-addon/config";
+import {
+  config,
+  type ConfigFormInput,
+  ConfigFormInputSchema,
+} from "@stremio-addon/config";
 import { z } from "astro/zod";
 
 export default function Inputbox() {
   const [manifestUrl, setManifestUrl] = useState("");
   const { register, handleSubmit, formState, setValue, watch } =
-    useForm<Config>({
-      resolver: zodResolver(ConfigSchema),
+    useForm<ConfigFormInput>({
+      resolver: zodResolver(ConfigFormInputSchema),
     });
   const watchedPosterChoice = watch("posterChoice");
 
@@ -38,7 +42,7 @@ export default function Inputbox() {
    * @param url URL to resolve
    * @returns Resolved URL
    */
-  async function generateManifestURL(data: Config) {
+  async function generateManifestURL(data: ConfigFormInput) {
     try {
       // verify with server
       const encodedConfig = await config.encode(data);
@@ -51,7 +55,7 @@ export default function Inputbox() {
     }
   }
 
-  async function onSubmit(data: Config) {
+  async function onSubmit(data: ConfigFormInput) {
     setManifestUrl("");
     if (!data.url) {
       toast.error("Please enter a valid URL");
@@ -79,6 +83,12 @@ export default function Inputbox() {
 
   async function installAddon() {
     window.location.href = manifestUrl;
+  }
+
+  async function installWeb() {
+    window.open(
+      `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`
+    );
   }
 
   return (
@@ -160,32 +170,46 @@ export default function Inputbox() {
             </div>
           </div>
 
-          <div className="grid gap-1 grid-cols-2 grid-rows-2">
-            <button
-              className="col-span-2 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold cursor-pointer hover:bg-[#202830] hover:text-white hover:underline"
-              disabled={formState.isSubmitting}
-              type="submit"
+          <div className="flex gap-1 justify-around">
+            <div className={manifestUrl?.length > 0 ? "hidden" : ""}>
+              <button
+                className="col-span-3 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold cursor-pointer hover:bg-[#202830] hover:text-white hover:underline"
+                disabled={formState.isSubmitting}
+                type="submit"
+              >
+                {formState.isSubmitting === false
+                  ? "Generate Manifest"
+                  : "Validating..."}
+              </button>
+            </div>
+            <div
+              className={`${manifestUrl?.length === 0 ? "hidden" : ""} flex gap-1 justify-around grow`}
             >
-              {formState.isSubmitting === false
-                ? "Generate Manifest"
-                : "Validating..."}
-            </button>
-            <button
-              className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
-              onClick={installAddon}
-              hidden={manifestUrl?.length === 0}
-              type="button"
-            >
-              {formState.isSubmitting === false ? "Install" : "Validating..."}
-            </button>
-            <button
-              className="grow border border-transparent hover:border-white bg-[#202830] uppercase text-white text-lg p-2 rounded font-normal"
-              onClick={copyToClipboard}
-              hidden={manifestUrl?.length === 0}
-              type="submit"
-            >
-              {formState.isSubmitting === false ? "Copy" : "Validating..."}
-            </button>
+              <button
+                className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
+                onClick={installAddon}
+                hidden={manifestUrl?.length === 0}
+                type="button"
+              >
+                Install
+              </button>
+              <button
+                className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
+                onClick={installWeb}
+                hidden={manifestUrl?.length === 0}
+                type="button"
+              >
+                Install to web
+              </button>
+              <button
+                className="grow border border-transparent hover:border-white bg-[#202830] uppercase text-white text-lg p-2 rounded font-normal"
+                onClick={copyToClipboard}
+                hidden={manifestUrl?.length === 0}
+                type="submit"
+              >
+                Copy to clipboard
+              </button>
+            </div>
           </div>
         </div>
       </form>

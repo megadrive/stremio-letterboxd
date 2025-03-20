@@ -1,1 +1,1 @@
-export { config, type Config, ConfigSchema } from "./config.js";
+export * from "./config.js";

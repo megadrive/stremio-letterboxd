@@ -10,7 +10,8 @@
     "format": "prettier ./packages --write .",
     "build": "pnpm -r build",
     "start": "pnpm -r start",
-    "prepare": "pnpm format && husky"
+    "prepare": "pnpm format && husky",
+    "db:seed": "pnpm --filter @stremio-addon/server db:seed"
   },
   "keywords": [],
   "author": "",

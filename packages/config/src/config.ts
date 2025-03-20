@@ -23,8 +23,16 @@ export const ConfigSchema = z.object({
     ])
     .default("letterboxd-custom-from-list"),
   rpdbApiKey: z.string().optional(),
+  reservedTag: z.enum(["weekly", "monthly"]).optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
+
+/** Used in the frontend, we can hide backend-only config values here. */
+export const ConfigFormInputSchema = z.object({
+  ...ConfigSchema.shape,
+  reservedTag: z.undefined(),
+});
+export type ConfigFormInput = z.infer<typeof ConfigFormInputSchema>;
 
 export const config = {
   /**
@@ -40,6 +48,7 @@ export const config = {
       return parsed;
     } catch (e: unknown) {
       // @ts-expect-error Message exists on a parsing error.
+      // TODO: Make this error more descriptive, maybe the ZodError
       console.error("Could not decode config", e?.message);
     }
 
