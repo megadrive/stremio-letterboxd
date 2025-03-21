@@ -19,6 +19,7 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
       if (configString) {
         const conf = await config.decode(configString);
         if (!conf) throw new ConfigError("Invalid config");
+        conf.encoded = configString;
         c.set("config", conf);
       }
     } catch (error) {

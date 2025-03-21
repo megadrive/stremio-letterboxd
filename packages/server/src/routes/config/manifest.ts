@@ -1,6 +1,7 @@
 import { createRouter } from "@/util/createHono.js";
-import { createManifest } from "@/util/manifest.js";
-import { serverEnv } from "@stremio-addon/env";
+import { addonManifest, createManifest } from "@/util/manifest.js";
+import { determineCatalogName } from "@/lib/letterboxd/scraper.js";
+import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 
 export const manifestRouter = createRouter();
 
@@ -16,11 +17,35 @@ export const manifestRouter = createRouter();
 manifestRouter.get("/", async (c) => {
   const config = c.var.config;
 
+  let catalogName = config.catalogName;
+  try {
+    if (!catalogName) {
+      catalogName = await determineCatalogName({ url: config.url });
+    }
+  } catch {
+    c.var.logger.error("Failed to determine catalog name.");
+    return c.text("", INTERNAL_SERVER_ERROR);
+  }
+
   const manifest = createManifest({
-    id: "com.example.addon",
-    name: "Example Addon with config",
-    description: `Configured values: ${Object.keys(config).join(", ")}`,
-    version: `1.0.0${serverEnv.isDev ? "-dev" : ""}`,
+    ...addonManifest,
+    id: `${addonManifest.id}:${config.encoded}`,
+    name: `Letterboxd - ${catalogName}`,
+    description: `Adds ${catalogName} as a catalog to Stremio. URL: ${config.url}`,
+    catalogs: [
+      {
+        id: crypto.randomUUID(),
+        name: catalogName,
+        // @ts-expect-error Custom Type
+        type: "letterboxd",
+        extra: [
+          {
+            name: "skip",
+            isRequired: false,
+          },
+        ],
+      },
+    ],
   });
 
   return c.json(manifest);

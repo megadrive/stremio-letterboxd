@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { type Config } from "@stremio-addon/config";
-import { pinoLoggerMiddleware } from "@/middleware/pinoLogger.js";
+import { pinoLoggerMiddleware } from "@/lib/pinoLogger.js";
 import { cors } from "hono/cors";
 import type { PinoLogger } from "hono-pino";
 import { notFound, onError, serveEmojiFavicon } from "stoker/middlewares";

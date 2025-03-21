@@ -24,6 +24,7 @@ export const ConfigSchema = z.object({
     .default("letterboxd-custom-from-list"),
   rpdbApiKey: z.string().optional(),
   reservedTag: z.enum(["weekly", "monthly"]).optional(),
+  encoded: z.string().optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

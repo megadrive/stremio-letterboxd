@@ -21,6 +21,10 @@ export const serverEnv = cleanEnv(process.env, {
     desc: "Required. Base URL for the addon, used for absolute URLs. Leave the last / off.",
     example: "https://base-url-to-your-addon.com",
   }),
+  QUEUE_CONCURRENCY: num({
+    default: 14,
+    desc: "How many concurrent requests to make to Letterboxd. Leave it as 1 unless you know what you're doing.",
+  }),
 });
 
 export const HOST_LOCAL = `http://localhost:${serverEnv.PORT}`;

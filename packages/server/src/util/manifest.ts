@@ -1,3 +1,4 @@
+import { serverEnv } from "@stremio-addon/env";
 import type { Manifest } from "stremio-addon-sdk";
 
 /**
@@ -15,15 +16,13 @@ const manifestBase: Manifest = {
   catalogs: [],
   resources: ["meta"],
   types: ["movie", "series"],
-};
+} as const;
 
 /**
  * Create a new manifest.
  * NOTE: Remember that each "call" to your addon runs in isolation. There is no "app state" aside from the config sent in the URL.
  */
-export const createManifest = (
-  opts: Pick<Manifest, "id" | "name"> & Partial<Omit<Manifest, "id" | "name">>
-): Manifest => {
+export const createManifest = (opts: Partial<Manifest>): Manifest => {
   return {
     ...manifestBase,
     ...opts,
@@ -37,7 +36,10 @@ export const createManifest = (
  * You can do cool things like dynamically create catalogs, or request certain resources. You do that in the line marked: @configurable-manifest
  */
 export const addonManifest = createManifest({
-  id: "org.your.addon.id",
-  name: "Stremio Addon Starter",
-  version: "0.0.0",
+  id: "github.megadrive.stremio.letterboxd",
+  name: "Letterboxd",
+  version: `2.0.0${serverEnv.isDev ? "-dev" : ""}`,
+  description: "Adds a Letterboxd URL as a catalog.",
+  logo: "https://stremio-letterboxd-watchlist.up.railway.app/logo.png",
+  catalogs: [],
 });

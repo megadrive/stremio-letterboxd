@@ -16,3 +16,10 @@ export function pinoLoggerMiddleware() {
     },
   });
 }
+
+export const pinoLoggerStandalone = pino(
+  {
+    level: serverEnv.isDevelopment ? "debug" : "info",
+  },
+  serverEnv.isDevelopment ? pretty() : undefined
+);
