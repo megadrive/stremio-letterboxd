@@ -53,7 +53,7 @@ export class LetterboxdCacher {
    * @param url URL to a Letterboxd page
    * @returns
    */
-  async scrapeList(userConfig: Config) {
+  async scrapeList(userConfig: Config): Promise<BasicMetadata[] | undefined> {
     /*
       - Scrape the initial HTML of a given URL
       - Scrape the .poster $cheerio elements for initial metadata
@@ -78,7 +78,8 @@ export class LetterboxdCacher {
 
       // scrape the list to cache for the user
 
-      const catalogName = await determineCatalogName({ url, $ });
+      const catalogName =
+        userConfig.catalogName ?? (await determineCatalogName({ url, $ }));
       const initialMeta = await scrapePostersForMetadata($);
 
       // Cache catalog metadata
@@ -88,7 +89,6 @@ export class LetterboxdCacher {
       };
 
       logger.info(`Caching metadata for ${catalogName}`);
-      logger.info({ userCache });
 
       try {
         const newConfig = await prisma.config.create({

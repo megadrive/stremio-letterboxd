@@ -1,3 +1,7 @@
+import {
+  letterboxdCacher,
+  type CatalogMetadata,
+} from "@/workers/letterboxdCacher.js";
 import { type Config, config } from "@stremio-addon/config";
 import { prisma } from "@stremio-addon/database";
 
@@ -18,19 +22,29 @@ async function seed() {
     },
   ];
 
-  const encoded: string[] = [];
   for (const conf of configs) {
-    const encodedConfig = await config.encode(conf);
-    encoded.push(encodedConfig);
-  }
+    const encoded = await config.encode(conf);
+    const items = await letterboxdCacher.scrapeList(conf);
 
-  return prisma.config.createMany({
-    data: encoded.map((encodedConfig) => {
-      return {
-        config: encodedConfig,
-      };
-    }),
-  });
+    if (!items) {
+      console.error("Failed to scrape metadata for", conf.url);
+      continue;
+    }
+
+    const metadata: CatalogMetadata = {
+      name: conf.catalogName,
+      items: items,
+    };
+
+    console.info("Seeding database with", conf);
+    await prisma.config.create({
+      data: {
+        config: encoded,
+        metadata: JSON.stringify(metadata),
+        isReserved: true,
+      },
+    });
+  }
 }
 
 seed()

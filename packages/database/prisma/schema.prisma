@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -19,11 +19,12 @@ model Cinemeta {
 }
 
 model Config {
-  id        String   @id @default(uuid())
-  config    String // JSON
-  metadata  String // String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  config     String // JSON
+  metadata   String // String[]
+  isReserved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([config])
 }
