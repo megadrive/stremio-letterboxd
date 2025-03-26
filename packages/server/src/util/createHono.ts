@@ -15,6 +15,7 @@ type AppBindings = {
 export type AppBindingsWithConfig = AppBindings & {
   Variables: {
     config: Config;
+    configString: string;
   };
 };
 

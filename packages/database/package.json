@@ -9,6 +9,7 @@
   "type": "module",
   "scripts": {
     "prisma": "prisma",
+    "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",

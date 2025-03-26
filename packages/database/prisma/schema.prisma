@@ -18,19 +18,27 @@ model Cinemeta {
   updatedAt DateTime @updatedAt
 }
 
-model LetterboxdIDMapping {
-  letterboxd String  @id
-  imdb       String? @unique
-  tmdb       String  @unique
-
-  @@index([letterboxd, imdb])
-}
-
 model Config {
   id        String   @id @default(uuid())
-  config    String
+  config    String // JSON
+  metadata  String // String[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([config])
+}
+
+model Film {
+  id          String   @id
+  title       String
+  year        Int
+  runtime     Int
+  description String
+  genres      String
+  director    String
+  cast        String
+  imdb        String?
+  tmdb        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

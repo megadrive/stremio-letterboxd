@@ -11,7 +11,8 @@
     "build": "pnpm -r build",
     "start": "pnpm -r start",
     "prepare": "pnpm format && husky",
-    "db:seed": "pnpm --filter @stremio-addon/server db:seed"
+    "db:seed": "pnpm --filter @stremio-addon/server db:seed",
+    "db:push": "pnpm --filter @stremio-addon/database db:push"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +28,7 @@
     "@types/stremio-addon-sdk": "^1.6.11",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-neverthrow": "^1.1.4",
     "eslint-plugin-prettier": "^5.2.3",
     "globals": "^16.0.0",
     "husky": "^9.1.7",

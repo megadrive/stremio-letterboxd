@@ -28,9 +28,12 @@ importers:
       eslint-config-prettier:
         specifier: ^10.0.1
         version: 10.0.1(eslint@9.21.0(jiti@2.4.2))
+      eslint-plugin-neverthrow:
+        specifier: ^1.1.4
+        version: 1.1.4(@typescript-eslint/parser@8.24.1(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3))(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3)
       eslint-plugin-prettier:
         specifier: ^5.2.3
-        version: 5.2.3(eslint-config-prettier@10.0.1(eslint@9.21.0(jiti@2.4.2)))(eslint@9.21.0(jiti@2.4.2))(prettier@3.5.2)
+        version: 5.2.3(@types/eslint@9.6.1)(eslint-config-prettier@10.0.1(eslint@9.21.0(jiti@2.4.2)))(eslint@9.21.0(jiti@2.4.2))(prettier@3.5.2)
       globals:
         specifier: ^16.0.0
         version: 16.0.0
@@ -98,6 +101,9 @@ importers:
       hono-pino:
         specifier: ^0.8.0
         version: 0.8.0(hono@4.7.4)(pino@9.6.0)
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       p-queue:
         specifier: ^8.1.0
         version: 8.1.0
@@ -1466,6 +1472,18 @@ packages:
         integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==,
       }
 
+  "@types/eslint-utils@3.0.5":
+    resolution:
+      {
+        integrity: sha512-dGOLJqHXpjomkPgZiC7vnVSJtFIOM1Y6L01EyUhzPuD0y0wfIGiqxiGs3buUBfzxLIQHrCvZsIMDaCZ8R5IIoA==,
+      }
+
+  "@types/eslint@9.6.1":
+    resolution:
+      {
+        integrity: sha512-FXx2pKgId/WyYo2jXw63kk7/+TY7u7AziEJxJAnSFzHlqTAS3Ync6SvgYAN/k4/PQpnnVuzoMuVnByKK2qp0ag==,
+      }
+
   "@types/estree@1.0.6":
     resolution:
       {
@@ -2410,6 +2428,16 @@ packages:
     peerDependencies:
       eslint: ">=7.0.0"
 
+  eslint-plugin-neverthrow@1.1.4:
+    resolution:
+      {
+        integrity: sha512-+8zsE5rDqsDfKYAOq0Fr2jbuxHXTmntIWWJqJA3ms1GAKcVCjl0ycetzOu/hTxot9ctr+WYQpCBgB3F2HATR7A==,
+      }
+    engines: { node: ">=14.17" }
+    peerDependencies:
+      "@typescript-eslint/parser": ">=4.20.0"
+      eslint: ">=5.16.0"
+
   eslint-plugin-prettier@5.2.3:
     resolution:
       {
@@ -2433,6 +2461,22 @@ packages:
         integrity: sha512-PHlWUfG6lvPc3yvP5A4PNyBL1W8fkDUccmI21JUu/+GKZBoH/W5u6usENXUrWFRsyoW5ACUjFGgAFQp5gUlb/A==,
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
+
+  eslint-utils@3.0.0:
+    resolution:
+      {
+        integrity: sha512-uuQC43IGctw68pJA1RgbQS8/NP7rch6Cwd4j3ZBtgo4/8Flj4eGE7ZYSZRN3iq5pVUv6GPdW5Z1RFleo84uLDA==,
+      }
+    engines: { node: ^10.0.0 || ^12.0.0 || >= 14.0.0 }
+    peerDependencies:
+      eslint: ">=5"
+
+  eslint-visitor-keys@2.1.0:
+    resolution:
+      {
+        integrity: sha512-0rSmRBzXgDzIsD6mGdJgevzgezI534Cer5L/vyMX0kHzT/jiB43jRhd9YUlMGYLQy2zprNmoT8qasCGtY+QaKw==,
+      }
+    engines: { node: ">=10" }
 
   eslint-visitor-keys@3.4.3:
     resolution:
@@ -3660,6 +3704,13 @@ packages:
       }
     engines: { node: ">= 10" }
 
+  neverthrow@8.2.0:
+    resolution:
+      {
+        integrity: sha512-kOCT/1MCPAxY5iUV3wytNFUMUolzuwd/VF/1KCx7kf6CutrOsTie+84zTGTpgQycjvfLdBBdvBvFLqFD2c0wkQ==,
+      }
+    engines: { node: ">=18" }
+
   nlcst-to-string@4.0.0:
     resolution:
       {
@@ -4630,6 +4681,12 @@ packages:
       typescript:
         optional: true
 
+  tslib@1.14.1:
+    resolution:
+      {
+        integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==,
+      }
+
   tslib@2.6.2:
     resolution:
       {
@@ -4641,6 +4698,15 @@ packages:
       {
         integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==,
       }
+
+  tsutils@3.21.0:
+    resolution:
+      {
+        integrity: sha512-mHKK3iUXL+3UF6xL5k0PEhKRUBKPBCv/+RkEOpjRWxxx27KKRBmmA60A9pgOUvMi8GKhRMPEmjBRPzs2W7O1OA==,
+      }
+    engines: { node: ">= 6" }
+    peerDependencies:
+      typescript: ">=2.8.0 || >= 3.2.0-dev || >= 3.3.0-dev || >= 3.4.0-dev || >= 3.5.0-dev || >= 3.6.0-dev || >= 3.6.0-beta || >= 3.7.0-dev || >= 3.7.0-beta"
 
   tsx@4.19.3:
     resolution:
@@ -6040,6 +6106,16 @@ snapshots:
     dependencies:
       "@types/ms": 2.1.0
 
+  "@types/eslint-utils@3.0.5":
+    dependencies:
+      "@types/eslint": 9.6.1
+      "@types/estree": 1.0.6
+
+  "@types/eslint@9.6.1":
+    dependencies:
+      "@types/estree": 1.0.6
+      "@types/json-schema": 7.0.15
+
   "@types/estree@1.0.6": {}
 
   "@types/hast@3.0.4":
@@ -6698,19 +6774,37 @@ snapshots:
     dependencies:
       eslint: 9.21.0(jiti@2.4.2)
 
-  eslint-plugin-prettier@5.2.3(eslint-config-prettier@10.0.1(eslint@9.21.0(jiti@2.4.2)))(eslint@9.21.0(jiti@2.4.2))(prettier@3.5.2):
+  eslint-plugin-neverthrow@1.1.4(@typescript-eslint/parser@8.24.1(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3))(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3):
+    dependencies:
+      "@types/eslint-utils": 3.0.5
+      "@typescript-eslint/parser": 8.24.1(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3)
+      eslint: 9.21.0(jiti@2.4.2)
+      eslint-utils: 3.0.0(eslint@9.21.0(jiti@2.4.2))
+      tsutils: 3.21.0(typescript@5.7.3)
+    transitivePeerDependencies:
+      - typescript
+
+  eslint-plugin-prettier@5.2.3(@types/eslint@9.6.1)(eslint-config-prettier@10.0.1(eslint@9.21.0(jiti@2.4.2)))(eslint@9.21.0(jiti@2.4.2))(prettier@3.5.2):
     dependencies:
       eslint: 9.21.0(jiti@2.4.2)
       prettier: 3.5.2
       prettier-linter-helpers: 1.0.0
       synckit: 0.9.2
     optionalDependencies:
+      "@types/eslint": 9.6.1
       eslint-config-prettier: 10.0.1(eslint@9.21.0(jiti@2.4.2))
 
   eslint-scope@8.2.0:
     dependencies:
       esrecurse: 4.3.0
       estraverse: 5.3.0
+
+  eslint-utils@3.0.0(eslint@9.21.0(jiti@2.4.2)):
+    dependencies:
+      eslint: 9.21.0(jiti@2.4.2)
+      eslint-visitor-keys: 2.1.0
+
+  eslint-visitor-keys@2.1.0: {}
 
   eslint-visitor-keys@3.4.3: {}
 
@@ -7553,6 +7647,10 @@ snapshots:
 
   neotraverse@0.6.18: {}
 
+  neverthrow@8.2.0:
+    optionalDependencies:
+      "@rollup/rollup-linux-x64-gnu": 4.34.8
+
   nlcst-to-string@4.0.0:
     dependencies:
       "@types/nlcst": 2.0.3
@@ -8181,9 +8279,16 @@ snapshots:
     optionalDependencies:
       typescript: 5.7.3
 
+  tslib@1.14.1: {}
+
   tslib@2.6.2: {}
 
   tslib@2.8.1: {}
+
+  tsutils@3.21.0(typescript@5.7.3):
+    dependencies:
+      tslib: 1.14.1
+      typescript: 5.7.3
 
   tsx@4.19.3:
     dependencies:

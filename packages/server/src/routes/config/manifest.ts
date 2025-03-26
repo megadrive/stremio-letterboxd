@@ -1,6 +1,9 @@
 import { createRouter } from "@/util/createHono.js";
 import { addonManifest, createManifest } from "@/util/manifest.js";
-import { determineCatalogName } from "@/lib/letterboxd/scraper.js";
+import {
+  determineCatalogName,
+  letterboxdCacher,
+} from "@/workers/letterboxdCacher.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 
 export const manifestRouter = createRouter();
@@ -15,12 +18,15 @@ export const manifestRouter = createRouter();
  * Search: @configuration in packages/config to change the configuration.
  */
 manifestRouter.get("/", async (c) => {
-  const config = c.var.config;
+  const conf = c.var.config;
 
-  let catalogName = config.catalogName;
+  let catalogName = conf.catalogName;
   try {
     if (!catalogName) {
-      catalogName = await determineCatalogName({ url: config.url });
+      // if the catalog name is not provided, determine it from the letterboxd page
+      catalogName = await determineCatalogName({
+        url: conf.url,
+      });
     }
   } catch {
     c.var.logger.error("Failed to determine catalog name.");
@@ -29,9 +35,9 @@ manifestRouter.get("/", async (c) => {
 
   const manifest = createManifest({
     ...addonManifest,
-    id: `${addonManifest.id}:${config.encoded}`,
+    id: `${addonManifest.id}:${c.var.configString}`,
     name: `Letterboxd - ${catalogName}`,
-    description: `Adds ${catalogName} as a catalog to Stremio. URL: ${config.url}`,
+    description: `Adds ${catalogName} as a catalog to Stremio. URL: ${conf.url}`,
     catalogs: [
       {
         id: crypto.randomUUID(),
@@ -47,6 +53,9 @@ manifestRouter.get("/", async (c) => {
       },
     ],
   });
+
+  // once the manifest is created, begin caching films
+  letterboxdCacher.addList(conf);
 
   return c.json(manifest);
 });
