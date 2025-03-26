@@ -21,7 +21,7 @@ model Cinemeta {
 model Config {
   id         String   @id @default(uuid())
   config     String // JSON
-  metadata   String // String[]
+  metadata   String // JSON
   isReserved Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
