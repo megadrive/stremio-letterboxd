@@ -12,7 +12,8 @@
     "start": "pnpm -r start",
     "prepare": "pnpm format && husky",
     "db:seed": "pnpm --filter @stremio-addon/server db:seed",
-    "db:push": "pnpm --filter @stremio-addon/database db:push"
+    "db:push": "pnpm --filter @stremio-addon/database db:push",
+    "prisma:generate": "pnpm --filter @stremio-addon/database prisma generate"
   },
   "keywords": [],
   "author": "",

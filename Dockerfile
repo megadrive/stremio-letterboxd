@@ -10,6 +10,8 @@ COPY . .
 
 RUN npm install -g pnpm@10.5.0 && pnpm install
 
+RUN pnpm -w prisma:generate
+
 RUN pnpm build
 
 CMD ["pnpm", "start"]
