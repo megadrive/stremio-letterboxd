@@ -82,6 +82,19 @@ export class LetterboxdCacher {
         userConfig.catalogName ?? (await determineCatalogName({ url, $ }));
       const initialMeta = await scrapePostersForMetadata($);
 
+      const pages = +$("paginate-pages").last().text();
+      if (pages > 1) {
+        logger.info(`Found ${pages} pages`);
+        for (let i = 2; i <= pages; i++) {
+          const url = `${userConfig.url}${!userConfig.url.endsWith("/") ? "/" : ""}page/${i}/`;
+          const html = await scrapeHtml(url);
+          const $ = cheerio(html);
+
+          const meta = await scrapePostersForMetadata($);
+          this.fetchBatchFullMetadata(meta);
+        }
+      }
+
       // Cache catalog metadata
       const userCache: CatalogMetadata = {
         name: catalogName,
@@ -107,28 +120,39 @@ export class LetterboxdCacher {
       }
 
       // fire off the next step, full metadata, in batches of 10
-      const fullMetadataQueue = new PQueue({
-        concurrency: serverEnv.QUEUE_CONCURRENCY,
-      });
-      let left = initialMeta.length;
-      while (left > 0) {
-        let next = 10;
-        if (left >= 10) {
-          left = left - 10;
-        } else {
-          next = left;
-          left = 0;
-        }
-
-        const batch = initialMeta.slice(left, left + next);
-        fullMetadataQueue.add(() =>
-          fetchFullMetadata(batch.map((meta) => meta.id))
-        );
-      }
+      this.fetchBatchFullMetadata(initialMeta);
 
       return initialMeta;
     } catch (error) {
       logger.error(error);
+    }
+  }
+
+  private fetchBatchFullMetadata(
+    initialMeta: {
+      id: string;
+      name: string;
+      poster: string;
+      altPoster?: string | undefined;
+    }[]
+  ) {
+    const fullMetadataQueue = new PQueue({
+      concurrency: serverEnv.QUEUE_CONCURRENCY,
+    });
+    let left = initialMeta.length;
+    while (left > 0) {
+      let next = 10;
+      if (left >= 10) {
+        left = left - 10;
+      } else {
+        next = left;
+        left = 0;
+      }
+
+      const batch = initialMeta.slice(left, left + next);
+      fullMetadataQueue.add(() =>
+        fetchFullMetadata(batch.map((meta) => meta.id))
+      );
     }
   }
 }
