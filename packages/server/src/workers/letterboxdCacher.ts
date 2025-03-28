@@ -82,6 +82,8 @@ export class LetterboxdCacher {
       let pages = (() => {
         if (foundPages > 10) return 10;
         if (foundPages < 1) return 1;
+
+        return foundPages;
       })();
       if (new URL(url).pathname.includes("/films")) {
         pages = 2;
