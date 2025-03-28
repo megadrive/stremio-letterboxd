@@ -20,7 +20,7 @@ model Cinemeta {
 
 model Config {
   id         String   @id @default(uuid())
-  config     String // JSON
+  config     String   @unique // JSON
   metadata   String // JSON
   isReserved Boolean  @default(false)
   createdAt  DateTime @default(now())
@@ -32,14 +32,17 @@ model Config {
 model Film {
   id          String   @id
   title       String
-  year        Int
-  runtime     Int
-  description String
-  genres      String
-  director    String
-  cast        String
+  year        Int?
+  runtime     Int?
+  description String?
+  genres      String?
+  director    String?
+  cast        String?
   imdb        String?
   tmdb        String
+  rating      Float    @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([imdb, tmdb])
 }

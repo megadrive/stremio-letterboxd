@@ -8,7 +8,6 @@ import { FETCH_FAILED, SCRAPE_FAILED } from "@/lib/errors.js";
 import { prisma } from "@stremio-addon/database";
 import { config, type Config } from "@stremio-addon/config";
 
-type Slug = string;
 // gets cached in each user's database
 export const BasicMetadataSchema = z.object({
   id: z.string(),
@@ -21,12 +20,6 @@ export const FullMetadataSchema = BasicMetadataSchema.merge(
   z.object({
     imdbId: z.string().optional(),
     tmdbId: z.string(),
-    description: z.string(),
-    cast: z.array(z.string()),
-    director: z.array(z.string()),
-    genres: z.array(z.string()),
-    runtime: z.number(),
-    released: z.string(),
   })
 );
 export type FullMetadata = z.infer<typeof FullMetadataSchema>;
@@ -53,7 +46,9 @@ export class LetterboxdCacher {
    * @param url URL to a Letterboxd page
    * @returns
    */
-  async scrapeList(userConfig: Config): Promise<BasicMetadata[] | undefined> {
+  /* scrape a list directly */ async scrapeList(
+    userConfig: Config
+  ): Promise<BasicMetadata[] | undefined> {
     /*
       - Scrape the initial HTML of a given URL
       - Scrape the .poster $cheerio elements for initial metadata
@@ -73,26 +68,35 @@ export class LetterboxdCacher {
     try {
       const encodedConfig = await config.encode(userConfig);
       const url = userConfig.url;
-      const html = await scrapeHtml(url);
+      const html = await fetchHtml(url);
       const $ = cheerio(html);
 
       // scrape the list to cache for the user
 
       const catalogName =
         userConfig.catalogName ?? (await determineCatalogName({ url, $ }));
-      const initialMeta = await scrapePostersForMetadata($);
+      const initialMeta: BasicMetadata[] = [];
 
-      const pages = +$("paginate-pages").last().text();
-      if (pages > 1) {
-        logger.info(`Found ${pages} pages`);
-        for (let i = 2; i <= pages; i++) {
-          const url = `${userConfig.url}${!userConfig.url.endsWith("/") ? "/" : ""}page/${i}/`;
-          const html = await scrapeHtml(url);
-          const $ = cheerio(html);
+      const foundPages = +$("paginate-pages").last().text();
+      // TODO refactor this later
+      let pages = (() => {
+        if (foundPages > 10) return 10;
+        if (foundPages < 1) return 1;
+      })();
+      if (new URL(url).pathname.includes("/films")) {
+        pages = 2;
+      }
+      logger.info(`Found ${pages} pages`);
 
-          const meta = await scrapePostersForMetadata($);
-          this.fetchBatchFullMetadata(meta);
-        }
+      for (let i = 1; i <= pages; i++) {
+        const url = `${userConfig.url}${!userConfig.url.endsWith("/") ? "/" : ""}page/${i}/`;
+        logger.error(`Scraping page ${i} of ${pages} in ${url}`);
+        const html = await fetchHtml(url);
+        const $ = cheerio(html);
+
+        const meta = await scrapePostersForMetadata($);
+
+        initialMeta.push(...meta);
       }
 
       // Cache catalog metadata
@@ -104,9 +108,13 @@ export class LetterboxdCacher {
       logger.info(`Caching metadata for ${catalogName}`);
 
       try {
-        const newConfig = await prisma.config.create({
-          data: {
+        const newConfig = await prisma.config.upsert({
+          where: { config: encodedConfig },
+          create: {
             config: encodedConfig,
+            metadata: JSON.stringify(userCache),
+          },
+          update: {
             metadata: JSON.stringify(userCache),
           },
         });
@@ -119,191 +127,49 @@ export class LetterboxdCacher {
         logger.error(error);
       }
 
-      // fire off the next step, full metadata, in batches of 10
-      this.fetchBatchFullMetadata(initialMeta);
+      // scrape the IDs from the film pages and cache
+      const slugs = initialMeta.map((m) => m.id);
+      scrapeIDsFromFilmPage(slugs).then(() => {
+        logger.info(`Successfully cached IDs for ${catalogName}`);
+      });
 
       return initialMeta;
     } catch (error) {
       logger.error(error);
     }
   }
-
-  private fetchBatchFullMetadata(
-    initialMeta: {
-      id: string;
-      name: string;
-      poster: string;
-      altPoster?: string | undefined;
-    }[]
-  ) {
-    const fullMetadataQueue = new PQueue({
-      concurrency: serverEnv.QUEUE_CONCURRENCY,
-    });
-    let left = initialMeta.length;
-    while (left > 0) {
-      let next = 10;
-      if (left >= 10) {
-        left = left - 10;
-      } else {
-        next = left;
-        left = 0;
-      }
-
-      const batch = initialMeta.slice(left, left + next);
-      fullMetadataQueue.add(() =>
-        fetchFullMetadata(batch.map((meta) => meta.id))
-      );
-    }
-  }
 }
 
-async function fetchFullMetadata(slugs: Slug[]) {
-  // fetch any cached slugs and only update them if they're over a week old
-  const cachedMetadata = await prisma.film.findMany({
-    where: {
-      id: {
-        in: slugs,
-      },
-    },
-  });
-
-  const expiredSlugs = cachedMetadata
-    .filter((meta) => {
-      const now = new Date();
-      const lastUpdated = new Date(meta.updatedAt);
-      const diff = now.getTime() - lastUpdated.getTime();
-      const diffInDays = diff / (1000 * 3600 * 24);
-      return diffInDays > 7;
-    })
-    .map((meta) => meta.id);
-
-  // also get the slugs that don't exist in the database
-  const missingSlugs = slugs.filter((slug) => {
-    return !cachedMetadata.find((meta) => meta.id === slug);
-  });
-
-  logger.info(
-    `Fetching metadata for ${expiredSlugs.length} expired and ${missingSlugs.length} missing slugs`
-  );
-
-  const slugsToFetch = [...expiredSlugs, ...missingSlugs];
-
-  for (const slug of slugsToFetch) {
-    try {
-      const html = await scrapeHtml(`https://letterboxd.com/film/${slug}`);
+async function scrapeIDsFromFilmPage(slugs: string[]) {
+  const idQueue = new PQueue({ concurrency: 3 });
+  for (const slug of slugs) {
+    idQueue.add(async () => {
+      const url = `https://letterboxd.com/film/${slug}/`;
+      const html = await fetchHtml(url);
       const $ = cheerio(html);
 
-      const name = $(".filmtitle").text().trim();
-      const released = $(".releaseyear").text().trim();
-      const tagline = $(".review>.tagline").text().trim();
-      const description = $(".review p").text().trim();
-      // 133 mins
-      let runtime = 0;
-      const $runtime = $(".text-footer")
-        .text()
-        .trim()
-        .match(/^[0-9]+/);
-      if ($runtime) {
-        runtime = Number.parseInt($runtime[0]);
-      }
+      //<a href="http://www.imdb.com/title/tt31806037/maindetails" class="micro-button track-event" data-track-action="IMDb" target="_blank">IMDb</a>`
+      const imdbHref = $("a[data-track-action='IMDb']").attr("href");
+      const imdb = imdbHref?.match(/tt\d+/)?.[0];
+      const tmdbHref = $("a[data-track-action='TMDB']").attr("href");
+      const tmdb = tmdbHref?.match(/\/\d+$/)?.[0]?.slice(1);
 
-      const $imdbId = (
-        $("a[data-track-action='IMDb']").attr("href") ?? ""
-      ).match("tt[0-9]+");
-      const imdbId = $imdbId?.length ? $imdbId[0] : undefined;
-      const $tmdbId = (
-        $("a[data-track-action='TMDB']").attr("href") ?? ""
-      ).match(/[0-9]+/);
-      const tmdbId = $tmdbId?.length ? $tmdbId[0] : "";
-      if (!tmdbId.length) {
-        logger.error(`No TMDB ID found for ${slug}`);
-        continue;
-      }
-
-      const cast =
-        $("#tab-cast .text-slug.tooltip")
-          .map((_, el) => $(el).text())
-          .toArray()
-          .slice(0, 4) ?? [];
-
-      const director = $("#tab-crew > div")
-        .first()
-        .find("a")
-        .map((_, el) => {
-          return $(el).text().trim();
-        })
-        .toArray();
-
-      const genres = $("#tab-genres .text-sluglist .text-slug")
-        .map(function () {
-          if (($(this).prop("href") ?? "").includes("genre")) {
-            return $(this).text();
-          }
-        })
-        .toArray()
-        .filter((genre) => genre.length);
-
-      // scrapey scrapey
-      const toCache: FullMetadata = {
-        id: slug,
-        name,
-        poster: "",
-        imdbId,
-        tmdbId,
-        description: `${tagline ? `${tagline.toUpperCase()} - ` : ""}${description}`,
-        cast,
-        director,
-        genres,
-        runtime,
-        released,
-      };
-
-      const parsedMetadata = FullMetadataSchema.parse(toCache);
-
-      logger.info(`Caching full metadata for ${slug}`);
-
+      // cache to db
       try {
-        const newMetadata = await prisma.film.upsert({
-          create: {
-            id: parsedMetadata.id,
-            title: parsedMetadata.name,
-            imdb: parsedMetadata.imdbId,
-            tmdb: parsedMetadata.tmdbId,
-            description: parsedMetadata.description,
-            cast: JSON.stringify(parsedMetadata.cast),
-            director: JSON.stringify(parsedMetadata.director),
-            genres: JSON.stringify(parsedMetadata.genres),
-            runtime: parsedMetadata.runtime,
-            year: +parsedMetadata.released,
-          },
-          update: {
-            title: parsedMetadata.name,
-            imdb: parsedMetadata.imdbId,
-            tmdb: parsedMetadata.tmdbId,
-            description: parsedMetadata.description,
-            cast: JSON.stringify(parsedMetadata.cast),
-            director: JSON.stringify(parsedMetadata.director),
-            genres: JSON.stringify(parsedMetadata.genres),
-            runtime: parsedMetadata.runtime,
-            year: +parsedMetadata.released,
-          },
-          where: { id: parsedMetadata.id },
+        await prisma.film.update({
+          where: { id: slug },
+          data: { imdb, tmdb },
         });
-
-        logger.info(
-          `Successfully cached full metadata for ${slug}. ID: ${newMetadata.id}`
-        );
-      } catch (error) {
-        logger.error(`Failed to cache full metadata for ${slug}`);
-        logger.error(error);
+      } catch {
+        // don't care lol
       }
-    } catch (error) {
-      logger.error(`Couldn't fetch ${slug}`);
-      logger.error(error);
-    }
+    });
   }
 }
 
+/**
+ * Determine the catalog name from either a Cheerio instance or a URL
+ */
 export async function determineCatalogName(opts: {
   url?: string;
   $?: ReturnType<typeof cheerio>;
@@ -317,7 +183,7 @@ export async function determineCatalogName(opts: {
     }
 
     if (!$) {
-      const html = await scrapeHtml(url!);
+      const html = await fetchHtml(url!);
       $ = cheerio(html);
     }
 
@@ -363,11 +229,16 @@ async function determineStrategy(url: string): Promise<string> {
   const { origin } = new URL(url);
   const remainingUrl = url.slice(origin.length);
 
+  const urlPath = new URL(url).pathname;
   for (const [path, strategy] of Object.entries(urls)) {
-    if (url.startsWith(path)) {
+    logger.debug(`Checking ${path} against ${urlPath}`);
+    if (urlPath.startsWith(path)) {
       switch (strategy) {
-        case "prepend_ajax":
-          return `${origin}/ajax/${remainingUrl}`;
+        case "prepend_ajax": {
+          logger.debug(`Using prepend_ajax strategy`);
+          const [, prepend, ...rest] = remainingUrl.split("/");
+          return `${origin}/${prepend}/ajax/${rest.join("/")}`;
+        }
         // add more later if necessary
         // case "other_strategy":
         //   return `${origin}/ajax/${strategy}`;
@@ -381,7 +252,10 @@ async function determineStrategy(url: string): Promise<string> {
 /**
  * Scrape the initial HTML of a given URL
  */
-async function scrapeHtml(url: string): Promise<string> {
+async function fetchHtml(
+  url: string,
+  headers?: Record<string, string>
+): Promise<string> {
   logger.info(`Scraping HTML from ${url}`);
   const res = await resolveFinalUrl(url);
   if (!res) {
@@ -391,10 +265,13 @@ async function scrapeHtml(url: string): Promise<string> {
   const urlToScrape = await determineStrategy(res.url);
 
   try {
-    const res = await wrappedFetch(urlToScrape);
+    const res = await wrappedFetch(urlToScrape, { headers });
 
     if (!res.ok) {
-      throw { ...FETCH_FAILED, message: "Couldn't fetch the poster url" };
+      throw {
+        ...FETCH_FAILED,
+        message: `Couldn't scrape HTML: ${urlToScrape}`,
+      };
     }
 
     logger.info("Successfully fetched HTML");
@@ -413,8 +290,12 @@ async function scrapePostersForMetadata(
   $: ReturnType<typeof cheerio>
 ): Promise<BasicMetadata[]> {
   logger.info(`Scraping posters for metadata`);
-  const $posters = $(".film-poster");
+  let $posters = $(".film-poster");
   logger.info(`Found ${$posters.length} posters`);
+
+  if ($posters.length === 0) {
+    $posters = $(".poster");
+  }
 
   const metadata: (BasicMetadata & { poster?: string })[] = [];
 
@@ -444,54 +325,7 @@ async function scrapePostersForMetadata(
 
   logger.info(`Scraped metadata for ${metadata.length} films`);
 
-  logger.info(`Fetching posters for metadata`);
-  const metadataWithPosters = await fetchPosters(metadata);
-
-  return metadataWithPosters;
-}
-
-function cacheBuster() {
-  const dict =
-    "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-  return [...Array(8)]
-    .map(() => dict[Math.floor(Math.random() * dict.length)])
-    .join("");
-}
-
-/**
- * Fetch posters for an array of metadata
- */
-async function fetchPosters(
-  metadata: (BasicMetadata & {
-    poster?: string;
-  })[]
-): Promise<BasicMetadata[]> {
-  const metadataWithPosters: BasicMetadata[] = [];
-
-  try {
-    for (const meta of metadata) {
-      const posterUrl = `https://letterboxd.com/ajax/poster/film/${meta.id}/std/125x187/?k=${cacheBuster()}`;
-      const posterHtml = await scrapeHtml(posterUrl);
-      const $poster = cheerio(posterHtml);
-      const poster = $poster("img").first().attr("src") ?? "";
-
-      let altPoster: string | undefined = undefined;
-      logger.debug(`altPoster: ${meta.altPoster}`);
-      if (meta.altPoster) {
-        logger.info(`Fetching alt poster for ${meta.id}`);
-        const altPosterUrl = `https://letterboxd.com/ajax/poster/film/${meta.id}/std/${meta.altPoster}/125x187/?k=${cacheBuster()}`;
-        const altPosterHtml = await scrapeHtml(altPosterUrl);
-        const $altPoster = cheerio(altPosterHtml);
-        altPoster = $altPoster("img").first().attr("src");
-      }
-
-      metadataWithPosters.push({ ...meta, poster, altPoster });
-    }
-  } catch (error) {
-    logger.error(error);
-  }
-
-  return metadataWithPosters;
+  return metadata;
 }
 
 export const letterboxdCacher = new LetterboxdCacher();

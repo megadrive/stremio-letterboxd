@@ -21,9 +21,16 @@ export const serverEnv = cleanEnv(process.env, {
     desc: "Required. Base URL for the addon, used for absolute URLs. Leave the last / off.",
     example: "https://base-url-to-your-addon.com",
   }),
+  TMDB_APIKEY: str({
+    desc: "The API key for TMDb, get one at https://www.themoviedb.org/settings/api",
+  }),
   QUEUE_CONCURRENCY: num({
     default: 14,
     desc: "How many concurrent requests to make to Letterboxd. Leave it as 1 unless you know what you're doing.",
+  }),
+  METADATA_TIME_TO_LIVE: num({
+    default: 1000 * 60 * 60 * 24 * 7,
+    desc: "How long to cache metadata for in ms. Default is 1 week.",
   }),
 });
 
