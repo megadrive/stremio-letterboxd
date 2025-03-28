@@ -80,6 +80,10 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           return "";
         }
 
+        if (c.var.config.posterChoice === "rpdb" && c.var.config.rpdbApiKey) {
+          return `https://api.ratingposterdb.com/${c.var.config.rpdbApiKey}/imdb/poster-default/${film.id}.jpg`;
+        }
+
         return `https://images.metahub.space/poster/small/${film.imdb}/img`;
       })();
 

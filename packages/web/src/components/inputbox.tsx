@@ -137,14 +137,7 @@ export default function Inputbox() {
                 className="border border-black text-[#202830] bg-white rounded text-xl px-2 py-1 w-full"
                 {...register("posterChoice")}
               >
-                <option value="letterboxd-custom-from-list">
-                  Letterboxd List Posters (default)
-                </option>
-                <option value="cinemeta">Cinemeta</option>
-                <option value="letterboxd">Letterboxd</option>
-                <option value="letterboxd-ratings">
-                  Letterboxd with ratings
-                </option>
+                <option value="cinemeta">Cinemeta (default)</option>
                 <option value="rpdb">RPDB</option>
               </select>
             </div>

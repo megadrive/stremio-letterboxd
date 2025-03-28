@@ -1,24 +1,33 @@
 import { Toaster, toast } from "react-hot-toast";
+import { config, type Config } from "@stremio-addon/config";
+import React from "react";
 
-function List({ id, name, url }: { id: string; name: string; url: string }) {
+function List(conf: Config) {
+  const [encodedConfig, setEncodedConfig] = React.useState<string>("");
+  const [installUrl, setInstallUrl] = React.useState<string>("");
+
+  React.useEffect(() => {
+    config.encode(conf).then((encoded) => {
+      setEncodedConfig(encoded);
+    });
+
+    setInstallUrl(
+      `${new URL(location.href).origin}/${encodedConfig}/manifest.json`.replace(
+        /https?/,
+        "stremio"
+      )
+    );
+  }, [config]);
+
   function installList() {
     window.location.href = installUrl;
   }
 
-  const base = window.location.origin.includes(":4321")
-    ? "http://localhost:3030"
-    : window.location.origin;
-
-  const installUrl = `${base}/${encodeURIComponent(id)}/manifest.json`.replace(
-    /https?/,
-    "stremio"
-  );
-
   return (
     <div className="grid gap-2 grid-cols-2">
       <div className="text-right">
-        <a href={url} className="italic hover:underline">
-          {name}
+        <a href={installUrl} className="italic hover:underline">
+          {conf.catalogName}
         </a>
       </div>
       <div className="grid grid-flow-col grid-cols-2 gap-1">
@@ -28,6 +37,18 @@ function List({ id, name, url }: { id: string; name: string; url: string }) {
           onClick={installList}
         >
           Install
+        </button>
+        <button
+          className="border border-transparent hover:border-white"
+          type="button"
+          onClick={() =>
+            window.open(
+              `https://web.stremio.com/#/addons?addon=${encodeURIComponent(installUrl)}`,
+              "_blank"
+            )
+          }
+        >
+          Web
         </button>
         <button
           className="border border-transparent hover:border-white"
@@ -52,14 +73,14 @@ export default function Popular() {
       <h2 className="text-center font-semibold text-xl mb-2">Popular lists</h2>
       <div className="grid gap-1">
         <List
-          id="/films/popular/this/week/|cn=Popular This Week"
-          name="This Week"
+          catalogName="Popular This Week"
           url="https://letterboxd.com/films/popular/this/week/"
+          posterChoice="cinemeta"
         />
         <List
-          id="/films/popular/this/month/|cn=Popular This Month"
-          name="This Month"
+          catalogName="Popular This Month"
           url="https://letterboxd.com/films/popular/this/month/"
+          posterChoice="cinemeta"
         />
       </div>
     </div>
