@@ -9,14 +9,14 @@ function List(conf: Config) {
   React.useEffect(() => {
     config.encode(conf).then((encoded) => {
       setEncodedConfig(encoded);
-    });
 
-    setInstallUrl(
-      `${new URL(location.href).origin}/${encodedConfig}/manifest.json`.replace(
-        /https?/,
-        "stremio"
-      )
-    );
+      setInstallUrl(
+        `${new URL(location.href).origin}/${encodedConfig}/manifest.json`.replace(
+          /https?/,
+          "stremio"
+        )
+      );
+    });
   }, [config]);
 
   function installList() {
@@ -26,7 +26,7 @@ function List(conf: Config) {
   return (
     <div className="grid gap-2 grid-cols-2">
       <div className="text-right">
-        <a href={installUrl} className="italic hover:underline">
+        <a href={conf.url} className="italic hover:underline">
           {conf.catalogName}
         </a>
       </div>
