@@ -4,13 +4,6 @@ import { createMiddleware } from "hono/factory";
 import { FORBIDDEN } from "stoker/http-status-codes";
 import { FORBIDDEN as FORBIDDEN_TEXT } from "stoker/http-status-phrases";
 
-class ConfigError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ConfigError";
-  }
-}
-
 export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
   async (c, next) => {
     const configString = c.req.param("config");
@@ -18,9 +11,13 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
     try {
       if (configString) {
         const conf = await config.decode(configString);
-        if (!conf) throw new ConfigError("Invalid config");
-        c.set("config", conf);
-        c.set("configString", configString);
+
+        if (conf) {
+          c.set("config", conf);
+          c.set("configString", configString);
+
+          c.var.logger.info(`Parsed config from URL: ${JSON.stringify(conf)}`);
+        }
       }
     } catch (error) {
       if (error instanceof Error) {

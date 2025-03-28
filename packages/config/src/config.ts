@@ -43,12 +43,15 @@ export const config = {
   decode: async (data: string): Promise<Config | undefined> => {
     try {
       const decoded = JSON.parse(atob(data));
-      const parsed = ConfigSchema.parse(decoded);
+      const parsed = ConfigSchema.safeParse(decoded);
+      if (!parsed.success) {
+        console.error("Failed to parse config", parsed.error.issues);
+        return undefined;
+      }
 
-      return parsed;
+      return parsed.data;
     } catch (e: unknown) {
       // @ts-expect-error Message exists on a parsing error.
-      // TODO: Make this error more descriptive, maybe the ZodError
       console.error("Could not decode config", e?.message);
     }
 

@@ -3,15 +3,12 @@ import { config, type Config } from "@stremio-addon/config";
 import React from "react";
 
 function List(conf: Config) {
-  const [encodedConfig, setEncodedConfig] = React.useState<string>("");
   const [installUrl, setInstallUrl] = React.useState<string>("");
 
   React.useEffect(() => {
     config.encode(conf).then((encoded) => {
-      setEncodedConfig(encoded);
-
       setInstallUrl(
-        `${new URL(location.href).origin}/${encodedConfig}/manifest.json`.replace(
+        `${new URL(location.href).origin}/${encoded}/manifest.json`.replace(
           /https?/,
           "stremio"
         )
