@@ -77,7 +77,7 @@ export class LetterboxdCacher {
         userConfig.catalogName ?? (await determineCatalogName({ url, $ }));
       const initialMeta: BasicMetadata[] = [];
 
-      const foundPages = +$("paginate-pages").last().text();
+      const foundPages = +$(".paginate-page").last().text();
       // TODO refactor this later
       let pages = (() => {
         if (foundPages > 10) return 10;
@@ -86,7 +86,8 @@ export class LetterboxdCacher {
         return foundPages;
       })();
       if (new URL(url).pathname.includes("/films")) {
-        pages = 2;
+        // 72 * 10 = 720
+        pages = 10;
       }
       logger.info(`Found ${pages} pages`);
 
@@ -100,6 +101,8 @@ export class LetterboxdCacher {
 
         initialMeta.push(...meta);
       }
+
+      logger.debug(`Found ${initialMeta.length} posters`);
 
       // Cache catalog metadata
       const userCache: CatalogMetadata = {
@@ -130,8 +133,7 @@ export class LetterboxdCacher {
       }
 
       // scrape the IDs from the film pages and cache
-      const slugs = initialMeta.map((m) => m.id);
-      scrapeIDsFromFilmPage(slugs).then(() => {
+      scrapeIDsFromFilmPage(initialMeta).then(() => {
         logger.info(`Successfully cached IDs for ${catalogName}`);
       });
 
@@ -142,29 +144,61 @@ export class LetterboxdCacher {
   }
 }
 
-async function scrapeIDsFromFilmPage(slugs: string[]) {
+async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
   const idQueue = new PQueue({ concurrency: 3 });
-  for (const slug of slugs) {
+
+  const cachedIds = await prisma.film.findMany({
+    where: {
+      id: { in: initialMeta.map((meta) => meta.id) },
+    },
+    select: { id: true },
+  });
+  const cachedIdsSet = new Set(cachedIds.map((meta) => meta.id));
+  initialMeta = initialMeta.filter((meta) => !cachedIdsSet.has(meta.id));
+  logger.info(`Found ${cachedIds.length} cached IDs`);
+  logger.info(`Found ${initialMeta.length} uncached IDs`);
+  if (initialMeta.length === 0) {
+    logger.info("No uncached IDs found");
+    return;
+  }
+
+  for (const meta of initialMeta) {
     idQueue.add(async () => {
-      const url = `https://letterboxd.com/film/${slug}/`;
+      const url = `https://letterboxd.com/film/${meta.id}/`;
       const html = await fetchHtml(url);
       const $ = cheerio(html);
 
       //<a href="http://www.imdb.com/title/tt31806037/maindetails" class="micro-button track-event" data-track-action="IMDb" target="_blank">IMDb</a>`
-      const imdbHref = $("a[data-track-action='IMDb']").attr("href");
+      const imdbHref = $("a[data-track-action='IMDb']").prop("href");
       const imdb = imdbHref?.match(/tt\d+/)?.[0];
-      const tmdbHref = $("a[data-track-action='TMDB']").attr("href");
-      const tmdb = tmdbHref?.match(/\/\d+$/)?.[0]?.slice(1);
+      const tmdbHref = $("a[data-track-action='TMDB']").prop("href");
+      const tmdb = tmdbHref?.match(/\d+/)?.[0];
+
+      if (!tmdb) {
+        logger.error(`Couldn't find IDs for ${meta.id}`);
+        logger.error({ imdb, tmdb });
+        return;
+      }
 
       // cache to db
       try {
-        await prisma.film.update({
-          where: { id: slug },
-          data: { imdb, tmdb },
+        logger.info(`Caching IDs for ${meta.id}`);
+
+        await prisma.film.upsert({
+          where: { id: meta.id },
+          create: {
+            id: meta.id,
+            title: meta.name,
+            tmdb,
+            imdb,
+          },
+          update: { imdb, tmdb },
         });
-      } catch {
-        // don't care lol
+      } catch (error) {
+        logger.error(`Couldn't update film ${meta.id} with IDs, ${error}`);
       }
+
+      logger.info(`Cached IDs for ${meta.id}`);
     });
   }
 }
@@ -314,10 +348,8 @@ async function scrapePostersForMetadata(
     const altPosterId = $el.data("altPoster");
     const name = $el.find("img").first().prop("alt");
 
-    logger.debug({ filmSlug, altPosterId, name });
-
     const parsedMetadata = InterimBasicMetadataSchema.parse({
-      id: filmSlug,
+      id: `${filmSlug}`,
       name,
       altPoster: altPosterId,
     });
