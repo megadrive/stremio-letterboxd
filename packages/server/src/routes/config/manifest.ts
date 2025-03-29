@@ -38,6 +38,13 @@ manifestRouter.get("/", async (c) => {
     id: `${addonManifest.id}:${c.var.configString}`,
     name: `Letterboxd - ${catalogName}`,
     description: `Adds ${catalogName} as a catalog to Stremio. URL: ${conf.url}`,
+    resources: [
+      {
+        name: "meta",
+        types: ["movie"],
+        idPrefixes: ["letterboxd:"],
+      },
+    ],
     catalogs: [
       {
         id: crypto.randomUUID(),

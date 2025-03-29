@@ -14,7 +14,7 @@ const manifestBase: Manifest = {
   description: "",
   version: "",
   catalogs: [],
-  resources: ["meta"],
+  resources: [],
   types: ["movie", "series"],
 } as const;
 
