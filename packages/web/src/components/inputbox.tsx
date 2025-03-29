@@ -138,6 +138,9 @@ export default function Inputbox() {
                 {...register("posterChoice")}
               >
                 <option value="cinemeta">Cinemeta (default)</option>
+                <option value="letterboxd-ratings">
+                  Letterboxd With Ratings
+                </option>
                 <option value="rpdb">RPDB</option>
               </select>
             </div>
