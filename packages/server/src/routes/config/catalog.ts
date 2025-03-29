@@ -8,6 +8,7 @@ import {
   letterboxdCacher,
 } from "@/workers/letterboxdCacher.js";
 import type { Context } from "hono";
+import { serverEnv } from "@stremio-addon/env";
 
 export const catalogRouter = createRouter();
 
@@ -64,7 +65,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
 
     // pagination
     const start = parsedExtras?.skip ? Number(parsedExtras.skip) : 0;
-    let end = start + 100;
+    let end = start + serverEnv.CATALOG_PAGE_SIZE;
     if (end >= cachedFilms.length) {
       end = cachedFilms.length;
     }
