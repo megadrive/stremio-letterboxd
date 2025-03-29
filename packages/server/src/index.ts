@@ -10,6 +10,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { createAPIRouter, createApp, createRouter } from "@/util/createHono.js";
 import { recommendAPIRouter } from "@/routes/api/recommend.js";
 import { statsAPIRouter } from "./routes/api/stats.js";
+import { resolveAPIRouter } from "./routes/api/resolve.js";
 
 const app = createApp();
 
@@ -43,6 +44,7 @@ app.route("/:config", configRouter);
 const apiRouter = createAPIRouter();
 apiRouter.route("/recommend", recommendAPIRouter);
 apiRouter.route("/stats", statsAPIRouter);
+apiRouter.route("/resolve", resolveAPIRouter);
 app.route("/api", apiRouter);
 
 serve(

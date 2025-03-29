@@ -9,6 +9,20 @@ import {
 } from "@stremio-addon/config";
 import { z } from "astro/zod";
 
+async function resolveUrl(url: string) {
+  const encodedUrl = encodeURIComponent(url);
+
+  const res = await fetch(`/api/resolve/${encodedUrl}`, {
+    headers: { "cache-control": "no-cache" },
+  });
+  if (res.ok) {
+    const resolvedUrl = await res.text();
+    return resolvedUrl;
+  } else {
+    throw new Error(`Failed to resolve URL: ${res.statusText}`);
+  }
+}
+
 export default function Inputbox() {
   const [manifestUrl, setManifestUrl] = useState("");
   const { register, handleSubmit, formState, setValue, watch, reset } =
@@ -17,6 +31,7 @@ export default function Inputbox() {
       mode: "onChange",
     });
   const watchedPosterChoice = watch("posterChoice");
+  const watchedUrl = watch("url");
 
   async function recommendList() {
     try {
@@ -109,6 +124,15 @@ export default function Inputbox() {
               type="text"
               placeholder="https://letterboxd.com/almosteffective/watchlist"
               {...register("url")}
+              onBlur={() => {
+                if (watchedUrl.length === 0) return;
+                if (!watchedUrl.startsWith("https://boxd.it/")) return;
+                resolveUrl(watchedUrl).then((resolvedUrl) => {
+                  if (resolvedUrl) {
+                    setValue("url", resolvedUrl);
+                  }
+                });
+              }}
               className="w-full border border-black bg-white text-[#202830] rounded text-xl px-2 py-1"
             />
             <button
