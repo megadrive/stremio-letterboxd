@@ -21,7 +21,7 @@ export const ConfigSchema = z.object({
       "letterboxd-custom-from-list",
       "rpdb",
     ])
-    .default("letterboxd-custom-from-list"),
+    .default("cinemeta"),
   rpdbApiKey: z.string().optional(),
   reservedTag: z.enum(["weekly", "monthly"]).optional(),
 });
