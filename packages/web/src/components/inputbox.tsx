@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +8,15 @@ import {
   ConfigFormInputSchema,
 } from "@stremio-addon/config";
 import { z } from "astro/zod";
+import { sortOptions } from "@/lib/sortOptions";
+
+function SortOption(props: { name: string; url: string }) {
+  return (
+    <option value={props.url} key={props.url}>
+      {props.name}
+    </option>
+  );
+}
 
 async function resolveUrl(url: string) {
   const encodedUrl = encodeURIComponent(url);
@@ -25,6 +34,7 @@ async function resolveUrl(url: string) {
 
 export default function Inputbox() {
   const [manifestUrl, setManifestUrl] = useState("");
+  const selectRef = useRef<HTMLSelectElement>(null);
   const { register, handleSubmit, formState, setValue, watch, reset } =
     useForm<ConfigFormInput>({
       resolver: zodResolver(ConfigFormInputSchema),
@@ -110,6 +120,23 @@ export default function Inputbox() {
     );
   }
 
+  function applySort() {
+    const selectedSort = selectRef.current?.value;
+    if (!selectedSort) return;
+
+    let url = watchedUrl;
+    if (!url) return;
+
+    // if there is already a sort applied, remove it
+    for (const option of sortOptions) {
+      if (url.includes(option.url)) {
+        url = url.replace(option.url.slice(1), "");
+      }
+    }
+    // apply the new sort
+    setValue("url", url + selectedSort.slice(1));
+  }
+
   return (
     <div>
       <Toaster />
@@ -143,6 +170,24 @@ export default function Inputbox() {
             >
               {formState.isSubmitting === false ? "Recommend" : "Validating..."}
             </button>
+          </div>
+          <div className="flex gap-1">
+            <div>Apply a sort</div>
+            <select
+              className="border border-black text-[#202830] bg-white rounded text-xl px-2 py-1 w-full"
+              id="sort"
+              name="sort"
+              ref={selectRef}
+            >
+              {sortOptions.map((option) => (
+                <SortOption
+                  key={option.url}
+                  name={option.name}
+                  url={option.url}
+                />
+              ))}
+            </select>
+            <button onClick={applySort}>Apply</button>
           </div>
           <div className="text-base">
             Set a custom list if you'd like (leave empty to auto-generate):
