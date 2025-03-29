@@ -11,9 +11,10 @@ import { z } from "astro/zod";
 
 export default function Inputbox() {
   const [manifestUrl, setManifestUrl] = useState("");
-  const { register, handleSubmit, formState, setValue, watch } =
+  const { register, handleSubmit, formState, setValue, watch, reset } =
     useForm<ConfigFormInput>({
       resolver: zodResolver(ConfigFormInputSchema),
+      mode: "onChange",
     });
   const watchedPosterChoice = watch("posterChoice");
 
@@ -47,8 +48,11 @@ export default function Inputbox() {
       // verify with server
       const encodedConfig = await config.encode(data);
       const { origin } = new URL(location.href);
+      const newOrigin = origin.startsWith("https")
+        ? origin.replace(/^https/, "stremio")
+        : origin;
 
-      return `${origin}/${encodedConfig}/manifest.json`;
+      return `${newOrigin}/${encodedConfig}/manifest.json`;
     } catch (error) {
       // @ts-expect-error Message exists
       toast.error(`Try again in a few seconds: ${error.message}`);
@@ -166,20 +170,32 @@ export default function Inputbox() {
             </div>
           </div>
 
+          <div className="mx-auto flex gap-1">
+            <button
+              className="col-span-3 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold cursor-pointer hover:bg-[#202830] hover:text-white hover:underline"
+              disabled={formState.isSubmitting}
+              type="submit"
+            >
+              {formState.isSubmitting === false
+                ? "Generate Manifest"
+                : "Validating..."}
+            </button>
+            <button
+              className="col-span-3 grow border border-transparent bg-auto uppercase text-white text-lg p-2 rounded cursor-pointer hover:bg-[#202830] hover:text-white hover:underline"
+              disabled={formState.isSubmitting}
+              onClick={() => {
+                setManifestUrl("");
+                reset();
+              }}
+              type="button"
+            >
+              Reset
+            </button>
+          </div>
+
           <div className="flex gap-1 justify-around">
-            <div className={manifestUrl?.length > 0 ? "hidden" : ""}>
-              <button
-                className="col-span-3 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold cursor-pointer hover:bg-[#202830] hover:text-white hover:underline"
-                disabled={formState.isSubmitting}
-                type="submit"
-              >
-                {formState.isSubmitting === false
-                  ? "Generate Manifest"
-                  : "Validating..."}
-              </button>
-            </div>
             <div
-              className={`${manifestUrl?.length === 0 ? "hidden" : ""} flex gap-1 justify-around grow`}
+              className={`${!formState.isDirty ? "hidden" : ""} flex gap-1 justify-around grow`}
             >
               <button
                 className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
