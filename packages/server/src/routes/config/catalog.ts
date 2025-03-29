@@ -86,7 +86,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         }
 
         if (film.imdb) {
-          if (c.var.config.posterChoice === "rpdb" && c.var.config.rpdbApiKey) {
+          if (c.var.config.posterChoice === "rpdb") {
             return `https://api.ratingposterdb.com/${c.var.config.rpdbApiKey ?? "t0-free-rpdb"}/imdb/poster-default/${film.id}.jpg`;
           }
           return `https://images.metahub.space/poster/small/${film.imdb}/img`;
