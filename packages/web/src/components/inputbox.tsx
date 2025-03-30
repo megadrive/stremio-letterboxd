@@ -172,7 +172,7 @@ export default function Inputbox() {
             </button>
           </div>
           <div className="flex gap-1">
-            <div>Apply a sort</div>
+            <div className="w-2xs">Apply sorting</div>
             <select
               className="border border-black text-[#202830] bg-white rounded text-xl px-2 py-1 w-full"
               id="sort"
@@ -187,7 +187,12 @@ export default function Inputbox() {
                 />
               ))}
             </select>
-            <button onClick={applySort}>Apply</button>
+            <button
+              onClick={applySort}
+              className="w-2xs border border-white rounded"
+            >
+              Apply
+            </button>
           </div>
           <div className="text-base">
             Set a custom list if you'd like (leave empty to auto-generate):
@@ -214,7 +219,7 @@ export default function Inputbox() {
                 <option value="letterboxd-ratings">
                   Letterboxd With Ratings
                 </option>
-                <option value="rpdb">RPDB</option>
+                <option value="rpdb">Ratings Poster Database</option>
               </select>
             </div>
           </div>
@@ -231,7 +236,7 @@ export default function Inputbox() {
               <input
                 type="text"
                 placeholder="RPDb API Key"
-                className="w-full border border-black text-[#202830] rounded text-xl px-2 py-1"
+                className="w-full border border-white text-white rounded text-xl px-2 py-1"
                 {...register("rpdbApiKey", {
                   deps: ["posterChoice"],
                 })}
