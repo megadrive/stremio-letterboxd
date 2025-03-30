@@ -7,12 +7,9 @@ function List(conf: Config) {
 
   React.useEffect(() => {
     config.encode(conf).then((encoded) => {
-      setInstallUrl(
-        `${new URL(location.href).origin}/${encoded}/manifest.json`.replace(
-          /https?/,
-          "stremio"
-        )
-      );
+      const url = new URL(window.location.href);
+      const newOrigin = url.origin.replace(/^https/, "stremio");
+      setInstallUrl(`${newOrigin}/${encoded}/manifest.json`);
     });
   }, [config]);
 
@@ -29,7 +26,7 @@ function List(conf: Config) {
       </div>
       <div className="grid grid-flow-col grid-cols-2 gap-1">
         <button
-          className="border border-white rounded hover:bg-white hover:text-tailwind"
+          className="border border-white rounded hover:bg-white hover:text-[#"
           type="button"
           onClick={installList}
         >
