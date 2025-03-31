@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "astro-build.astro-vscode",
+    "editorconfig.editorconfig",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.vscode-typescript-next",
+    "esbenp.prettier-vscode",
+    "prisma.prisma"
+  ]
+}
