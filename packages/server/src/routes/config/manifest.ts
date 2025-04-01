@@ -33,11 +33,30 @@ manifestRouter.get("/", async (c) => {
     return c.text("", INTERNAL_SERVER_ERROR);
   }
 
+  let posterChoice = "";
+  switch (conf.posterChoice) {
+    case "cinemeta":
+      posterChoice = "Cinemeta";
+      break;
+    case "letterboxd":
+      posterChoice = "Letterboxd";
+      break;
+    case "letterboxd-ratings":
+      posterChoice = "Letterboxd Ratings";
+      break;
+    case "letterboxd-custom-from-list":
+      posterChoice = "List";
+      break;
+    case "rpdb":
+      posterChoice = `RPDb (${conf.rpdbApiKey ? "paid" : "free"})`;
+      break;
+  }
+
   const manifest = createManifest({
     ...addonManifest,
     id: `${addonManifest.id}:${c.var.configString}`,
     name: `Letterboxd - ${catalogName}`,
-    description: `Adds ${catalogName} as a catalog to Stremio. URL: ${conf.url}`,
+    description: `Adds ${catalogName} as a catalog. Using ${posterChoice} posters.`,
     resources: [
       {
         name: "meta",
@@ -47,7 +66,7 @@ manifestRouter.get("/", async (c) => {
     ],
     catalogs: [
       {
-        id: crypto.randomUUID(),
+        id: c.var.configString,
         name: catalogName,
         // @ts-expect-error Custom Type
         type: "letterboxd",

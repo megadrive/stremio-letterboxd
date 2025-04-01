@@ -9,8 +9,9 @@ import { subtitleRouter } from "@/routes/config/subtitle.js";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { createAPIRouter, createApp, createRouter } from "@/util/createHono.js";
 import { recommendAPIRouter } from "@/routes/api/recommend.js";
-import { statsAPIRouter } from "./routes/api/stats.js";
-import { resolveAPIRouter } from "./routes/api/resolve.js";
+import { statsAPIRouter } from "@/routes/api/stats.js";
+import { resolveAPIRouter } from "@/routes/api/resolve.js";
+import { posterAPIRouter } from "@/routes/api/poster.js";
 
 const app = createApp();
 
@@ -42,9 +43,10 @@ configRouter.route("/subtitle", subtitleRouter);
 app.route("/:config", configRouter);
 
 const apiRouter = createAPIRouter();
+apiRouter.route("/poster", posterAPIRouter);
 apiRouter.route("/recommend", recommendAPIRouter);
-apiRouter.route("/stats", statsAPIRouter);
 apiRouter.route("/resolve", resolveAPIRouter);
+apiRouter.route("/stats", statsAPIRouter);
 app.route("/api", apiRouter);
 
 serve(

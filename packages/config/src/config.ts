@@ -23,15 +23,13 @@ export const ConfigSchema = z.object({
     ])
     .default("cinemeta"),
   rpdbApiKey: z.string().optional(),
-  reservedTag: z.enum(["weekly", "monthly"]).optional(),
+  /** origin, provided by the frontend for absolute urls */
+  origin: z.string(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
 /** Used in the frontend, we can hide backend-only config values here. */
-export const ConfigFormInputSchema = z.object({
-  ...ConfigSchema.shape,
-  reservedTag: z.undefined(),
-});
+export const ConfigFormInputSchema = ConfigSchema.omit({ origin: true });
 export type ConfigFormInput = z.infer<typeof ConfigFormInputSchema>;
 
 export const config = {

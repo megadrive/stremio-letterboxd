@@ -46,3 +46,14 @@ model Film {
 
   @@unique([imdb, tmdb])
 }
+
+model Poster {
+  id        String   @id @default(uuid())
+  poster    String
+  filmId    String
+  altId     Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([filmId, altId])
+}

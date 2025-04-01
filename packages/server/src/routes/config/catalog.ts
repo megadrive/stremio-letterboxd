@@ -81,6 +81,18 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           return "";
         }
 
+        if (c.var.config.posterChoice === "letterboxd") {
+          return `${c.var.config.origin}/api/poster/${film.id}`;
+        }
+
+        if (c.var.config.posterChoice === "letterboxd-custom-from-list") {
+          const altId = cachedMetadata.data.items.find(
+            (item) => item.id === film.id
+          )?.altPoster;
+          // if altId is not found, use the default letterboxd poster
+          return `${c.var.config.origin}/api/poster/${film.id}${altId ? `/${altId}` : ""}`;
+        }
+
         if (c.var.config.posterChoice === "letterboxd-ratings") {
           return `https://letterboxd-posters-with-ratings.almosteffective.com/${film.id}`;
         }

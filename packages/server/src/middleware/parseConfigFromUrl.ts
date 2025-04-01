@@ -1,15 +1,13 @@
 import type { AppBindingsWithConfig } from "@/util/createHono.js";
 import { config } from "@stremio-addon/config";
 import { createMiddleware } from "hono/factory";
-import { FORBIDDEN } from "stoker/http-status-codes";
-import { FORBIDDEN as FORBIDDEN_TEXT } from "stoker/http-status-phrases";
 
 export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
   async (c, next) => {
     const configString = c.req.param("config");
 
     try {
-      if (configString) {
+      if (configString && configString.length) {
         const conf = await config.decode(configString);
 
         if (conf) {
@@ -23,7 +21,6 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
       if (error instanceof Error) {
         c.var.logger.error(error);
       }
-      c.text(FORBIDDEN_TEXT, FORBIDDEN);
     }
 
     await next();

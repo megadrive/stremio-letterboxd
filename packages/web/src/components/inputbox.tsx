@@ -71,7 +71,12 @@ export default function Inputbox() {
   async function generateManifestURL(data: ConfigFormInput) {
     try {
       // verify with server
-      const encodedConfig = await config.encode(data);
+      const encodedConfig = await config.encode({
+        ...data,
+        origin: location.origin,
+      });
+
+      // change the protocol for installation in production
       const { origin } = new URL(location.href);
       const newOrigin = origin.startsWith("https")
         ? origin.replace(/^https/, "stremio")
@@ -216,6 +221,10 @@ export default function Inputbox() {
                 {...register("posterChoice")}
               >
                 <option value="cinemeta">Cinemeta (default)</option>
+                <option value="letterboxd">Letterboxd</option>
+                <option value="letterboxd-custom-from-list">
+                  Letterboxd List
+                </option>
                 <option value="letterboxd-ratings">
                   Letterboxd With Ratings
                 </option>
