@@ -24,16 +24,16 @@ function List(conf: Config) {
           {conf.catalogName}
         </a>
       </div>
-      <div className="grid grid-flow-col grid-cols-2 gap-1">
+      <div className="grid grid-flow-col grid-cols-3 gap-1">
         <button
-          className="border border-white rounded hover:bg-white hover:text-[#"
+          className="border border-white rounded hover:bg-white hover:text-black"
           type="button"
           onClick={installList}
         >
           Install
         </button>
         <button
-          className="border border-transparent hover:border-white"
+          className="border border-transparent rounded hover:border-white"
           type="button"
           onClick={() =>
             window.open(
@@ -45,7 +45,7 @@ function List(conf: Config) {
           Web
         </button>
         <button
-          className="border border-transparent hover:border-white"
+          className="border border-transparent rounded hover:border-white"
           type="button"
           onClick={() =>
             navigator.clipboard
