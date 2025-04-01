@@ -4,8 +4,6 @@ import { addonManifest, createManifest } from "@/util/manifest.js";
 import { manifestRouter } from "@/routes/config/manifest.js";
 import { catalogRouter } from "@/routes/config/catalog.js";
 import { metaRouter } from "@/routes/config/meta.js";
-import { streamRouter } from "@/routes/config/stream.js";
-import { subtitleRouter } from "@/routes/config/subtitle.js";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { createAPIRouter, createApp, createRouter } from "@/util/createHono.js";
 import { recommendAPIRouter } from "@/routes/api/recommend.js";
@@ -37,8 +35,6 @@ const configRouter = createRouter();
 configRouter.route("/manifest.json", manifestRouter);
 configRouter.route("/catalog", catalogRouter);
 configRouter.route("/meta", metaRouter);
-configRouter.route("/stream", streamRouter);
-configRouter.route("/subtitle", subtitleRouter);
 
 app.route("/:config", configRouter);
 
