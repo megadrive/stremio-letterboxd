@@ -63,4 +63,31 @@ export const config = {
   encode: async (data: Config): Promise<string> => {
     return btoa(JSON.stringify(data));
   },
+  convertFromLegacy: async (data: string): Promise<Config> => {
+    // %2Fgirasolitos%2Fwatchlist%2F%7Cp%3Dcinemeta%7Ccn%3Dash%20%E2%98%86%E2%80%99s%20Watchlist
+    const legacy = decodeURIComponent(data);
+    const [path, p, cn] = legacy.split("|");
+
+    const [posterChoice] = p.split("=");
+    const [catalogName] = cn.split("=");
+
+    const parsedPosterChoice = ConfigSchema.pick({
+      posterChoice: true,
+    })
+      .required()
+      .safeParse({
+        posterChoice,
+      });
+
+    if (!parsedPosterChoice.success) {
+      throw new Error(`Invalid poster choice: ${posterChoice}`);
+    }
+
+    return {
+      origin: "",
+      url: `https://letterboxd.com${path}`,
+      catalogName,
+      posterChoice: parsedPosterChoice.data.posterChoice,
+    };
+  },
 };

@@ -13,6 +13,21 @@ import { serverEnv } from "@stremio-addon/env";
 export const catalogRouter = createRouter();
 
 async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
+  // If we have a legacy config, we should not proceed
+  if (c.get("isLegacyConfig")) {
+    const metas: MetaDetail[] = [
+      {
+        id: "error",
+        type: "movie",
+        name: "Legacy config detected, please reconfigure the addon.",
+        description:
+          "The config you are using is no longer supported. Please reconfigure the addon.",
+        website: `https://letterboxd.almosteffective.com/`,
+      },
+    ];
+    return c.json({ metas }, INTERNAL_SERVER_ERROR);
+  }
+
   const type = c.req.param("type");
   const id = (c.req.param("id") ?? "").replace(/\.json$/, "");
   const extras = (c.req.param("extras.json") ?? "").replace(/\.json$/, "");
