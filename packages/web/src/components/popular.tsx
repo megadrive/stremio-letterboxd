@@ -67,14 +67,16 @@ export default function Popular() {
       <h2 className="text-center font-semibold text-xl mb-2">Popular lists</h2>
       <div className="grid gap-1">
         <List
+          origin={location.origin}
           catalogName="Popular This Week"
           url="https://letterboxd.com/films/popular/this/week/"
-          posterChoice="cinemeta"
+          posterChoice="letterboxd"
         />
         <List
+          origin={location.origin}
           catalogName="Popular This Month"
           url="https://letterboxd.com/films/popular/this/month/"
-          posterChoice="cinemeta"
+          posterChoice="letterboxd"
         />
       </div>
     </div>

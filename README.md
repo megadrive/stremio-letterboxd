@@ -18,5 +18,5 @@ If you dig the addon and would like to support it, please consider [donating](ht
 
 ## Contributors
 
--   [Megadrive](https://github.com/megadrive)
--   [Keryfia](https://github.com/keryfia) (Ratings on posters)
+- [Megadrive](https://github.com/megadrive)
+- [Keryfia](https://github.com/keryfia) (Ratings on posters)
