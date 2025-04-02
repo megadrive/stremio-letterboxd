@@ -150,13 +150,17 @@ async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
   const cachedIds = await prisma.film.findMany({
     where: {
       id: { in: initialMeta.map((meta) => meta.id) },
+      AND: {
+        updatedAt: {
+          gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1),
+        },
+      },
     },
-    select: { id: true },
   });
   const cachedIdsSet = new Set(cachedIds.map((meta) => meta.id));
   initialMeta = initialMeta.filter((meta) => !cachedIdsSet.has(meta.id));
   logger.info(`Found ${cachedIds.length} cached IDs`);
-  logger.info(`Found ${initialMeta.length} uncached IDs`);
+  logger.info(`Found ${initialMeta.length} uncached or stale IDs`);
   if (initialMeta.length === 0) {
     logger.info("No uncached IDs found");
     return;
