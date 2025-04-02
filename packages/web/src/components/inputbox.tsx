@@ -18,7 +18,16 @@ function SortOption(props: { name: string; url: string }) {
   );
 }
 
+/**
+ * Resolves a Boxt.it URL to the final destination.
+ * @param url A Boxt.it URL
+ * @returns Resolved URL
+ */
 async function resolveUrl(url: string) {
+  if (/^https:\/\/(www\.)?letterboxd\.com/.test(url)) {
+    return url;
+  }
+
   const encodedUrl = encodeURIComponent(url);
 
   const res = await fetch(`/api/resolve/${encodedUrl}`, {
@@ -33,6 +42,7 @@ async function resolveUrl(url: string) {
 }
 
 export default function Inputbox() {
+  const [formDisabled, setFormDisabled] = useState(false);
   const [manifestUrl, setManifestUrl] = useState("");
   const selectRef = useRef<HTMLSelectElement>(null);
   const { register, handleSubmit, formState, setValue, watch, reset } =
@@ -43,6 +53,9 @@ export default function Inputbox() {
   const watchedPosterChoice = watch("posterChoice");
   const watchedUrl = watch("url");
 
+  /**
+   * Fetches a recommendation from the server and sets the URL field.
+   */
   async function recommendList() {
     try {
       const res = await fetch("/api/recommend", {
@@ -64,9 +77,9 @@ export default function Inputbox() {
   }
 
   /**
-   * Resolves a URL after redirects. Returns undefined if an error occurs or not a letterboxd URL.
-   * @param url URL to resolve
-   * @returns Resolved URL
+   * Generates the manifest URL for the given configuration.
+   *
+   * Note: When in dev the protocol is `http`, in production it is `stremio`.
    */
   async function generateManifestURL(data: ConfigFormInput) {
     try {
@@ -89,6 +102,9 @@ export default function Inputbox() {
     }
   }
 
+  /**
+   * Handles the submission of the form.
+   */
   async function onSubmit(data: ConfigFormInput) {
     setManifestUrl("");
     if (!data.url) {
@@ -104,6 +120,9 @@ export default function Inputbox() {
     }
   }
 
+  /**
+   * Copies the manifest URL to the clipboard and displays a toast.
+   */
   async function copyToClipboard() {
     try {
       if (manifestUrl?.length === 0) return;
@@ -115,22 +134,42 @@ export default function Inputbox() {
     }
   }
 
+  /**
+   * Redirects the browser to the manifest URL to install the addon.
+   *
+   * Note: In dev, the protocol is `http`, in production it is `stremio`.
+   * So in development you'll be redirected to the manifest.
+   */
   async function installAddon() {
     window.location.href = manifestUrl;
   }
 
+  /**
+   * Opens a new window/tab to install the addon on the web version.
+   */
   async function installWeb() {
     window.open(
       `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`
     );
   }
 
+  /**
+   * Applies a sort to the URL.
+   */
   function applySort() {
     const selectedSort = selectRef.current?.value;
     if (!selectedSort) return;
 
     let url = watchedUrl;
     if (!url) return;
+
+    // disable the form
+    setFormDisabled(true);
+
+    // ensure the url ends in a slash
+    if (!url.endsWith("/")) {
+      url += "/";
+    }
 
     // if there is already a sort applied, remove it
     for (const option of sortOptions) {
@@ -140,6 +179,7 @@ export default function Inputbox() {
     }
     // apply the new sort
     setValue("url", url + selectedSort.slice(1));
+    setFormDisabled(false);
   }
 
   return (
@@ -156,6 +196,7 @@ export default function Inputbox() {
               type="text"
               placeholder="https://letterboxd.com/almosteffective/watchlist"
               {...register("url")}
+              disabled={formDisabled}
               onBlur={() => {
                 if (watchedUrl.length === 0) return;
                 if (!watchedUrl.startsWith("https://boxd.it/")) return;
@@ -170,10 +211,10 @@ export default function Inputbox() {
             <button
               className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
               onClick={recommendList}
-              disabled={formState.isSubmitting}
+              disabled={formState.isSubmitting || formDisabled}
               type="button"
             >
-              {formState.isSubmitting === false ? "Recommend" : "Validating..."}
+              Recommend
             </button>
           </div>
           <div className="flex gap-1">
@@ -256,7 +297,7 @@ export default function Inputbox() {
           <div className="mx-auto flex gap-1">
             <button
               className="col-span-3 grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold cursor-pointer hover:bg-[#202830] hover:text-white hover:underline"
-              disabled={formState.isSubmitting}
+              disabled={formState.isSubmitting || formDisabled}
               type="submit"
             >
               {formState.isSubmitting === false

@@ -11,6 +11,7 @@ import { z } from "zod";
 export const ConfigSchema = z.object({
   url: z
     .string()
+    .regex(/^(https:\/\/(www\.)?letterboxd\.com\/).+\/$/)
     .min(1, { message: "A Letterboxd or Boxd.it URL is required." }),
   catalogName: z.string({ description: "The name of the catalog" }),
   posterChoice: z
@@ -21,7 +22,7 @@ export const ConfigSchema = z.object({
       "letterboxd-custom-from-list",
       "rpdb",
     ])
-    .default("cinemeta"),
+    .default("letterboxd-custom-from-list"),
   rpdbApiKey: z.string().optional(),
   /** origin, provided by the frontend for absolute urls */
   origin: z.string(),
