@@ -48,7 +48,6 @@ export default function Inputbox() {
   const { register, handleSubmit, formState, setValue, watch, reset } =
     useForm<ConfigFormInput>({
       resolver: zodResolver(ConfigFormInputSchema),
-      mode: "onChange",
     });
   const watchedPosterChoice = watch("posterChoice");
   const watchedUrl = watch("url");
@@ -95,7 +94,23 @@ export default function Inputbox() {
         ? origin.replace(/^https/, "stremio")
         : origin;
 
-      return `${newOrigin}/${encodedConfig}/manifest.json`;
+      const res = await fetch(`/api/config/${encodedConfig}`, {
+        method: "POST",
+        headers: { "cache-control": "no-cache" },
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to generate manifest: ${res.statusText}`);
+      }
+      const json = await res.json();
+      const parsed = z
+        .object({ id: z.string(), success: z.boolean() })
+        .parse(json);
+
+      if (!parsed.success) {
+        throw new Error("Failed to generate manifest");
+      }
+
+      return `${newOrigin}/${parsed.id}/manifest.json`;
     } catch (error) {
       // @ts-expect-error Message exists
       toast.error(`Try again in a few seconds: ${error.message}`);
@@ -236,6 +251,7 @@ export default function Inputbox() {
             <button
               onClick={applySort}
               className="w-2xs border border-white rounded"
+              type="button"
             >
               Apply
             </button>

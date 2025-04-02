@@ -62,9 +62,15 @@ export const config = {
    * @returns Encoded string
    */
   encode: async (data: Config): Promise<string> => {
-    return btoa(JSON.stringify(data));
+    // alphabetically sort the keys to ensure consistent encoding
+    const sorted = Object.fromEntries(
+      Object.entries(data).sort(([a], [b]) => a.localeCompare(b))
+    );
+
+    return btoa(JSON.stringify(sorted));
   },
-  convertFromLegacy: async (data: string): Promise<Config> => {
+  // TODO: Implement
+  convertFromLegacy: (data: string): Config => {
     // %2Fgirasolitos%2Fwatchlist%2F%7Cp%3Dcinemeta%7Ccn%3Dash%20%E2%98%86%E2%80%99s%20Watchlist
     const legacy = decodeURIComponent(data);
     const [path, p, cn] = legacy.split("|");

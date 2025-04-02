@@ -10,6 +10,7 @@ import { recommendAPIRouter } from "@/routes/api/recommend.js";
 import { statsAPIRouter } from "@/routes/api/stats.js";
 import { resolveAPIRouter } from "@/routes/api/resolve.js";
 import { posterAPIRouter } from "@/routes/api/poster.js";
+import { createConfigAPIRoute } from "./routes/api/config.js";
 
 const app = createApp();
 
@@ -39,6 +40,7 @@ configRouter.route("/meta", metaRouter);
 app.route("/:config", configRouter);
 
 const apiRouter = createAPIRouter();
+apiRouter.route("/config", createConfigAPIRoute);
 apiRouter.route("/poster", posterAPIRouter);
 apiRouter.route("/recommend", recommendAPIRouter);
 apiRouter.route("/resolve", resolveAPIRouter);
