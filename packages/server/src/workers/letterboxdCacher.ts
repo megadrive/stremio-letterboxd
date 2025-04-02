@@ -180,6 +180,20 @@ async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
         return;
       }
 
+      // get other data from the page
+      const tagline = $(".tagline").text();
+      const description = $(".tagline").siblings("div.truncate").text().trim();
+      const cast = $(".cast-list a")
+        .map((_, el) => $(el).text())
+        .splice(0, 3);
+      const releaseyear = $(".releaseyear").text();
+      const directors = $("#tab-crew a[href^='/director']")
+        .map((_, el) => $(el).text())
+        .splice(0, 3);
+      const genres = $("#tab-genres a[href^='/films/genre']")
+        .map((_, el) => $(el).text())
+        .splice(0, 3);
+
       // cache to db
       try {
         logger.info(`Caching IDs for ${meta.id}`);
@@ -189,6 +203,11 @@ async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
           create: {
             id: meta.id,
             title: meta.name,
+            director: JSON.stringify(directors),
+            cast: JSON.stringify(cast),
+            description: `${tagline.toUpperCase()} - ${description}`,
+            genres: JSON.stringify(genres),
+            year: releaseyear ? +releaseyear : undefined,
             tmdb,
             imdb,
           },
