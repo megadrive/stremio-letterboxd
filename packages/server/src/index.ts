@@ -10,7 +10,7 @@ import { recommendAPIRouter } from "@/routes/api/recommend.js";
 import { statsAPIRouter } from "@/routes/api/stats.js";
 import { resolveAPIRouter } from "@/routes/api/resolve.js";
 import { posterAPIRouter } from "@/routes/api/poster.js";
-import { createConfigAPIRoute } from "./routes/api/config.js";
+import { configAPIRoute } from "./routes/api/config.js";
 
 const app = createApp();
 
@@ -36,11 +36,14 @@ const configRouter = createRouter();
 configRouter.route("/manifest.json", manifestRouter);
 configRouter.route("/catalog", catalogRouter);
 configRouter.route("/meta", metaRouter);
-
+configRouter.get("/configure", (c) => {
+  // NOTE: Stremio doesn't support changing the config for a lot of what we do, so just ignore it.
+  return c.redirect(`/configure`);
+});
 app.route("/:config", configRouter);
 
 const apiRouter = createAPIRouter();
-apiRouter.route("/config", createConfigAPIRoute);
+apiRouter.route("/config", configAPIRoute);
 apiRouter.route("/poster", posterAPIRouter);
 apiRouter.route("/recommend", recommendAPIRouter);
 apiRouter.route("/resolve", resolveAPIRouter);

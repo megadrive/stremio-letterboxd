@@ -42,4 +42,8 @@ export const addonManifest = createManifest({
   description: "Adds a Letterboxd URL as a catalog.",
   logo: "https://stremio-letterboxd-watchlist.up.railway.app/logo.png",
   catalogs: [],
+  behaviorHints: {
+    configurable: true,
+    configurationRequired: true,
+  },
 });

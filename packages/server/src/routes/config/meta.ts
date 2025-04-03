@@ -1,5 +1,6 @@
 import { tmdb } from "@/lib/tmdb.js";
 import { createRouter } from "@/util/createHono.js";
+import { getError } from "@/util/errors.js";
 import { prisma } from "@stremio-addon/database";
 import type { MetaDetail } from "stremio-addon-sdk";
 
@@ -19,9 +20,14 @@ metaRouter.get("/:type/:id.json", async (c) => {
 
   id = id.replace(/\.json$/, "");
 
-  const [, idWithoutPrefix] = id.split(":");
+  const [, idWithoutPrefix, errorCode] = id.split(":");
 
   c.var.logger.debug(`meta ${type} ${idWithoutPrefix}`);
+
+  // handle error metas
+  if (idWithoutPrefix === "error") {
+    return c.json({ meta: getError(errorCode, c.var.config) });
+  }
 
   try {
     const cached = await prisma.film.findFirst({

@@ -46,6 +46,9 @@ export default defineConfig({
         "^/.+/manifest.json": {
           target: "http://localhost:3000",
         },
+        "^/.+/configure": {
+          target: "http://localhost:3000",
+        },
         "^/.+/(catalog|meta|stream|subtitle).*": {
           target: "http://localhost:3000",
         },

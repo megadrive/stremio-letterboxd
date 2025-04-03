@@ -54,6 +54,11 @@ manifestRouter.get("/", async (c) => {
 
   const manifest = createManifest({
     ...addonManifest,
+    behaviorHints: {
+      ...addonManifest.behaviorHints,
+      configurable: true,
+      configurationRequired: false,
+    },
     id: `${addonManifest.id}:${c.var.configString}`,
     name: `Letterboxd - ${catalogName}`,
     description: `Adds ${catalogName} as a catalog. Using ${posterChoice} posters.`,
