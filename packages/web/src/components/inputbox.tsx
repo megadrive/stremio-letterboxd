@@ -24,10 +24,6 @@ function SortOption(props: { name: string; url: string }) {
  * @returns Resolved URL
  */
 async function resolveUrl(url: string) {
-  if (/^https:\/\/(www\.)?letterboxd\.com/.test(url)) {
-    return url;
-  }
-
   const encodedUrl = encodeURIComponent(url);
 
   const res = await fetch(`/api/resolve/${encodedUrl}`, {
@@ -214,14 +210,21 @@ export default function Inputbox() {
               disabled={formDisabled}
               onBlur={() => {
                 if (watchedUrl.length === 0) return;
-                if (!watchedUrl.startsWith("https://boxd.it/")) return;
-                resolveUrl(watchedUrl).then((resolvedUrl) => {
-                  if (resolvedUrl) {
-                    setValue("url", resolvedUrl);
-                  }
-                });
+                setFormDisabled(true);
+                resolveUrl(watchedUrl)
+                  .then((resolvedUrl) => {
+                    setFormDisabled(false);
+                    if (resolvedUrl) {
+                      setValue("url", resolvedUrl);
+                    }
+                  })
+                  .catch((error) => {
+                    setFormDisabled(false);
+                    console.warn(error);
+                    toast.error("Failed to resolve URL");
+                  });
               }}
-              className="w-full border border-black bg-white text-[#202830] rounded text-xl px-2 py-1"
+              className="w-full border border-black bg-white text-[#202830] rounded text-xl px-2 py-1 disabled:text-gray-200"
             />
             <button
               className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
@@ -277,11 +280,11 @@ export default function Inputbox() {
                 className="border border-black text-[#202830] bg-white rounded text-xl px-2 py-1 w-full"
                 {...register("posterChoice")}
               >
-                <option value="cinemeta">Cinemeta (default)</option>
-                <option value="letterboxd">Letterboxd</option>
                 <option value="letterboxd-custom-from-list">
-                  Letterboxd List
+                  Letterboxd (including custom)
                 </option>
+                <option value="letterboxd">Letterboxd</option>
+                <option value="cinemeta">Cinemeta</option>
                 <option value="letterboxd-ratings">
                   Letterboxd With Ratings
                 </option>
