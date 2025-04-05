@@ -338,7 +338,7 @@ export default function Inputbox() {
 
           <div className="flex gap-1 justify-around">
             <div
-              className={`${!formState.isDirty ? "hidden" : ""} flex gap-1 justify-around grow`}
+              className={`${!manifestUrl?.length ? "hidden" : ""} flex gap-1 justify-around grow`}
             >
               <button
                 className="grow border border-white bg-white uppercase text-[#202830] text-lg p-2 rounded font-bold hover:bg-[#202830] hover:text-white hover:underline"
