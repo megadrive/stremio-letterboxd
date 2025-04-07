@@ -64,7 +64,8 @@ export default function Inputbox() {
         .object({ recommendation: z.string() })
         .parse(json);
       const recommendedUrl = `https://letterboxd.com${recommendation}`;
-      setValue("url", recommendedUrl);
+      const resolvedUrl = await resolveUrl(recommendedUrl);
+      setValue("url", resolvedUrl);
       setManifestUrl("");
     } catch (error) {
       console.warn(error);

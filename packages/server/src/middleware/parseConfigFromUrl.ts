@@ -3,6 +3,20 @@ import { config } from "@stremio-addon/config";
 import { prisma } from "@stremio-addon/database";
 import { createMiddleware } from "hono/factory";
 
+class ConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigError";
+  }
+}
+
+class ConfigWarn extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigWarn";
+  }
+}
+
 export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
   async (c, next) => {
     const configId = c.req.param("config");
@@ -10,8 +24,7 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
     try {
       if (configId && configId.length) {
         if (configId === "api") {
-          c.var.logger.warn("API config not supported, skipping");
-          throw new Error();
+          throw new ConfigError(`API config not supported`);
         }
 
         const cachedConfig = await prisma.config.findFirst({
@@ -31,7 +44,18 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
 
         if (!cachedConfig) {
           c.var.logger.warn(`Config not found for id: ${configId}`);
-          throw new Error();
+
+          // try to decode the configId as base64
+          const decodedConfig = await config.decode(configId);
+          if (decodedConfig) {
+            c.set("config", decodedConfig);
+            c.set("configString", configId);
+
+            c.var.logger.info(`Parsed config from base64: ${configId}`);
+            throw new ConfigWarn(`Parsed config from base64: ${configId}`);
+          }
+
+          throw new ConfigError(`Config not found for id: ${configId}`);
         }
 
         const conf = await config.decode(cachedConfig.config);
@@ -44,8 +68,13 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
         }
       }
     } catch (error) {
-      if (error instanceof Error) {
+      if (error instanceof ConfigError) {
         c.var.logger.error(error.message);
+      }
+      if (error instanceof ConfigWarn) {
+        c.var.logger.warn(error.message);
+      } else {
+        c.var.logger.error(error);
       }
     }
 
