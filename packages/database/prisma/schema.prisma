@@ -19,12 +19,14 @@ model Cinemeta {
 }
 
 model Config {
-  id         String   @id @default(uuid())
-  config     String   @unique // JSON
-  metadata   String // JSON
-  isReserved Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String       @id @default(uuid())
+  config        String       @unique // JSON
+  metadata      String // JSON
+  isReserved    Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  shuffleSeedId String?      @unique
+  shuffleSeed   ShuffleSeed?
 
   @@index([config])
 }
@@ -56,4 +58,15 @@ model Poster {
   updatedAt DateTime @updatedAt
 
   @@index([filmId, altId])
+}
+
+model ShuffleSeed {
+  id        String   @id @default(uuid())
+  seed      String
+  configId  String   @unique
+  config    Config   @relation(fields: [configId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([seed])
 }

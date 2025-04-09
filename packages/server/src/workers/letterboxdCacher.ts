@@ -67,7 +67,11 @@ export class LetterboxdCacher {
     */
     try {
       const encodedConfig = await config.encode(userConfig);
-      const url = userConfig.url;
+      let url = userConfig.url;
+      // if it's a shuffle, just grab the films as usual. we will do our own shuffling later
+      if (url.includes("/by/shuffle/")) {
+        url = url.replace(/\/by\/shuffle\/.*$/, "/");
+      }
       const html = await fetchHtml(url);
       const $ = cheerio(html);
 

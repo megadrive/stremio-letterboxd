@@ -9,6 +9,7 @@ import {
 } from "@/workers/letterboxdCacher.js";
 import type { Context } from "hono";
 import { serverEnv } from "@stremio-addon/env";
+import { createShuffle } from "fast-shuffle";
 
 export const catalogRouter = createRouter();
 
@@ -65,7 +66,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     }
 
     const slugs = cachedMetadata.data.items.map((item) => item.id);
-    const cachedFilms = await prisma.film.findMany({
+    let cachedFilms = await prisma.film.findMany({
       where: {
         id: {
           in: slugs,
@@ -73,10 +74,45 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       },
     });
 
-    // order the films in the same order as the slugs
-    cachedFilms.sort((a, b) => {
-      return slugs.indexOf(a.id) - slugs.indexOf(b.id);
-    });
+    if (!c.var.config.url.includes("/by/shuffle/")) {
+      // order the films in the same order as the slugs
+      cachedFilms.sort((a, b) => {
+        return slugs.indexOf(a.id) - slugs.indexOf(b.id);
+      });
+    } else {
+      // if we are shuffling, get the seed from the database if it exists
+      c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
+      let seedRecord = await prisma.shuffleSeed.findFirst({
+        where: {
+          configId: cached.id,
+        },
+      });
+      if (!seedRecord) {
+        // create a new seed
+        c.var.logger.info(
+          `No shuffle seed found for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
+        );
+        const newSeed = Date.now();
+        const newSeedRecord = await prisma.shuffleSeed.upsert({
+          where: {
+            configId: cached.id,
+          },
+          create: {
+            configId: cached.id,
+            seed: `${newSeed}`,
+          },
+          update: {
+            seed: `${newSeed}`,
+          },
+        });
+        c.var.logger.info(`Created new shuffle seed: ${newSeedRecord.seed}`);
+        seedRecord = newSeedRecord;
+      }
+
+      // randomise the cached films with the seed
+      const seededShuffle = createShuffle(+seedRecord.seed);
+      cachedFilms = seededShuffle(cachedFilms);
+    }
 
     // pagination
     const start = parsedExtras?.skip ? Number(parsedExtras.skip) : 0;

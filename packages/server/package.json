@@ -12,6 +12,7 @@
     "@stremio-addon/database": "workspace:*",
     "@stremio-addon/env": "workspace:*",
     "cheerio": "^1.0.0",
+    "fast-shuffle": "^6.1.1",
     "hono": "^4.7.4",
     "hono-pino": "^0.8.0",
     "neverthrow": "^8.2.0",
