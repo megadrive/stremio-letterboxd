@@ -89,7 +89,7 @@ export class LetterboxdCacher {
 
         return foundPages;
       })();
-      if (new URL(url).pathname.includes("/films")) {
+      if (new URL(url).pathname.startsWith("/films")) {
         // 72 * 10 = 720
         pages = 10;
       }
@@ -137,9 +137,11 @@ export class LetterboxdCacher {
       }
 
       // scrape the IDs from the film pages and cache
-      scrapeIDsFromFilmPage(initialMeta).then(() => {
-        logger.info(`Successfully cached IDs for ${catalogName}`);
-      });
+      scrapeIDsFromFilmPage(initialMeta)
+        .then(() => {
+          logger.info(`Successfully cached IDs for ${catalogName}`);
+        })
+        .catch(logger.error);
 
       return initialMeta;
     } catch (error) {
