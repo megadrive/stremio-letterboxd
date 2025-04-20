@@ -104,11 +104,13 @@ configAPIRoute.post("/:encodedConfigOrId", async (c) => {
 
     const metadata = await letterboxdCacher.scrapeList(conf);
 
-    c.var.logger.info("Creating config", { encodedConfig, metadata });
+    c.var.logger.info("Creating config flow");
+    c.var.logger.info({ encodedConfig, conf, metadata });
     let record;
 
     try {
       // try to fetch the config, if it exists
+      c.var.logger.info("Attempting to fetch config");
       record = await prisma.config.findFirst({
         where: {
           config: encodedConfig,
@@ -121,6 +123,7 @@ configAPIRoute.post("/:encodedConfigOrId", async (c) => {
     if (!record) {
       try {
         // try to create the config
+        c.var.logger.info("Attempting to create config");
         record = await prisma.config.create({
           data: {
             config: encodedConfig,
