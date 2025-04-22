@@ -75,6 +75,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     });
 
     if (!c.var.config.url.includes("/by/shuffle/")) {
+      c.var.logger.info(`Sorting films for ${c.var.config.url}`);
       // order the films in the same order as the slugs
       cachedFilms.sort((a, b) => {
         return slugs.indexOf(a.id) - slugs.indexOf(b.id);
@@ -87,12 +88,24 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           configId: cached.id,
         },
       });
-      if (!seedRecord) {
+
+      if (seedRecord) {
+        c.var.logger.info(
+          `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
+        );
+      }
+
+      // if expired or not found, create a new seed
+      const ONE_HOUR = 60 * 60 * 1000;
+      if (
+        !seedRecord ||
+        Date.now() - seedRecord.updatedAt.getTime() > ONE_HOUR
+      ) {
         // create a new seed
         c.var.logger.info(
-          `No shuffle seed found for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
+          `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
         );
-        const newSeed = Date.now();
+        const newSeed = Math.random() * 1000000;
         const newSeedRecord = await prisma.shuffleSeed.upsert({
           where: {
             configId: cached.id,
