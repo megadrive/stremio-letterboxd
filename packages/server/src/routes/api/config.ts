@@ -105,7 +105,11 @@ configAPIRoute.post("/:encodedConfigOrId", async (c) => {
     const metadata = await letterboxdCacher.scrapeList(conf);
 
     c.var.logger.info("Creating config flow");
-    c.var.logger.info({ encodedConfig, conf, metadata });
+    c.var.logger.info({
+      encodedConfig,
+      conf,
+      metadata: `${metadata?.length ? metadata.length : 0} items`,
+    });
     let record;
 
     try {
@@ -133,7 +137,7 @@ configAPIRoute.post("/:encodedConfigOrId", async (c) => {
         c.var.logger.info("Create config", {
           newRecordId: record.id,
           encodedConfig,
-          metadata,
+          metadata: `${metadata?.length ? metadata.length : 0} items`,
         });
       } catch (error) {
         c.var.logger.error("Failed to create config", error);
