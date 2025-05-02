@@ -46,4 +46,10 @@ export const addonManifest = createManifest({
     configurable: true,
     configurationRequired: true,
   },
+  // @ts-expect-error stremio-addons.net validation
+  stremioAddonsConfig: {
+    issuer: "https://stremio-addons.net",
+    signature:
+      "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..zhrjmLGDChFm-qb-uWRzFw.UxMdnE1qrqnMUNJp0h1tKhHInzukAMP7gomVYUGrUsKO32U8izcbKEcWwKVGAa0qyb8k_JVkyvsTgAHHSEdzFwxgexejseZ241nT0But9L4RAAvGU_GUsPpEe0__d20Z.fLtFn1wImV9-9I0JAHby3Q",
+  },
 });
