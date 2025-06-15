@@ -342,6 +342,7 @@ async function fetchHtml(
     logger.info("Successfully fetched HTML");
     return await res.text();
   } catch (error) {
+    logger.error(`Failed to fetch HTML from ${urlToScrape}`);
     logger.error(error);
   }
 

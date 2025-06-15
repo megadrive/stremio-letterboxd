@@ -1,5 +1,6 @@
 import { load } from "cheerio";
 import { wrappedFetch } from "./wrappedFetch.js";
+import { pinoLoggerStandalone as logger } from "@/lib/pinoLogger.js";
 
 const listUrl = "https://letterboxd.com/lists/popular/this/week/";
 
@@ -36,15 +37,20 @@ export class ListManager {
   }
 
   private async fetchListPage(url: string) {
-    const res = await wrappedFetch(url, {
-      headers: {
-        "Cache-Control": "no-cache",
-      },
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch list page: ${res.statusText}`);
+    try {
+      const res = await wrappedFetch(url, {
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch list page: ${res.statusText}`);
+      }
+      return res.text();
+    } catch (error) {
+      logger.error(`Error fetching list page: ${error}`);
+      logger.error(error);
     }
-    return res.text();
   }
 
   private parseListPage($: ReturnType<typeof load>) {

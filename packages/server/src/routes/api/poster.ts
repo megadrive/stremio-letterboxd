@@ -25,12 +25,20 @@ async function fetchPoster(
   altId?: string
 ): Promise<string | undefined> {
   const POSTER_URL = `https://letterboxd.com/ajax/poster/film/${slug}/std/${altId ? `${altId}/` : ""}230x345/?k=${cacheBuster()}`;
-  const res = await fetch(POSTER_URL);
-  if (!res.ok) {
+
+  let html;
+  try {
+    const res = await fetch(POSTER_URL);
+    if (!res.ok) {
+      return;
+    }
+    html = await res.text();
+  } catch (error) {
+    logger.error(`Error fetching poster for ${slug}`);
+    logger.error(error);
     return;
   }
 
-  const html = await res.text();
   const $ = cheerio(html);
 
   const href = $("img").first().prop("srcset");
