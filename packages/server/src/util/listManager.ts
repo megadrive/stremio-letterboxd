@@ -87,6 +87,11 @@ export class ListManager {
       const listUrlPage = `${listUrl}/page/${i}`;
       try {
         const html = await this.fetchListPage(listUrlPage);
+        if (!html) {
+          console.warn(`No HTML returned for list page: ${listUrlPage}`);
+          continue;
+        }
+
         const $ = load(html);
 
         const lists = this.parseListPage($);
