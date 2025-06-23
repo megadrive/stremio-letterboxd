@@ -40,7 +40,7 @@ export const addonManifest = createManifest({
   name: "Letterboxd",
   version: `2.0.0${serverEnv.isDev ? "-dev" : ""}`,
   description: "Adds a Letterboxd URL as a catalog.",
-  logo: "https://stremio-letterboxd-watchlist.up.railway.app/logo.png",
+  logo: "https://letterboxd.almosteffective.com/logo.png",
   catalogs: [],
   behaviorHints: {
     configurable: true,

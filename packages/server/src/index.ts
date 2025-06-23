@@ -10,7 +10,7 @@ import { recommendAPIRouter } from "@/routes/api/recommend.js";
 import { statsAPIRouter } from "@/routes/api/stats.js";
 import { resolveAPIRouter } from "@/routes/api/resolve.js";
 import { posterAPIRouter } from "@/routes/api/poster.js";
-import { configAPIRoute } from "./routes/api/config.js";
+import { configAPIRoute } from "@/routes/api/config.js";
 
 const app = createApp();
 
