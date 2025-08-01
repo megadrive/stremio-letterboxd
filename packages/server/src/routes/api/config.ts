@@ -10,33 +10,41 @@ export const configAPIRoute = createAPIRouter();
 
 configAPIRoute.get("/:encodedConfigOrId", async (c) => {
   const encodedConfigOrId = c.req.param("encodedConfigOrId");
-  const configRecord = await prisma.config.findFirst({
-    where: {
-      OR: [
-        {
-          id: encodedConfigOrId,
-        },
-        {
-          config: encodedConfigOrId,
-        },
-      ],
-    },
-  });
-  if (!configRecord) {
-    logger.error("Failed to fetch config", encodedConfigOrId);
-    return c.json({ success: false, message: "Config not found" }, NOT_FOUND);
-  }
+  try {
+    const configRecord = await prisma.config.findFirst({
+      where: {
+        OR: [
+          {
+            id: encodedConfigOrId,
+          },
+          {
+            config: encodedConfigOrId,
+          },
+        ],
+      },
+    });
+    if (!configRecord) {
+      logger.error("Failed to fetch config", encodedConfigOrId);
+      return c.json({ success: false, message: "Config not found" }, NOT_FOUND);
+    }
 
-  const parsedConfig = await config.decode(configRecord.config);
-  if (!parsedConfig) {
-    logger.error("Failed to decode config", configRecord.config);
+    const parsedConfig = await config.decode(configRecord.config);
+    if (!parsedConfig) {
+      logger.error("Failed to decode config", configRecord.config);
+      return c.json(
+        { success: false, message: "Failed to decode config" },
+        NOT_FOUND
+      );
+    }
+
+    return c.json({ success: true, config: parsedConfig });
+  } catch (error) {
+    logger.error("Failed to fetch config", error);
     return c.json(
-      { success: false, message: "Failed to decode config" },
+      { success: false, message: "Failed to fetch config" },
       NOT_FOUND
     );
   }
-
-  return c.json({ success: true, config: parsedConfig });
 });
 
 configAPIRoute.put("/:id", async (c) => {
@@ -46,17 +54,17 @@ configAPIRoute.put("/:id", async (c) => {
     logger.error("No config id provided");
     return c.json({ success: false });
   }
-  const body = await c.req.json();
-
-  // ensure config is legit
-  const parsed = ConfigSchema.safeParse(body);
-
-  if (!parsed.success) {
-    logger.error("Failed to parse config", parsed.error);
-    return c.json({ success: false, message: "Invalid config" }, NOT_FOUND);
-  }
-
   try {
+    const body = await c.req.json();
+
+    // ensure config is legit
+    const parsed = ConfigSchema.safeParse(body);
+
+    if (!parsed.success) {
+      logger.error("Failed to parse config", parsed.error);
+      return c.json({ success: false, message: "Invalid config" }, NOT_FOUND);
+    }
+
     const configRecord = await prisma.config.findFirst({
       where: {
         OR: [

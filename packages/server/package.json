@@ -11,6 +11,7 @@
     "@stremio-addon/config": "workspace:*",
     "@stremio-addon/database": "workspace:*",
     "@stremio-addon/env": "workspace:*",
+    "await-to-js": "^3.0.0",
     "cheerio": "^1.0.0",
     "fast-shuffle": "^6.1.1",
     "hono": "^4.7.4",
