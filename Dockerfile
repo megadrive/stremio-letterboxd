@@ -17,10 +17,9 @@ RUN npm install -g pnpm@10.5.0
 RUN pnpm install
 
 # Generate Prisma client in the database package
-RUN pnpm --filter @stremio-addon/database prisma generate
+RUN pnpm -w prisma:generate
 
 # Build all packages
-RUN pnpm -r build
+RUN pnpm build
 
-# Start all packages (or adjust to your entrypoint)
-CMD ["pnpm", "-r", "start"]
+CMD ["pnpm", "start"]
