@@ -1,8 +1,8 @@
 FROM node:22.14.0
 
 ENV NODE_ENV=production
-# Set this to your actual database URL or use build args/secrets for production
-ENV DATABASE_URL="your_database_url_here"
+# dummy for Prisma
+ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
 
 RUN apt-get update && apt-get install -y git build-essential
 
