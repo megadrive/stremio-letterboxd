@@ -8,3 +8,7 @@ packages:
 catalogs:
   prisma:
     prisma: latest
+
+syncInjectedDepsAfterScripts:
+- build
+injectWorkspacePackages: true
