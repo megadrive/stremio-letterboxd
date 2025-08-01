@@ -16,6 +16,8 @@ RUN npm install -g pnpm@10.5.0
 # Install all dependencies for all workspace packages
 RUN pnpm install
 
+RUN pnpm exec pnpm approve-builds
+
 # Generate Prisma client in the database package
 RUN pnpm -w prisma:generate
 
