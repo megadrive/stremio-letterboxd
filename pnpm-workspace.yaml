@@ -6,6 +6,6 @@ catalogs:
     prisma: latest
 
 syncInjectedDepsAfterScripts:
-- build
+  - build
 
 injectWorkspacePackages: true

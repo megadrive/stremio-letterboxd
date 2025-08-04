@@ -20,6 +20,7 @@ RUN pnpm install
 # RUN pnpm exec pnpm approve-builds
 
 # Generate Prisma client in the database package
+RUN pnpm --filter @stremio-addon/database install
 RUN pnpm --filter @stremio-addon/database prisma generate
 
 # Build all packages
