@@ -1,9 +1,5 @@
 packages:
-  - packages/config
-  - packages/database
-  - packages/env
-  - packages/server
-  - packages/web
+  - packages/*
 
 catalogs:
   prisma:
@@ -11,4 +7,5 @@ catalogs:
 
 syncInjectedDepsAfterScripts:
 - build
+
 injectWorkspacePackages: true
