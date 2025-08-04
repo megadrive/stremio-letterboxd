@@ -1,9 +1,6 @@
 {
   "name": "@stremio-addon/server",
   "type": "module",
-  "imports": {
-    "@/*": "./src/*"
-  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
@@ -24,11 +21,11 @@
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "stoker": "^1.4.2",
+    "tsx": "^4.19.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",
-    "@types/stremio-addon-sdk": "^1.6.11",
-    "tsx": "^4.19.3"
+    "@types/stremio-addon-sdk": "^1.6.11"
   }
 }
