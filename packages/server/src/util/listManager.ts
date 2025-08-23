@@ -69,7 +69,6 @@ export class ListManager {
       const name = $section.find(".name").text().trim();
       // const description = $section.children("p").first().text();
       const numFilms = $section.children("span .value").first().text();
-      console.debug({ url, name, person, numFilms });
 
       if (!url) return;
 
