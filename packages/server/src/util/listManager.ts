@@ -60,15 +60,16 @@ export class ListManager {
   }
 
   private parseListPage($: ReturnType<typeof load>) {
-    const $sections = $(".liked-lists section");
+    const $sections = $(".list-summary");
     const lists: List[] = [];
     $sections.each((_, section) => {
       const $section = $(section);
-      const person = `${$section.children("strong .name").first().text()} (${$section.data("person")})`;
-      const url = $section.children("a").first().attr("href") ?? "";
-      const name = $section.children("h2 .title").first().text();
+      const person = $section.find(".displayname").text().trim();
+      const url = $section.find("a").first().prop("href") ?? "";
+      const name = $section.find(".name").text().trim();
       // const description = $section.children("p").first().text();
       const numFilms = $section.children("span .value").first().text();
+      console.debug({ url, name, person, numFilms });
 
       if (!url) return;
 
