@@ -94,7 +94,7 @@ export class LetterboxdCacher {
 
       for (let i = 1; i <= pages; i++) {
         const url = `${userConfig.url}${!userConfig.url.endsWith("/") ? "/" : ""}page/${i}/`;
-        logger.error(`Scraping page ${i} of ${pages} in ${url}`);
+        logger.info(`Scraping page ${i} of ${pages} in ${url}`);
         const html = await fetchHtml(url);
         const $ = cheerio(html);
 
@@ -367,11 +367,25 @@ async function scrapePostersForMetadata(
   $: ReturnType<typeof cheerio>
 ): Promise<BasicMetadata[]> {
   logger.info(`Scraping posters for metadata`);
-  let $posters = $(".film-poster");
-  logger.info(`Found ${$posters.length} posters`);
 
-  if ($posters.length === 0) {
-    $posters = $(".poster");
+  const posterSelectors = [".poster", ".film-poster"];
+
+  const $posters = (() => {
+    for (const selector of posterSelectors) {
+      const posters = $(selector);
+      if (posters.length > 0) {
+        console.info(
+          `Found posters with selector: ${selector}: ${posters.length}`
+        );
+        return posters;
+      }
+    }
+    return undefined;
+  })();
+
+  if (!$posters || $posters.length === 0) {
+    logger.warn("No posters found, returning empty metadata array");
+    return [];
   }
 
   const metadata: (BasicMetadata & { poster?: string })[] = [];
@@ -383,17 +397,19 @@ async function scrapePostersForMetadata(
   });
 
   $posters.each(function () {
-    const $el = $(this);
+    const $el = $(this).parent();
 
-    const filmSlug = $el.data("filmSlug");
+    const filmSlug = $el.data("itemSlug");
     const altPosterId = $el.data("altPoster");
-    const name = $el.find("img").first().prop("alt");
+    const name = $el.data("itemName");
 
     const parsedMetadata = InterimBasicMetadataSchema.parse({
       id: `${filmSlug}`,
-      name,
+      name: `${name}`,
       altPoster: altPosterId,
     });
+
+    console.debug({ parsedMetadata });
 
     metadata.push({ ...parsedMetadata, poster: "" });
   });
