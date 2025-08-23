@@ -23,6 +23,6 @@
   "license": "ISC",
   "packageManager": "pnpm@10.5.0",
   "dependencies": {
-    "@prisma/client": "6.5.0"
+    "@prisma/client": "6.13.0"
   }
 }

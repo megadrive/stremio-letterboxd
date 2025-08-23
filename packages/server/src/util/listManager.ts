@@ -1,5 +1,7 @@
 import { load } from "cheerio";
 import { wrappedFetch } from "./wrappedFetch.js";
+import { pinoLoggerStandalone as logger } from "@/lib/pinoLogger.js";
+import { to } from "await-to-js";
 
 const listUrl = "https://letterboxd.com/lists/popular/this/week/";
 
@@ -36,14 +38,24 @@ export class ListManager {
   }
 
   private async fetchListPage(url: string) {
-    const res = await wrappedFetch(url, {
-      headers: {
-        "Cache-Control": "no-cache",
-      },
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch list page: ${res.statusText}`);
+    const [resErr, res] = await to(
+      wrappedFetch(url, {
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      })
+    );
+
+    if (resErr) {
+      logger.error(`Error fetching list page: ${resErr}`);
+      return;
     }
+
+    if (!res.ok) {
+      logger.error(`Failed to fetch list page: ${res.statusText}`);
+      return;
+    }
+
     return res.text();
   }
 
@@ -79,16 +91,22 @@ export class ListManager {
 
     for (let i = 1; i <= numPagesToFetch; i++) {
       const listUrlPage = `${listUrl}/page/${i}`;
-      try {
-        const html = await this.fetchListPage(listUrlPage);
-        const $ = load(html);
 
-        const lists = this.parseListPage($);
-        for (const list of lists) {
-          this.lists.add(list.url);
-        }
-      } catch (error) {
-        console.error(`Failed to fetch list page: ${error}`);
+      const [htmlErr, html] = await to(this.fetchListPage(listUrlPage));
+      if (htmlErr) {
+        console.error(`Error fetching list page ${listUrlPage}: ${htmlErr}`);
+        continue;
+      }
+      if (!html) {
+        console.warn(`No HTML returned for list page: ${listUrlPage}`);
+        continue;
+      }
+
+      const $ = load(html);
+
+      const lists = this.parseListPage($);
+      for (const list of lists) {
+        this.lists.add(list.url);
       }
     }
   }

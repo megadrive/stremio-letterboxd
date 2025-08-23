@@ -7,6 +7,7 @@ import { z } from "zod";
 import { FETCH_FAILED, SCRAPE_FAILED } from "@/lib/errors.js";
 import { prisma } from "@stremio-addon/database";
 import { config, type Config } from "@stremio-addon/config";
+import { to } from "await-to-js";
 
 // gets cached in each user's database
 export const BasicMetadataSchema = z.object({
@@ -83,12 +84,8 @@ export class LetterboxdCacher {
 
       const foundPages = +$(".paginate-page").last().text();
       // TODO refactor this later
-      let pages = (() => {
-        if (foundPages > 10) return 10;
-        if (foundPages < 1) return 1;
-
-        return foundPages;
-      })();
+      // min-max 1 to 10
+      let pages = Math.min(Math.max(1, foundPages), 10);
       if (new URL(url).pathname.startsWith("/films")) {
         // 72 * 10 = 720
         pages = 10;
@@ -153,16 +150,25 @@ export class LetterboxdCacher {
 async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
   const idQueue = new PQueue({ concurrency: 3 });
 
-  const cachedIds = await prisma.film.findMany({
-    where: {
-      id: { in: initialMeta.map((meta) => meta.id) },
-      AND: {
-        updatedAt: {
-          gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1),
+  const [cachedIdsErr, cachedIds] = await to(
+    prisma.film.findMany({
+      where: {
+        id: { in: initialMeta.map((meta) => meta.id) },
+        AND: {
+          updatedAt: {
+            gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1),
+          },
         },
       },
-    },
-  });
+    })
+  );
+
+  if (cachedIdsErr || !cachedIds) {
+    logger.error("Failed to fetch cached IDs");
+    logger.error(cachedIdsErr);
+    return;
+  }
+
   const cachedIdsSet = new Set(cachedIds.map((meta) => meta.id));
   initialMeta = initialMeta.filter((meta) => !cachedIdsSet.has(meta.id));
   logger.info(`Found ${cachedIds.length} cached IDs`);
@@ -175,7 +181,12 @@ async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
   for (const meta of initialMeta) {
     idQueue.add(async () => {
       const url = `https://letterboxd.com/film/${meta.id}/`;
-      const html = await fetchHtml(url);
+      const [htmlErr, html] = await to(fetchHtml(url));
+      if (htmlErr || !html) {
+        logger.error(`Failed to fetch HTML for ${meta.id}`);
+        logger.error(htmlErr);
+        return;
+      }
       const $ = cheerio(html);
 
       //<a href="http://www.imdb.com/title/tt31806037/maindetails" class="micro-button track-event" data-track-action="IMDb" target="_blank">IMDb</a>`
@@ -322,14 +333,14 @@ async function fetchHtml(
   headers?: Record<string, string>
 ): Promise<string> {
   logger.info(`Scraping HTML from ${url}`);
-  const res = await resolveFinalUrl(url);
-  if (!res) {
-    throw { ...SCRAPE_FAILED, message: "Failed to resolve final URL." };
-  }
-
-  const urlToScrape = await determineStrategy(res.url);
-
   try {
+    const resFinalUrl = await resolveFinalUrl(url);
+    if (!resFinalUrl) {
+      throw { ...SCRAPE_FAILED, message: "Failed to resolve final URL." };
+    }
+
+    const urlToScrape = await determineStrategy(resFinalUrl.url);
+
     const res = await wrappedFetch(urlToScrape, { headers });
 
     if (!res.ok) {
@@ -342,6 +353,7 @@ async function fetchHtml(
     logger.info("Successfully fetched HTML");
     return await res.text();
   } catch (error) {
+    logger.error(`Failed to fetch HTML from ${url}`);
     logger.error(error);
   }
 

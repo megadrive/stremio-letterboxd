@@ -5,6 +5,7 @@ import {
   letterboxdCacher,
 } from "@/workers/letterboxdCacher.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
+import { to } from "await-to-js";
 
 export const manifestRouter = createRouter();
 
@@ -21,16 +22,25 @@ manifestRouter.get("/", async (c) => {
   const conf = c.var.config;
 
   let catalogName = conf.catalogName;
-  try {
-    if (!catalogName) {
-      // if the catalog name is not provided, determine it from the letterboxd page
-      catalogName = await determineCatalogName({
+  if (!catalogName) {
+    // if the catalog name is not provided, determine it from the letterboxd page
+    const [nameErr, name] = await to(
+      determineCatalogName({
         url: conf.url,
-      });
+      })
+    );
+
+    if (nameErr) {
+      c.var.logger.error("Failed to determine catalog name.");
+      return c.text(nameErr.message, INTERNAL_SERVER_ERROR);
     }
-  } catch {
-    c.var.logger.error("Failed to determine catalog name.");
-    return c.text("", INTERNAL_SERVER_ERROR);
+
+    if (!name) {
+      c.var.logger.error("Failed to determine catalog name.");
+      return c.text("Failed to determine catalog name.", INTERNAL_SERVER_ERROR);
+    }
+
+    catalogName = name;
   }
 
   let posterChoice = "";

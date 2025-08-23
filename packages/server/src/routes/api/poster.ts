@@ -4,6 +4,7 @@ import {
   type AppBindingsWithConfig,
 } from "@/util/createHono.js";
 import { prisma } from "@stremio-addon/database";
+import { to } from "await-to-js";
 import { load as cheerio } from "cheerio";
 import type { Context } from "hono";
 import { INTERNAL_SERVER_ERROR, NOT_FOUND } from "stoker/http-status-codes";
@@ -25,12 +26,25 @@ async function fetchPoster(
   altId?: string
 ): Promise<string | undefined> {
   const POSTER_URL = `https://letterboxd.com/ajax/poster/film/${slug}/std/${altId ? `${altId}/` : ""}230x345/?k=${cacheBuster()}`;
-  const res = await fetch(POSTER_URL);
-  if (!res.ok) {
+
+  const [resErr, res] = await to(fetch(POSTER_URL));
+  if (resErr || !res.ok) {
+    logger.error(`Error fetching poster for ${slug}`);
+    if (resErr) {
+      logger.error(resErr);
+    }
+    return;
+  }
+  const [htmlErr, html] = await to(res.text());
+
+  if (htmlErr || !html) {
+    logger.error(`Error parsing HTML for poster of ${slug}`);
+    if (htmlErr) {
+      logger.error(htmlErr);
+    }
     return;
   }
 
-  const html = await res.text();
   const $ = cheerio(html);
 
   const href = $("img").first().prop("srcset");

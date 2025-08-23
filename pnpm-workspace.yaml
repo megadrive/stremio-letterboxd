@@ -1,10 +1,11 @@
 packages:
-  - packages/config
-  - packages/database
-  - packages/env
-  - packages/server
-  - packages/web
+  - packages/*
 
 catalogs:
   prisma:
     prisma: latest
+
+syncInjectedDepsAfterScripts:
+  - build
+
+injectWorkspacePackages: true

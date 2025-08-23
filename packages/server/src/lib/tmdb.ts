@@ -1,6 +1,7 @@
 import { serverEnv } from "@stremio-addon/env";
 import { z, type ZodSchema } from "zod";
 import { pinoLoggerStandalone as logger } from "./pinoLogger.js";
+import { to } from "await-to-js";
 
 type Result<T> =
   | {
@@ -17,43 +18,51 @@ async function tmdbApi<T>(
   tmdbApiKey: string,
   schema: ZodSchema
 ): Promise<Result<T>> {
-  try {
-    const res = await fetch(`https://api.themoviedb.org/3${endpoint}`, {
+  const [resErr, res] = await to(
+    fetch(`https://api.themoviedb.org/3${endpoint}`, {
       headers: {
         accept: "application/json",
         Authorization: `Bearer ${tmdbApiKey}`,
       },
-    });
+    })
+  );
 
-    if (!res.ok) {
-      return Promise.resolve({
-        success: false,
-        error: `Error fetching TMDB API: ${res.status} ${res.statusText}`,
-      });
-    }
-    const json = await res.json();
-    const parsed = schema.safeParse(json);
-    if (!parsed.success) {
-      logger.error("Error parsing TMDB API response");
-      logger.error(parsed.error.issues);
-      return Promise.resolve({
-        success: false,
-        error: `Error parsing TMDB API response: ${parsed.error}`,
-      });
-    }
-
+  if (resErr) {
+    logger.error(`Error fetching TMDB API: ${resErr}`);
     return Promise.resolve({
-      success: true,
-      data: parsed.data,
+      success: false,
+      error: `Error fetching TMDB API: ${resErr}`,
     });
-  } catch (error) {
-    logger.error("Error fetching TMDB API");
-    logger.error(error);
+  }
+
+  if (!res.ok) {
+    return Promise.resolve({
+      success: false,
+      error: `Error fetching TMDB API: ${res.status} ${res.statusText}`,
+    });
+  }
+
+  const [jsonErr, json] = await to(res.json());
+  if (jsonErr) {
+    logger.error(`Error parsing TMDB API response: ${jsonErr}`);
+    return Promise.resolve({
+      success: false,
+      error: `Error parsing TMDB API response: ${jsonErr}`,
+    });
+  }
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    logger.error("Error parsing TMDB API response");
+    logger.error(parsed.error.issues);
+    return Promise.resolve({
+      success: false,
+      error: `Error parsing TMDB API response: ${parsed.error}`,
+    });
   }
 
   return Promise.resolve({
-    success: false,
-    error: "Error fetching TMDB API",
+    success: true,
+    data: parsed.data,
   });
 }
 

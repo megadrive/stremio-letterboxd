@@ -34,7 +34,7 @@
     "husky": "^9.1.7",
     "prettier": "^3.5.2",
     "syncpack": "^13.0.2",
-    "tsx": "^4.19.3",
+    "tsx": "^4.20.3",
     "typescript-eslint": "^8.24.1"
   }
 }

@@ -78,6 +78,6 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
       }
     }
 
-    await next();
+    await next().catch(() => {});
   }
 );

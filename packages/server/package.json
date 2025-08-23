@@ -11,6 +11,7 @@
     "@stremio-addon/config": "workspace:*",
     "@stremio-addon/database": "workspace:*",
     "@stremio-addon/env": "workspace:*",
+    "await-to-js": "^3.0.0",
     "cheerio": "^1.0.0",
     "fast-shuffle": "^6.1.1",
     "hono": "^4.7.4",
@@ -20,11 +21,11 @@
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "stoker": "^1.4.2",
+    "tsx": "^4.20.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",
-    "@types/stremio-addon-sdk": "^1.6.11",
-    "tsx": "^4.19.3"
+    "@types/stremio-addon-sdk": "^1.6.11"
   }
 }
