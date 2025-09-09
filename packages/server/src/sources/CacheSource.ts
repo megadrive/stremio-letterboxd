@@ -26,10 +26,9 @@ export class CacheSource implements ISource {
       return [];
     }
 
-    if (
-      cached &&
-      Date.now() - cached?.updatedAt.getTime() > 24 * 60 * 60 * 1000
-    ) {
+    // if the cache is older than 24 hours, update it in the background
+    const TTL = 1000 * 60 * 60; // 1 hour
+    if (cached && Date.now() - cached.updatedAt.getTime() > TTL) {
       // kick off an update if the config is not up to date
       letterboxdCacher.addList(config);
     }
@@ -61,6 +60,12 @@ export class CacheSource implements ISource {
       director: film.director ? JSON.parse(film.director) : undefined,
       genres: film.genres ? JSON.parse(film.genres) : undefined,
     }));
+
+    console.info(`Sorting films for ${config.url}`);
+    // order the films in the same order as the slugs
+    filmsData.sort((a, b) => {
+      return slugs.indexOf(a.id) - slugs.indexOf(b.id);
+    });
 
     return filmsData;
   }
