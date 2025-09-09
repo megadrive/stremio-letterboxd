@@ -3,13 +3,14 @@ import type { MetaDetail } from "stremio-addon-sdk";
 import { parseExtras } from "@/util/parseExtras.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 import { prisma } from "@stremio-addon/database";
-import {
-  CatalogMetadataSchema,
-  letterboxdCacher,
-} from "@/workers/letterboxdCacher.js";
 import type { Context } from "hono";
 import { serverEnv } from "@stremio-addon/env";
-import { createShuffle } from "fast-shuffle";
+// import { createShuffle } from "fast-shuffle";
+import { CacheSource } from "@/sources/CacheSource.js";
+import type { SourceResult } from "@/sources/ISource.js";
+import { to } from "await-to-js";
+
+const SOURCES = [new CacheSource()];
 
 export const catalogRouter = createRouter();
 
@@ -46,98 +47,108 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       },
     });
 
-    // kick off an update if the config is not up to date
-    letterboxdCacher.addList(c.var.config);
-
     if (!cached) {
       c.var.logger.error(`Failed to find cached metadata for ${encodedConfig}`);
 
       return c.json({ metas: [] }, INTERNAL_SERVER_ERROR);
     }
-    const cachedMetadata = CatalogMetadataSchema.safeParse(
-      JSON.parse(cached.metadata)
-    );
 
-    if (cachedMetadata.success === false) {
-      c.var.logger.error(
-        `Failed to parse cached metadata for ${encodedConfig}`
+    let data: SourceResult[] = [];
+    let successfulSource: string | null = null;
+    for (const source of SOURCES) {
+      const [sourceDataErr, sourceData] = await to(
+        source.fetch({
+          config: c.var.config,
+          configString: c.var.configString,
+        })
       );
+
+      if (!sourceDataErr) {
+        c.var.logger.info(
+          `Fetched ${sourceData.length} items from source ${source.constructor.name}`
+        );
+        data = sourceData;
+        successfulSource = source.constructor.name;
+        break;
+      }
+      c.var.logger.error(
+        `Error fetching data from source ${source.constructor.name}: ${sourceDataErr}`
+      );
+    }
+
+    if (!successfulSource) {
+      c.var.logger.error(`All sources failed for config ${encodedConfig}`);
       return c.json({ metas: [] }, INTERNAL_SERVER_ERROR);
     }
 
-    const slugs = cachedMetadata.data.items.map((item) => item.id);
-    let cachedFilms = await prisma.film.findMany({
-      where: {
-        id: {
-          in: slugs,
-        },
-      },
-    });
+    c.var.logger.info(
+      `Using data from source ${successfulSource} for config ${encodedConfig}`
+    );
 
-    if (!c.var.config.url.includes("/by/shuffle/")) {
-      c.var.logger.info(`Sorting films for ${c.var.config.url}`);
-      // order the films in the same order as the slugs
-      cachedFilms.sort((a, b) => {
-        return slugs.indexOf(a.id) - slugs.indexOf(b.id);
-      });
-    } else {
-      // if we are shuffling, get the seed from the database if it exists
-      c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
-      let seedRecord = await prisma.shuffleSeed.findFirst({
-        where: {
-          configId: cached.id,
-        },
-      });
+    // if (!c.var.config.url.includes("/by/shuffle/")) {
+    //   c.var.logger.info(`Sorting films for ${c.var.config.url}`);
+    //   // order the films in the same order as the slugs
+    //   data.sort((a, b) => {
+    //     return slugs.indexOf(a.id) - slugs.indexOf(b.id);
+    //   });
+    // } else {
+    //   // if we are shuffling, get the seed from the database if it exists
+    //   c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
+    //   let seedRecord = await prisma.shuffleSeed.findFirst({
+    //     where: {
+    //       configId: cached.id,
+    //     },
+    //   });
 
-      if (seedRecord) {
-        c.var.logger.info(
-          `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
-        );
-      }
+    //   if (seedRecord) {
+    //     c.var.logger.info(
+    //       `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
+    //     );
+    //   }
 
-      // if expired or not found, create a new seed
-      const ONE_HOUR = 60 * 60 * 1000;
-      if (
-        !seedRecord ||
-        Date.now() - seedRecord.updatedAt.getTime() > ONE_HOUR
-      ) {
-        // create a new seed
-        c.var.logger.info(
-          `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
-        );
-        const newSeed = Math.random() * 1000000;
-        const newSeedRecord = await prisma.shuffleSeed.upsert({
-          where: {
-            configId: cached.id,
-          },
-          create: {
-            configId: cached.id,
-            seed: `${newSeed}`,
-          },
-          update: {
-            seed: `${newSeed}`,
-          },
-        });
-        c.var.logger.info(`Created new shuffle seed: ${newSeedRecord.seed}`);
-        seedRecord = newSeedRecord;
-      }
+    //   // if expired or not found, create a new seed
+    //   const ONE_HOUR = 60 * 60 * 1000;
+    //   if (
+    //     !seedRecord ||
+    //     Date.now() - seedRecord.updatedAt.getTime() > ONE_HOUR
+    //   ) {
+    //     // create a new seed
+    //     c.var.logger.info(
+    //       `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
+    //     );
+    //     const newSeed = Math.random() * 1000000;
+    //     const newSeedRecord = await prisma.shuffleSeed.upsert({
+    //       where: {
+    //         configId: cached.id,
+    //       },
+    //       create: {
+    //         configId: cached.id,
+    //         seed: `${newSeed}`,
+    //       },
+    //       update: {
+    //         seed: `${newSeed}`,
+    //       },
+    //     });
+    //     c.var.logger.info(`Created new shuffle seed: ${newSeedRecord.seed}`);
+    //     seedRecord = newSeedRecord;
+    //   }
 
-      // randomise the cached films with the seed
-      const seededShuffle = createShuffle(+seedRecord.seed);
-      cachedFilms = seededShuffle(cachedFilms);
-    }
+    //   // randomise the cached films with the seed
+    //   const seededShuffle = createShuffle(+seedRecord.seed);
+    //   cachedFilms = seededShuffle(cachedFilms);
+    // }
 
     // pagination
     const start = parsedExtras?.skip ? Number(parsedExtras.skip) : 0;
     let end = start + serverEnv.CATALOG_PAGE_SIZE;
-    if (end >= cachedFilms.length) {
-      end = cachedFilms.length;
+    if (end >= data.length) {
+      end = data.length;
     }
-    const paginatedCachedFilms = cachedFilms.slice(start, end);
+    const paginatedCachedFilms = data.slice(start, end);
 
     const metas: MetaDetail[] = paginatedCachedFilms.map((film) => {
       const poster = (() => {
-        const cachedConfigFilmMetadata = cachedMetadata.data.items.find(
+        const cachedConfigFilmMetadata = data.find(
           (item) => item.id === film.id
         );
 
@@ -150,9 +161,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         }
 
         if (c.var.config.posterChoice === "letterboxd-custom-from-list") {
-          const altId = cachedMetadata.data.items.find(
-            (item) => item.id === film.id
-          )?.altPoster;
+          const altId = data.find((item) => item.id === film.id)?.altPoster;
           // if altId is not found, use the default letterboxd poster
           return `${c.var.config.origin}/api/poster/${film.id}${altId ? `/${altId}` : ""}`;
         }
@@ -174,11 +183,12 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       return {
         id: film.imdb ?? `letterboxd:${film.id}`,
         type: "movie",
-        name: film.title,
+        name: film.name,
         description: film.description ?? undefined,
-        cast: film.cast ? JSON.parse(film.cast) : undefined,
-        director: film.director ? JSON.parse(film.director) : undefined,
-        genres: film.genres ? JSON.parse(film.genres) : undefined,
+        cast: film.cast,
+        director: film.director,
+        // NOTE: change this as it will just be the ids
+        genres: film.genres,
         poster,
       };
     });

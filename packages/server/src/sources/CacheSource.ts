@@ -1,0 +1,67 @@
+import { prisma } from "@stremio-addon/database";
+import type { ISource, SourceResult } from "./ISource.js";
+import {
+  CatalogMetadataSchema,
+  letterboxdCacher,
+} from "@/workers/letterboxdCacher.js";
+import type { Config } from "@stremio-addon/config";
+
+export class CacheSource implements ISource {
+  async fetch(opts: {
+    config: Config;
+    configString: string;
+  }): Promise<SourceResult[]> {
+    const { config, configString } = opts;
+
+    const encodedConfig = configString;
+    const cached = await prisma.config.findFirst({
+      where: {
+        config: encodedConfig,
+      },
+    });
+
+    if (!cached) {
+      console.error(`Failed to find cached metadata for ${encodedConfig}`);
+
+      return [];
+    }
+
+    if (
+      cached &&
+      Date.now() - cached?.updatedAt.getTime() > 24 * 60 * 60 * 1000
+    ) {
+      // kick off an update if the config is not up to date
+      letterboxdCacher.addList(config);
+    }
+
+    const cachedMetadata = CatalogMetadataSchema.safeParse(
+      JSON.parse(cached.metadata)
+    );
+
+    if (cachedMetadata.success === false) {
+      console.error(`Failed to parse cached metadata for ${encodedConfig}`);
+
+      return [];
+    }
+
+    const slugs = cachedMetadata.data.items.map((item) => item.id);
+    const cachedFilms = await prisma.film.findMany({
+      where: {
+        id: {
+          in: slugs,
+        },
+      },
+    });
+
+    const filmsData: SourceResult[] = cachedFilms.map((film) => ({
+      id: film.id,
+      name: film.title,
+      description: film.description || undefined,
+      cast: film.cast ? JSON.parse(film.cast) : undefined,
+      director: film.director ? JSON.parse(film.director) : undefined,
+      genres: film.genres ? JSON.parse(film.genres) : undefined,
+    }));
+
+    return filmsData;
+  }
+}

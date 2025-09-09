@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
+    "@keyv/sqlite": "^4.0.5",
     "@stremio-addon/config": "workspace:*",
     "@stremio-addon/database": "workspace:*",
     "@stremio-addon/env": "workspace:*",
@@ -16,6 +17,7 @@
     "fast-shuffle": "^6.1.1",
     "hono": "^4.7.4",
     "hono-pino": "^0.8.0",
+    "keyv": "^5.5.0",
     "neverthrow": "^8.2.0",
     "p-queue": "^8.1.0",
     "pino": "^9.6.0",

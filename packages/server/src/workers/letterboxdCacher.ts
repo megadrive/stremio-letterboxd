@@ -409,8 +409,6 @@ async function scrapePostersForMetadata(
       altPoster: altPosterId,
     });
 
-    console.debug({ parsedMetadata });
-
     metadata.push({ ...parsedMetadata, poster: "" });
   });
 
