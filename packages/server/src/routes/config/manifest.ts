@@ -1,9 +1,6 @@
 import { createRouter } from "@/util/createHono.js";
 import { addonManifest, createManifest } from "@/util/manifest.js";
-import {
-  determineCatalogName,
-  letterboxdCacher,
-} from "@/workers/letterboxdCacher.js";
+import { determineCatalogName } from "@/workers/letterboxdCacher.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 import { to } from "await-to-js";
 
@@ -94,9 +91,6 @@ manifestRouter.get("/", async (c) => {
       },
     ],
   });
-
-  // once the manifest is created, begin caching films
-  letterboxdCacher.addList(conf);
 
   return c.json(manifest);
 });

@@ -33,13 +33,16 @@ export type CatalogMetadata = z.infer<typeof CatalogMetadataSchema>;
 /** Using p-queue, caches Letterboxd relevant data. */
 export class LetterboxdCacher {
   listQueue: PQueue;
+  runningJobs = new Set<string>();
 
   constructor() {
     this.listQueue = new PQueue({ concurrency: serverEnv.QUEUE_CONCURRENCY });
   }
 
   addList(userConfig: Config) {
-    this.listQueue.add(() => this.scrapeList(userConfig));
+    if (!this.runningJobs.has(userConfig.url)) {
+      this.listQueue.add(() => this.scrapeList(userConfig));
+    }
   }
 
   /**
@@ -66,6 +69,15 @@ export class LetterboxdCacher {
       data-alt-poster="398196"
     />
     */
+
+    if (this.runningJobs.has(userConfig.url)) {
+      console.warn(
+        "Already running job for this URL, skipping:",
+        userConfig.url
+      );
+      return;
+    }
+
     try {
       const encodedConfig = await config.encode(userConfig);
       let url = userConfig.url;
@@ -139,6 +151,8 @@ export class LetterboxdCacher {
           logger.info(`Successfully cached IDs for ${catalogName}`);
         })
         .catch(logger.error);
+
+      this.runningJobs.delete(userConfig.url);
 
       return initialMeta;
     } catch (error) {
