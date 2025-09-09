@@ -6,11 +6,13 @@ import { prisma } from "@stremio-addon/database";
 import type { Context } from "hono";
 import { serverEnv } from "@stremio-addon/env";
 import { createShuffle } from "fast-shuffle";
-import { CacheSource } from "@/sources/CacheSource.js";
-import type { SourceResult } from "@/sources/ISource.js";
 import { to } from "await-to-js";
 
-const SOURCES = [new CacheSource()];
+import type { SourceResult } from "@/sources/ISource.js";
+import { CacheSource } from "@/sources/CacheSource.js";
+import { LetterboxdSource } from "@/sources/Letterboxd.js";
+
+const SOURCES = [new LetterboxdSource(), new CacheSource()];
 
 export const catalogRouter = createRouter();
 

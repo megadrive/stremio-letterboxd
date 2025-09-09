@@ -32,6 +32,19 @@ export const serverEnv = cleanEnv(process.env, {
     default: 30,
     desc: "How many items to show per page in the catalog.",
   }),
+  LETTERBOXD_API_BASE_URL: url({
+    default: "https://api.letterboxd.com/api/v0/",
+    desc: "Base URL for the Letterboxd API.",
+  }),
+  LETTERBOXD_API_KEY: str({
+    desc: "The API key for Letterboxd, get one at https://letterboxd.com/api-beta/. If this is a 0 length, the letterboxd source will be skipped.",
+    example: "abcd1234abcd1234abcd1234abcd1234",
+    default: "",
+  }),
+  LETTERBOXD_API_AUTH_TYPE: str({
+    default: "Bearer",
+    desc: "The auth type to use for the Letterboxd API. Usually Bearer.",
+  }),
 });
 
 export const HOST_LOCAL = `http://localhost:${serverEnv.PORT}`;
