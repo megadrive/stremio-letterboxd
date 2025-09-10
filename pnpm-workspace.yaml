@@ -9,3 +9,9 @@ syncInjectedDepsAfterScripts:
   - build
 
 injectWorkspacePackages: true
+
+onlyBuiltDependencies:
+  - prisma
+  - "@prisma/client"
+  - ts-node
+  - typescript
