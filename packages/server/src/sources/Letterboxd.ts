@@ -3,159 +3,7 @@ import type { ISource, SourceOptions, SourceResult } from "./ISource.js";
 import { createCache } from "./ISource.js";
 import { serverEnv } from "@stremio-addon/env";
 import { z } from "zod";
-
-const ListImageSizeSchema = z.object({
-  width: z.number().describe("The image width in pixels."),
-  height: z.number().describe("The image height in pixels."),
-  url: z.string().describe("The URL to the image file."),
-});
-
-const ImageSchema = z.object({
-  sizes: z
-    .array(ListImageSizeSchema)
-    .describe("The available sizes for the image."),
-});
-
-const PronounSchema = z.object({
-  id: z.string().describe("The LID for this pronoun."),
-  label: z.string().describe("A label to describe this pronoun."),
-  subjectPronoun: z
-    .string()
-    .describe("The pronoun to use when the member is the subject."),
-  objectPronoun: z
-    .string()
-    .describe("The pronoun to use when the member is the object."),
-  possessiveAdjective: z.string(),
-  possessivePronoun: z.string(),
-  reflexive: z
-    .string()
-    .describe("The pronoun to use to refer back to the member."),
-});
-
-const MemberSchema = z.object({
-  id: z.string().describe("The LID of the member."),
-  username: z.string(),
-  givenName: z.string().optional(),
-  familyName: z.string().optional(),
-  displayName: z.string(),
-  shortName: z.string(),
-  pronoun: PronounSchema.optional(),
-  avatar: ImageSchema.optional(),
-  memberStatus: z.enum(["Crew", "Alum", "Hq", "Patron", "Pro", "Member"]),
-  hideAdsInContent: z.boolean(),
-  accountStatus: z.enum(["Active", "Memorialized"]),
-  commentPolicy: z.enum(["Anyone", "Friends", "You"]).optional(),
-  hideAds: z.boolean(),
-});
-
-const FilmSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  originalName: z.string().optional(),
-  sortingName: z.string(),
-  alternativeNames: z.array(z.string()).optional(),
-  releaseYear: z.number().optional(),
-  runTime: z.number().optional(),
-  rating: z.number().optional(),
-  directors: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      characterName: z.string().optional(),
-      tmdbid: z.string().optional(),
-      customPoster: ImageSchema.optional(),
-    })
-  ),
-  poster: ImageSchema,
-  adultPoster: ImageSchema.optional(),
-  top250Position: z.number().optional(),
-  adult: z.boolean(),
-  reviewsHidden: z.boolean(),
-  posterCustomisable: z.boolean(),
-  backdropCustomisable: z.boolean(),
-  filmCollectionId: z.string().optional(),
-  links: z.array(
-    z.object({
-      type: z.enum([
-        "letterboxd",
-        "boxd",
-        "tmdb",
-        "imdb",
-        "justwatch",
-        "facebook",
-        "instagram",
-        "twitter",
-        "youtube",
-        "tickets",
-        "tiktok",
-        "bluesky",
-        "threads",
-      ]),
-      id: z.string(),
-      url: z.string(),
-      label: z.string().optional(),
-      checkUrl: z.string().optional(),
-    })
-  ),
-  genres: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-    })
-  ),
-});
-
-const RelationshipSchema = z.object({
-  watched: z.boolean(),
-  whenWatched: z.string().optional(),
-  liked: z.boolean(),
-  whenLiked: z.string().optional(),
-  favorited: z.boolean(),
-  owned: z.boolean().optional(),
-  inWatchlist: z.boolean(),
-  whenAddedToWatchlist: z.string().optional(),
-  whenCompletedInWatchlist: z.string().optional(),
-  rating: z.number().optional(),
-  reviews: z.array(z.string()),
-  diaryEntries: z.array(z.string()),
-  rewatched: z.boolean().optional(),
-  privacyPolicy: z.enum(["Anyone", "Friends", "You", "Draft"]),
-});
-
-const ListItemSchema = z.object({
-  rank: z.number().optional(),
-  entryId: z.string(),
-  notesLbml: z.string().optional(),
-  posterPickerUrl: z.string().optional(),
-  backdropPickerUrl: z.string().optional(),
-  containsSpoilers: z.boolean().optional(),
-  film: FilmSchema,
-  whenAdded: z.string(),
-  notes: z.string().optional(),
-});
-
-const ListMetadataSchema = z.object({
-  totalFilmCount: z.number(),
-  filteredFilmCount: z.number(),
-});
-
-export const ListSchema = z.object({
-  next: z.string().optional(),
-  items: z.array(ListItemSchema),
-  itemCount: z.number().optional(),
-  metadata: ListMetadataSchema,
-  relationships: z.array(
-    z.object({
-      member: MemberSchema,
-      relationship: z.object({
-        counts: z.object({
-          watches: z.number(),
-          likes: z.number(),
-        }),
-      }),
-    })
-  ),
-});
+import { ListSchema } from "./Letterboxd.types.js";
 
 const cache = createCache<z.infer<typeof ListSchema>>("letterboxd");
 
@@ -166,6 +14,16 @@ const {
   LETTERBOXD_API_KEY,
   LETTERBOXD_API_AUTH_TYPE,
 } = serverEnv;
+
+const toSourceResult = (
+  item: z.infer<typeof ListSchema>["previewEntries"][number]
+): SourceResult => {
+  return {
+    id: item.film.id,
+    name: item.film.name,
+    poster: item.film.poster?.sizes.sort((a, b) => b.width - a.width)[0]?.url,
+  };
+};
 
 export class LetterboxdSource implements ISource {
   async fetch(
@@ -195,40 +53,84 @@ export class LetterboxdSource implements ISource {
 
     // get the list ID
     const [listIdErr, listIdRes] = await to(
-      fetch(`${LETTERBOXD_API_BASE_URL}/list/${url}`, {
+      fetch(url, {
         method: "HEAD",
       })
     );
 
-    if (listIdErr || !listIdRes || !listIdRes.ok) {
-      console.error(
-        `Failed to fetch Letterboxd list ID for ${url}: ${listIdErr}`
-      );
+    if (listIdErr || !listIdRes?.ok) {
+      console.error(`HEAD request failed for ${url}`);
       return [];
     }
 
-    const listId = listIdRes.headers.get("x-letterboxd-id");
+    const listId = listIdRes.headers.get("x-letterboxd-identifier");
 
     if (!listId) {
       console.error(`Failed to get Letterboxd list ID for ${url}`);
       return [];
     }
 
+    console.info(`Got Letterboxd list ID ${listId} for ${url}`);
+
     const cachedData = await cache.get(listId);
     if (cachedData) {
-      return cachedData.items.map((item) => ({
-        id: item.film.id,
-        name: item.film.name,
-        type: "movie",
-        poster: item.film.poster.sizes.sort((a, b) => b.width - a.width)[0]
-          ?.url,
-        releaseInfo: item.film.releaseYear?.toString(),
-        tmdbId: item.film.links.find((link) => link.type === "tmdb")?.id,
-      }));
+      console.info(`Using cached Letterboxd list data for ${url}`);
+      return cachedData.previewEntries.map(toSourceResult);
     }
 
-    // fetch the data
+    console.info(`No cached Letterboxd list data for ${url}, fetching...`);
 
-    return [];
+    // fetch the data
+    const headers = new Headers();
+    switch (LETTERBOXD_API_AUTH_TYPE.toLowerCase()) {
+      case "bearer":
+        headers.set("Authorization", `Bearer ${LETTERBOXD_API_KEY}`);
+        break;
+      case "rapidapi":
+        headers.set("X-RapidAPI-Key", LETTERBOXD_API_KEY);
+        headers.set("X-RapidAPI-Host", new URL(LETTERBOXD_API_BASE_URL).host);
+        break;
+    }
+
+    console.info(`Fetching Letterboxd list data for ${url} (ID: ${listId})`);
+
+    const apiListUrl = `${LETTERBOXD_API_BASE_URL}/list/${listId}`;
+    console.info(`Fetching Letterboxd list data from ${apiListUrl}`);
+    const [lbxdErr, lbxdRes] = await to(
+      fetch(apiListUrl, {
+        headers,
+      })
+    );
+
+    if (lbxdErr || !lbxdRes?.ok) {
+      console.warn(lbxdErr, lbxdRes);
+      console.error(
+        `Failed to fetch Letterboxd list data for ${url} (ID: ${listId}): ${lbxdErr}`
+      );
+      return [];
+    }
+
+    const [parseErr, parsed] = await to(lbxdRes.json());
+    if (parseErr || !parsed) {
+      console.error(
+        `Failed to parse Letterboxd list data for ${url} (ID: ${listId}): ${parseErr}`
+      );
+      return [];
+    }
+
+    const validated = ListSchema.safeParse(parsed);
+    if (!validated.success) {
+      console.error(
+        `Failed to validate Letterboxd list data for ${url} (ID: ${listId})`
+      );
+      console.error(validated.error);
+      return [];
+    }
+
+    const listData: SourceResult[] =
+      validated.data.previewEntries.map(toSourceResult);
+
+    await cache.set(listId, validated.data, 60 * 60);
+    return listData;
   }
 }

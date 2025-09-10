@@ -1,5 +1,13 @@
-import "dotenv/config";
+import { config } from "dotenv";
 import { cleanEnv, str, num, url } from "envalid";
+import { join } from "node:path";
+
+// when running in dev, run `pnpm -w dev` to load the .env from the repo root
+const envPath = join(process.cwd(), "..", "..", ".env");
+console.info(`Loading env from ${envPath}`);
+config({
+  path: envPath,
+});
 
 /**
  * Environment variables.
@@ -34,7 +42,7 @@ export const serverEnv = cleanEnv(process.env, {
   }),
   LETTERBOXD_API_BASE_URL: url({
     default: "https://api.letterboxd.com/api/v0/",
-    desc: "Base URL for the Letterboxd API.",
+    desc: "Base URL for the Letterboxd API. No trailing slash.",
   }),
   LETTERBOXD_API_KEY: str({
     desc: "The API key for Letterboxd, get one at https://letterboxd.com/api-beta/. If this is a 0 length, the letterboxd source will be skipped.",
@@ -42,8 +50,8 @@ export const serverEnv = cleanEnv(process.env, {
     default: "",
   }),
   LETTERBOXD_API_AUTH_TYPE: str({
-    default: "Bearer",
-    desc: "The auth type to use for the Letterboxd API. Usually Bearer.",
+    default: "bearer",
+    desc: "The auth type to use for the Letterboxd API. Usually bearer.",
   }),
 });
 

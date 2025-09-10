@@ -60,12 +60,13 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     for (const source of SOURCES) {
       const [sourceDataErr, sourceData] = await to(
         source.fetch({
+          url: c.var.config.url,
           config: c.var.config,
           configString: c.var.configString,
         })
       );
 
-      if (!sourceDataErr) {
+      if (!sourceDataErr && sourceData.length > 0) {
         c.var.logger.info(
           `Fetched ${sourceData.length} items from source ${source.constructor.name}`
         );
