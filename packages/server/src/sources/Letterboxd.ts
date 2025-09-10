@@ -127,10 +127,38 @@ export class LetterboxdSource implements ISource {
       return [];
     }
 
-    const listData: SourceResult[] =
+    console.info(
+      `Fetched and validated Letterboxd list data for ${url} (ID: ${listId})`
+    );
+
+    let listData: SourceResult[] =
       validated.data.previewEntries.map(toSourceResult);
 
-    await cache.set(listId, validated.data, 60 * 60);
+    listData = listData.map((item) => {
+      // convert id to slug
+      // find the item in the validated list
+      const validatedItem = validated.data.previewEntries.find(
+        (i) => i.film.id === item.id
+      );
+      if (validatedItem) {
+        const link = validatedItem.film.link;
+        const slugMatch = link.match(/\/film\/([^/]+)/);
+        if (slugMatch && slugMatch[1]) {
+          return {
+            ...item,
+            id: slugMatch[1],
+          };
+        }
+      }
+
+      return {
+        ...item,
+        id: "",
+      };
+    });
+
+    await cache.set(listId, validated.data, 1000 * 60 * 60); // 1 hour
+
     return listData;
   }
 }

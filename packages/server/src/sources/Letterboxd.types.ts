@@ -90,6 +90,7 @@ const FilmSchema = z.object({
   originalName: z
     .string({ description: "First party, Letterboxd internal." })
     .optional(),
+  link: z.string().url(),
   sortingName: z.string(),
   alternativeNames: z
     .array(z.string({ description: "First party, Letterboxd internal." }))
