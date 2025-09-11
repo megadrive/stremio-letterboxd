@@ -63,6 +63,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           url: c.var.config.url,
           config: c.var.config,
           configString: c.var.configString,
+          skip: parsedExtras?.skip ? Number(parsedExtras.skip) : undefined,
         })
       );
 
@@ -150,14 +151,35 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         );
 
         if (!cachedConfigFilmMetadata) {
+          c.var.logger.error(`No cached metadata found for film ID ${film.id}`);
           return "";
         }
 
         if (c.var.config.posterChoice === "letterboxd") {
+          if (successfulSource === "LetterboxdSource") {
+            const filmPoster = paginatedCachedFilms.find(
+              (f) => f.id === film.id
+            )?.poster;
+
+            if (filmPoster) {
+              return filmPoster;
+            }
+          }
+
           return `${c.var.config.origin}/api/poster/${film.id}`;
         }
 
         if (c.var.config.posterChoice === "letterboxd-custom-from-list") {
+          if (successfulSource === "LetterboxdSource") {
+            const filmPoster = paginatedCachedFilms.find(
+              (f) => f.id === film.id
+            )?.poster;
+
+            if (filmPoster) {
+              return filmPoster;
+            }
+          }
+
           const altId = data.find((item) => item.id === film.id)?.altPoster;
           // if altId is not found, use the default letterboxd poster
           return `${c.var.config.origin}/api/poster/${film.id}${altId ? `/${altId}` : ""}`;
@@ -174,6 +196,8 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           return `https://images.metahub.space/poster/small/${film.imdb}/img`;
         }
 
+        c.var.logger.error({ config: c.var.config, film });
+        c.var.logger.error(`!!! No poster found for film ID ${film.id}`);
         return "";
       })();
 

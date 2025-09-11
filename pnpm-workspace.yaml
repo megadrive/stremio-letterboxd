@@ -11,6 +11,7 @@ syncInjectedDepsAfterScripts:
 injectWorkspacePackages: true
 
 onlyBuiltDependencies:
+  - sqlite3
   - prisma
   - "@prisma/client"
   - ts-node

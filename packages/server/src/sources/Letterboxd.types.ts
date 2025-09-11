@@ -84,7 +84,7 @@ const GenreSchema = z.object({
   name: z.string(),
 });
 
-const FilmSchema = z.object({
+export const FilmSchema = z.object({
   id: z.string(),
   name: z.string(),
   originalName: z
@@ -140,4 +140,23 @@ export const ListSchema = z.object({
   clonedFrom: z.string().optional(),
   previewEntries: z.array(ListEntrySummarySchema),
   links: z.array(LinksSchema),
+});
+
+export const ListEntriesSchema = z.object({
+  next: z.string().optional(),
+  items: z.array(
+    z.object({
+      entryId: z.string(),
+      film: FilmSchema,
+      whenAdded: z.coerce.date(),
+      containsSpoilers: z.boolean().optional(),
+      notes: z.string().optional(),
+      rank: z.number().optional(),
+    })
+  ),
+  metadata: z.object({
+    filteredFilmCount: z.number(),
+    totalFilmCount: z.number(),
+  }),
+  itemCount: z.number().optional(),
 });

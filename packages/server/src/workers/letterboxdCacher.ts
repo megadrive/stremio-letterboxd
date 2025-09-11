@@ -193,6 +193,9 @@ async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
   }
 
   for (const meta of initialMeta) {
+    if (!meta?.id) {
+      continue;
+    }
     idQueue.add(async () => {
       const url = `https://letterboxd.com/film/${meta.id}/`;
       const [htmlErr, html] = await to(fetchHtml(url));
@@ -292,9 +295,7 @@ export async function determineCatalogName(opts: {
   return "Catalog name not found";
 }
 
-async function resolveFinalUrl(
-  url: string
-): Promise<ReturnType<typeof wrappedFetch> | undefined> {
+async function resolveFinalUrl(url: string): Promise<string | undefined> {
   try {
     const res = await wrappedFetch(url, {
       redirect: "follow",
@@ -304,7 +305,7 @@ async function resolveFinalUrl(
       throw { ...FETCH_FAILED, status: res.status };
     }
 
-    return res;
+    return res.url;
   } catch (error) {
     logger.error(error);
   }
@@ -348,16 +349,18 @@ async function fetchHtml(
 ): Promise<string> {
   logger.info(`Scraping HTML from ${url}`);
   try {
-    const resFinalUrl = await resolveFinalUrl(url);
-    if (!resFinalUrl) {
+    const [resFinalUrlErr, resFinalUrl] = await to(resolveFinalUrl(url));
+    if (resFinalUrlErr || !resFinalUrl) {
       throw { ...SCRAPE_FAILED, message: "Failed to resolve final URL." };
     }
 
-    const urlToScrape = await determineStrategy(resFinalUrl.url);
+    const urlToScrape = await determineStrategy(resFinalUrl);
 
-    const res = await wrappedFetch(urlToScrape, { headers });
+    const [resErr, res] = await to(wrappedFetch(urlToScrape, { headers }));
 
-    if (!res.ok) {
+    if (resErr || !res.ok) {
+      if (resErr) logger.error(resErr);
+
       throw {
         ...FETCH_FAILED,
         message: `Couldn't scrape HTML: ${urlToScrape}`,
