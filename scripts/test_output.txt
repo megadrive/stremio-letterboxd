@@ -1,0 +1,32 @@
+Fetching https://letterboxd.com/etienneone/watchlist/
+Found poster candidates: 29
+Parsed entries (first 50):
+#2               Rite of Passage: The Amazing Spider-Man Reborn
+#3               Paper Man
+#4               Lurker
+#5               Zero Day
+#6               Prince of the City
+#7               Amarcord
+#8               The Last Tycoon
+#9               The American Friend
+#10              They Came Together
+#11              Cruising
+#12              Escape from the 21st Century
+#13              Day of the Fight
+#14              Lost Bullet
+#15              Happiness
+#16              The Master
+#17              Like Father, Like Son
+#18              Class of 1999
+#19              The Last Match
+#20              Love Me
+#21              The Assessment
+#22              Suze
+#23              Locke
+#24              It Feeds
+#25              The Prowler
+#26              Beating Hearts
+#27              Villains
+#28              The Devil All the Time
+#29              Gonjiam: Haunted Asylum
+Total parsed entries: 28
