@@ -413,21 +413,65 @@ async function scrapePostersForMetadata(
     altPoster: z.coerce.string().optional(),
   });
 
-  $posters.each(function () {
-    const $el = $(this).parent();
+$posters.each(function () {
+  // the poster anchor or element
+  const $anchor = $(this);
+  // sometimes the code used parent() earlier; keep variable for clarity
+  const $el = $anchor.parent().length ? $anchor.parent() : $anchor;
 
-    const filmSlug = $el.data("itemSlug");
-    const altPosterId = $el.data("altPoster");
-    const name = $el.data("itemName");
+  // Robust attribute extraction:
+  // prefer current Letterboxd data attributes, but fall back to old names and href parsing.
+  let filmSlug =
+    // cheerio .data maps data-foo-bar -> data('fooBar')
+    $el.data('filmSlug') ??
+    $el.data('itemSlug') ??
+    // direct attribute fallback
+    $el.attr('data-film-slug') ??
+    $el.attr('data-item-slug') ??
+    // numeric id fallback (rare)
+    $el.attr('data-film-id') ??
+    '';
 
+  // If still empty, try extracting from the href of the anchor (e.g., "/film/slug/")
+  if (!filmSlug) {
+    const href = ($anchor.attr('href') || $el.attr('href') || '').toString();
+    const m = href.match(/\/film\/([^\/]+)\//);
+    if (m) filmSlug = m[1];
+  }
+
+  const altPosterId = $el.data('altPoster') ?? $el.attr('data-alt-poster') ?? undefined;
+
+  const name =
+    $el.data('itemName') ??
+    $el.data('filmName') ??
+    $el.attr('data-item-name') ??
+    $el.attr('data-film-name') ??
+    $anchor.attr('alt') ??
+    $anchor.attr('title') ??
+    $anchor.find('img').attr('alt') ??
+    '';
+
+  // Build parsed metadata defensively
+  try {
     const parsedMetadata = InterimBasicMetadataSchema.parse({
       id: `${filmSlug}`,
       name: `${name}`,
       altPoster: altPosterId,
     });
+    metadata.push({ ...parsedMetadata, poster: '' });
+  } catch (err) {
+    // fail softly: log and continue (logger is used elsewhere in repo)
+    try {
+      // Use any existing logger if available
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (global as any).logger?.debug?.({ err }, `Failed to parse poster metadata (slug="${filmSlug}", name="${name}")`);
+    } catch (_) {
+      // swallow any logging errors
+    }
+  }
+});
 
-    metadata.push({ ...parsedMetadata, poster: "" });
-  });
+
 
   logger.info(`Scraped metadata for ${metadata.length} films`);
 
