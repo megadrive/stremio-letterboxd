@@ -59,6 +59,7 @@ export class CacheSource implements ISource {
       cast: film.cast ? JSON.parse(film.cast) : undefined,
       director: film.director ? JSON.parse(film.director) : undefined,
       genres: film.genres ? JSON.parse(film.genres) : undefined,
+      imdb: film.imdb ?? undefined,
       tmdb: film.tmdb,
     }));
 
