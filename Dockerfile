@@ -14,7 +14,7 @@ COPY . .
 RUN npm install -g pnpm@10.5.0
 
 # Install all dependencies for all workspace packages
-RUN pnpm install
+RUN pnpm install --force
 
 # Generate Prisma client in the database package
 RUN pnpm --filter @stremio-addon/database prisma generate
