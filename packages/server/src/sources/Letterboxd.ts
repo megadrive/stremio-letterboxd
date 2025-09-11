@@ -1,11 +1,11 @@
 import { to } from "await-to-js";
 import type { ISource, SourceOptions, SourceResult } from "./ISource.js";
-import { createCache } from "./ISource.js";
+// import { createCache } from "./ISource.js";
 import { serverEnv } from "@stremio-addon/env";
 import { z } from "zod";
 import { ListSchema } from "./Letterboxd.types.js";
 
-const cache = createCache<z.infer<typeof ListSchema>>("letterboxd");
+// const cache = createCache<z.infer<typeof ListSchema>>("letterboxd");
 
 type EndpointType = "list";
 
@@ -72,11 +72,11 @@ export class LetterboxdSource implements ISource {
 
     console.info(`Got Letterboxd list ID ${listId} for ${url}`);
 
-    const cachedData = await cache.get(listId);
-    if (cachedData) {
-      console.info(`Using cached Letterboxd list data for ${url}`);
-      return cachedData.previewEntries.map(toSourceResult);
-    }
+    // const cachedData = await cache.get(listId);
+    // if (cachedData) {
+    //   console.info(`Using cached Letterboxd list data for ${url}`);
+    //   return cachedData.previewEntries.map(toSourceResult);
+    // }
 
     console.info(`No cached Letterboxd list data for ${url}, fetching...`);
 
@@ -157,7 +157,7 @@ export class LetterboxdSource implements ISource {
       };
     });
 
-    await cache.set(listId, validated.data, 1000 * 60 * 60); // 1 hour
+    // await cache.set(listId, validated.data, 1000 * 60 * 60); // 1 hour
 
     return listData;
   }
