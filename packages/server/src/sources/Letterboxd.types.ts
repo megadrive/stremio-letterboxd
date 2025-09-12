@@ -160,3 +160,57 @@ export const ListEntriesSchema = z.object({
   }),
   itemCount: z.number().optional(),
 });
+
+export const ContributorTypeSchema = z.enum([
+  "Director",
+  "CoDirector",
+  "Actor",
+  "Producer",
+  "Writer",
+  "OriginalWriter",
+  "Story",
+  "Casting",
+  "Editor",
+  "Cinematography",
+  "AssistantDirector",
+  "AdditionalDirecting",
+  "ExecutiveProducer",
+  "Lighting",
+  "CameraOperator",
+  "AdditionalPhotography",
+  "ProductionDesign",
+  "ArtDirection",
+  "SetDecoration",
+  "SpecialEffects",
+  "VisualEffects",
+  "TitleDesign",
+  "Stunts",
+  "Choreography",
+  "Composer",
+  "Songs",
+  "Sound",
+  "Costumes",
+  "Creator",
+  "MakeUp",
+  "Hairstyling",
+  "Studio",
+]);
+export const ContributorContributionsSchema = z.object({
+  next: z.string().optional(),
+  items: z.array(
+    z.object({
+      type: z.string(),
+      film: FilmSchema,
+      containsSpoilers: z.boolean().optional(),
+    })
+  ),
+  metadata: z.array(
+    z.object({
+      type: z.string(),
+      data: z.object({
+        totalFilmCount: z.number(),
+        filteredFilmCount: z.number(),
+      }),
+    })
+  ),
+});
