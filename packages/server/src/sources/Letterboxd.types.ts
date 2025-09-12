@@ -253,3 +253,8 @@ export const FilmSortSchema = z.enum([
   // "FilmPopularityThisMonth",
   // "FilmPopularityThisYear",
 ]);
+
+export const FilmsSchema = z.object({
+  next: z.string().optional(),
+  items: z.array(FilmSchema),
+});

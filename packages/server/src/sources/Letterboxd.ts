@@ -22,7 +22,10 @@ const {
   LETTERBOXD_API_AUTH_TYPE,
 } = serverEnv;
 
-const toSourceResult = (item: z.infer<typeof FilmSchema>): SourceResult => {
+const toSourceResult = (
+  item: z.infer<typeof FilmSchema>,
+  additionalData: Partial<SourceResult> = {}
+): SourceResult => {
   const imdb = item.links.find((link) => link.type === "imdb")?.id;
   const tmdb = item.links.find((link) => link.type === "tmdb")?.id;
   if (!tmdb) {
@@ -31,13 +34,20 @@ const toSourceResult = (item: z.infer<typeof FilmSchema>): SourceResult => {
     throw new Error(`No TMDb ID for Letterboxd film ${item.name}`);
   }
 
-  return {
+  const minimal: SourceResult = {
     id: item.id,
     name: item.name,
     poster: item.poster?.sizes.sort((a, b) => b.width - a.width)[0]?.url,
     imdb,
     tmdb,
   };
+
+  const full: SourceResult = {
+    ...minimal,
+    ...additionalData,
+  };
+
+  return full;
 };
 
 /**
@@ -164,7 +174,10 @@ export class LetterboxdSource implements ISource {
       const cachedData = await cache.get(cacheKey);
       if (cachedData) {
         console.info(`Using cached Letterboxd list data for ${url}`);
-        return cachedData.items.map((i) => i.film).map(toSourceResult);
+
+        return cachedData.items
+          .map((i) => i.film)
+          .map((f) => toSourceResult(f));
       }
     }
 
@@ -267,7 +280,7 @@ export class LetterboxdSource implements ISource {
       `Fetched and validated Letterboxd data for ${url} (ID: ${lbxdId})`
     );
 
-    let listData: SourceResult[] = validated.map(toSourceResult);
+    let listData: SourceResult[] = validated.map((f) => toSourceResult(f));
 
     listData = listData.map((item) => {
       // convert id to slug
