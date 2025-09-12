@@ -8,19 +8,44 @@ import {
   ContributorTypeSchema,
   FilmSchema,
   FilmSortSchema,
+  FilmsSchema,
+  FilmGenresSchema,
   ListEntriesSchema,
   MemberWatchlistSchema,
+  LetterboxdTypeSchema,
 } from "./Letterboxd.types.js";
-
-const cache = createCache<z.infer<typeof ListEntriesSchema>>("letterboxd");
-
-type EndpointType = "list" | "contributor" | "member_watchlist";
 
 const {
   LETTERBOXD_API_BASE_URL,
   LETTERBOXD_API_KEY,
   LETTERBOXD_API_AUTH_TYPE,
 } = serverEnv;
+
+const cache = createCache<z.infer<typeof ListEntriesSchema>>("letterboxd");
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const EndpointTypeSchema = z.enum([
+  "list",
+  "contributor",
+  "member_watchlist",
+  "film_popular",
+]);
+type EndpointType = z.infer<typeof EndpointTypeSchema>;
+
+const [genresErr, genresRes] = await to(apiRequest("/films/genres"));
+if (genresErr || !genresRes) {
+  console.error(`Failed to fetch Letterboxd genres: ${genresErr}`);
+}
+const GENRES = parse(genresRes, FilmGenresSchema)?.items.reduce(
+  (acc, genre) => {
+    acc[genre.name.toLowerCase()] = genre.id;
+    return acc;
+  },
+  {} as Record<string, string>
+);
+if (!GENRES) {
+  console.error(`Failed to parse Letterboxd genres`);
+}
 
 const toSourceResult = (
   item: z.infer<typeof FilmSchema>,
@@ -40,6 +65,8 @@ const toSourceResult = (
     poster: item.poster?.sizes.sort((a, b) => b.width - a.width)[0]?.url,
     imdb,
     tmdb,
+    director: item.directors.map((d) => d.name),
+    genres: item.genres.map((g) => g.name),
   };
 
   const full: SourceResult = {
@@ -51,12 +78,62 @@ const toSourceResult = (
 };
 
 /**
+ * Perform an API request to Letterboxd
+ * @param endpoint API endpoint, e.g. /list/12345/entries
+ * @param opts Any fetch options
+ * @returns Raw JSON response
+ */
+async function apiRequest(
+  endpoint: string,
+  opts: RequestInit = {}
+): Promise<unknown> {
+  if (LETTERBOXD_API_KEY.length === 0) {
+    throw new Error("Letterboxd API key not set");
+  }
+
+  const headers = new Headers(opts.headers);
+  switch (LETTERBOXD_API_AUTH_TYPE.toLowerCase()) {
+    case "bearer":
+      headers.set("Authorization", `Bearer ${LETTERBOXD_API_KEY}`);
+      break;
+    case "rapidapi":
+      headers.set("X-RapidAPI-Key", LETTERBOXD_API_KEY);
+      headers.set("X-RapidAPI-Host", new URL(LETTERBOXD_API_BASE_URL).host);
+      break;
+  }
+
+  const url = LETTERBOXD_API_BASE_URL + endpoint;
+  console.info(`Letterboxd API request: ${url}`);
+
+  const [resErr, res] = await to(
+    fetch(url, {
+      ...opts,
+      headers,
+    })
+  );
+
+  if (resErr || !res?.ok) {
+    console.error(resErr, res);
+    throw new Error(`Failed to fetch Letterboxd API: ${resErr}`);
+  }
+
+  const [parseErr, parsed] = await to(res.json() as Promise<unknown>);
+  if (parseErr || !parsed) {
+    throw new Error(
+      `Failed to parse JSON Letterboxd API response: ${parseErr}`
+    );
+  }
+
+  return parsed;
+}
+
+/**
  * Parse a JSON object with a Zod schema, logging any errors
  * @param data JSON
  * @param schema Zod schema
  * @returns Parsed data or null if parsing failed
  */
-function parse<T>(data: unknown, schema: z.Schema<T>) {
+function parse<T>(data: unknown, schema: z.Schema<T>): T | null {
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
     console.error(`Failed to parse Letterboxd list data`);
@@ -66,6 +143,11 @@ function parse<T>(data: unknown, schema: z.Schema<T>) {
   return parsed.data;
 }
 
+/**
+ * Letterboxd source
+ *
+ * Fetches data from the Letterboxd API
+ */
 export class LetterboxdSource implements ISource {
   async fetch(
     opts: SourceOptions &
@@ -127,6 +209,11 @@ export class LetterboxdSource implements ISource {
       username = watchlist_match[1];
     }
 
+    // /films/popular
+    if (pathname.startsWith("/films/popular")) {
+      endpoint = "film_popular";
+    }
+
     if (!endpoint) {
       console.warn(`Letterboxd endpoint not supported: ${url}`);
       return [];
@@ -150,23 +237,19 @@ export class LetterboxdSource implements ISource {
     }
 
     const lbxdId = lbxdIdRes.headers.get("x-letterboxd-identifier");
-    let lbxdType = lbxdIdRes.headers.get("x-letterboxd-type");
-    // watchlist
-    if (lbxdType === "Member" && endpoint === "member_watchlist") {
-      lbxdType = "member_watchlist";
-    }
+    const lbxdType = LetterboxdTypeSchema.optional().parse(
+      lbxdIdRes.headers.get("x-letterboxd-type")
+    );
 
     if (!lbxdId) {
-      console.error(`Failed to get Letterboxd list ID for ${url}`);
-      return [];
+      console.warn(`Failed to get Letterboxd list ID for ${url}`);
     }
 
     if (!lbxdType) {
-      console.error(`Failed to get Letterboxd type for ${url}`);
-      return [];
+      console.warn(`Failed to get Letterboxd type for ${url}`);
     }
 
-    const cacheKey = `${lbxdType}:${lbxdId}`;
+    const cacheKey = `${endpoint}:${lbxdId}`;
 
     console.info(`Got Letterboxd list ID ${lbxdId} for ${url}`);
 
@@ -186,17 +269,6 @@ export class LetterboxdSource implements ISource {
     );
 
     // fetch the data
-    const headers = new Headers();
-    switch (LETTERBOXD_API_AUTH_TYPE.toLowerCase()) {
-      case "bearer":
-        headers.set("Authorization", `Bearer ${LETTERBOXD_API_KEY}`);
-        break;
-      case "rapidapi":
-        headers.set("X-RapidAPI-Key", LETTERBOXD_API_KEY);
-        headers.set("X-RapidAPI-Host", new URL(LETTERBOXD_API_BASE_URL).host);
-        break;
-    }
-
     console.info(`Fetching Letterboxd list data for ${url} (ID: ${lbxdId})`);
 
     const PAGE_SIZE = 100;
@@ -217,14 +289,57 @@ export class LetterboxdSource implements ISource {
       searchParams.set("type", contributorType);
     }
 
-    const apiUrls: Record<string, string> = {
-      list: `/${lbxdType.toLowerCase()}/${lbxdId}/entries?${searchParams.toString()}`,
-      contributor: `/${lbxdType.toLowerCase()}/${lbxdId}/contributions?${searchParams.toString()}`,
-      member_watchlist: `/member/${lbxdId}/watchlist?${searchParams.toString()}`,
+    if (endpoint === "film_popular") {
+      // /films/popular/this/all-time/decade/2020s/genre/action/on/apple-itunes-au/
+      const filmsOptions = ["this", "decade", "genre", "on", "by"];
+      // pull out any films options from the URL
+      const pathParts = pathname.split("/").filter((p) => p.length > 0);
+      for (let i = 1; i < pathParts.length; i++) {
+        if (filmsOptions.includes(pathParts[i])) {
+          const key = pathParts[i];
+          const value = pathParts[i + 1];
+          if (value && !filmsOptions.includes(value)) {
+            if (key === "genre" && GENRES && GENRES[value]) {
+              // convert genre slug to genre name
+              searchParams.set(key, GENRES[value]);
+              i = i + 2;
+              continue;
+            }
+
+            if (key === "this") {
+              switch (value) {
+                case "week":
+                  searchParams.set("sort", "FilmPopularityThisWeek");
+                  break;
+                case "month":
+                  searchParams.set("sort", "FilmPopularityThisMonth");
+                  break;
+                case "year":
+                  searchParams.set("sort", "filmPopularityThisYear");
+                  break;
+                case "all-time":
+                  searchParams.set("sort", "FilmPopularity");
+                  break;
+                default:
+                  console.warn(`Unknown period value: ${value}`);
+              }
+            }
+
+            searchParams.set(key, value);
+            i = i + 2;
+          }
+        }
+      }
+    }
+
+    const apiUrls: Record<EndpointType, string> = {
+      list: `/list/${lbxdId}/entries`,
+      contributor: `/contributor/${lbxdId}/contributions`,
+      member_watchlist: `/member/${lbxdId}/watchlist`,
+      film_popular: `/films`,
     };
-    const apiUrl =
-      LETTERBOXD_API_BASE_URL +
-      apiUrls[lbxdType.toLowerCase() as keyof typeof apiUrls];
+    // nullishable to avoid TS complaining
+    const apiUrl = apiUrls[endpoint.toLowerCase() as keyof typeof apiUrls];
     if (!apiUrl) {
       console.error(`Unknown API URL key: ${lbxdType}`);
       return [];
@@ -233,12 +348,10 @@ export class LetterboxdSource implements ISource {
       `Fetching Letterboxd data from ${apiUrl} for ${url} (ID: ${lbxdId})`
     );
     const [lbxdErr, lbxdRes] = await to(
-      fetch(apiUrl, {
-        headers,
-      })
+      apiRequest(`${apiUrl}?${searchParams.toString()}`)
     );
 
-    if (lbxdErr || !lbxdRes?.ok) {
+    if (lbxdErr) {
       console.warn(lbxdErr, lbxdRes);
       console.error(
         `Failed to fetch Letterboxd list data for ${url} (ID: ${lbxdId}): ${lbxdErr}`
@@ -246,27 +359,20 @@ export class LetterboxdSource implements ISource {
       return [];
     }
 
-    // Parse to JSON
-    const [parseErr, parsed] = await to(lbxdRes.json() as Promise<unknown>);
-    if (parseErr || !parsed) {
-      console.error(
-        `Failed to parse Letterboxd list data for ${url} (ID: ${lbxdId}): ${parseErr}`
-      );
-      return [];
-    }
-
     // Validate the API result
     const validated = (() => {
-      switch (lbxdType.toLowerCase()) {
+      switch (endpoint.toLowerCase()) {
         case "list":
-          return parse(parsed, ListEntriesSchema)?.items.map((i) => i.film);
+          return parse(lbxdRes, ListEntriesSchema)?.items.map((i) => i.film);
         case "contributor":
-          return parse(parsed, ContributorContributionsSchema)?.items.map(
+          return parse(lbxdRes, ContributorContributionsSchema)?.items.map(
             (i) => i.film
           );
         case "member_watchlist": {
-          return parse(parsed, MemberWatchlistSchema)?.items;
+          return parse(lbxdRes, MemberWatchlistSchema)?.items;
         }
+        case "film_popular":
+          return parse(lbxdRes, FilmsSchema)?.items;
         default:
           console.error(`Unsupported Letterboxd type: ${lbxdType}`);
           return null;
@@ -299,7 +405,7 @@ export class LetterboxdSource implements ISource {
 
       return {
         ...item,
-        id: "",
+        id: `tmdb:${item.tmdb}`,
       };
     });
 

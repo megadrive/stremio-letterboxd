@@ -264,7 +264,7 @@ async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
  * Determine the catalog name from either a Cheerio instance or a URL
  */
 export async function determineCatalogName(opts: {
-  url?: string;
+  url: string;
   $?: ReturnType<typeof cheerio>;
 }): Promise<string> {
   try {
@@ -281,9 +281,27 @@ export async function determineCatalogName(opts: {
     }
 
     // <meta property="og:title" content="severance in some other forms" />
-    const catalogName = $("meta[property='og:title']").attr("content");
+    let catalogName = $("meta[property='og:title']").attr("content");
     if (!catalogName) {
-      throw new Error();
+      // predefined names for known URLs
+      const predefined = {
+        "/films/popular/": "Popular Films",
+        "/films/popular/this/week": "Popular Films This Week",
+        "/films/popular/this/month": "Popular Films This Month",
+        "/films/popular/this/year": "Popular Films This Year",
+      };
+
+      const urlPath = new URL(opts.url).pathname;
+      for (const [path, name] of Object.entries(predefined)) {
+        console.debug({ urlPath, path, name });
+        if (urlPath.startsWith(path)) {
+          catalogName = name;
+        }
+      }
+
+      if (!catalogName) {
+        throw new Error();
+      }
     }
 
     return catalogName;

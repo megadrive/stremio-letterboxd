@@ -223,10 +223,13 @@ export const MemberWatchlistSchema = z.object({
 export const FilmSortSchema = z.enum([
   "ListRanking",
   "FilmPopularity",
-  "WhenAddedToList",
-  "WhenAddedToListEarliestFirst",
-  "Shuffle",
+  "FilmPopularityThisWeek",
+  "FilmPopularityThisMonth",
+  "FilmPopularityThisYear",
   "FilmName",
+  // "WhenAddedToList",
+  // "WhenAddedToListEarliestFirst",
+  "Shuffle",
   // "OwnerRatingHighToLow",
   // "OwnerRatingLowToHigh",
   // "OwnerDiaryLatestFirst",
@@ -249,12 +252,27 @@ export const FilmSortSchema = z.enum([
   "ReleaseDateEarliestFirst",
   "FilmDurationShortestFirst",
   "FilmDurationLongestFirst",
-  // "FilmPopularityThisWeek",
-  // "FilmPopularityThisMonth",
-  // "FilmPopularityThisYear",
 ]);
 
 export const FilmsSchema = z.object({
   next: z.string().optional(),
   items: z.array(FilmSchema),
+});
+
+/**
+ * The types returned by doing a HEAD request to Letterboxd.
+ *
+ * entirely lowercase ones are types we define for our own purposes.
+ */
+export const LetterboxdTypeSchema = z
+  .enum(["List", "Contributor", "Member"])
+  .nullable();
+
+export const FilmGenresSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+    })
+  ),
 });
