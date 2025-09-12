@@ -7,12 +7,14 @@ import {
   ContributorContributionsSchema,
   ContributorTypeSchema,
   FilmSchema,
+  FilmSortSchema,
   ListEntriesSchema,
+  MemberWatchlistSchema,
 } from "./Letterboxd.types.js";
 
 const cache = createCache<z.infer<typeof ListEntriesSchema>>("letterboxd");
 
-type EndpointType = "list" | "contributor";
+type EndpointType = "list" | "contributor" | "member_watchlist";
 
 const {
   LETTERBOXD_API_BASE_URL,
@@ -60,10 +62,12 @@ export class LetterboxdSource implements ISource {
       Required<Pick<SourceOptions, "url">> & {
         filmId?: string;
         shouldCache?: boolean;
+        sort?: z.infer<typeof FilmSortSchema>;
       }
   ): Promise<SourceResult[]> {
     opts = {
       shouldCache: true,
+      sort: "ListRanking",
       ...opts,
     };
 
@@ -83,9 +87,13 @@ export class LetterboxdSource implements ISource {
 
     // remove extra slashes
     const pathname = urlObj.pathname.replace(/\/+/g, "/");
-    if (pathname.startsWith("/list/")) {
+
+    const regex_list = /^\/([^/]+)\/(list)\/([^/]+)\/?/;
+    const list_match = pathname.match(regex_list);
+    if (list_match) {
       endpoint = "list";
     }
+
     const contributorTypes = ContributorTypeSchema.options.map((o) =>
       o.toLowerCase()
     );
@@ -100,14 +108,28 @@ export class LetterboxdSource implements ISource {
       endpoint = "contributor";
     }
 
+    // /username/watchlist
+    const regex_watchlist = /^\/([^/]+)\/(watchlist)\/?$/;
+    const watchlist_match = pathname.match(regex_watchlist);
+    let username: string | null = null;
+    if (watchlist_match) {
+      endpoint = "member_watchlist";
+      username = watchlist_match[1];
+    }
+
     if (!endpoint) {
       console.warn(`Letterboxd endpoint not supported: ${url}`);
       return [];
     }
 
+    const urlForId =
+      endpoint === "member_watchlist" && username
+        ? `https://letterboxd.com/${username}/`
+        : url;
+
     // get the list ID
     const [lbxdIdErr, lbxdIdRes] = await to(
-      fetch(url, {
+      fetch(urlForId, {
         method: "HEAD",
       })
     );
@@ -118,7 +140,11 @@ export class LetterboxdSource implements ISource {
     }
 
     const lbxdId = lbxdIdRes.headers.get("x-letterboxd-identifier");
-    const lbxdType = lbxdIdRes.headers.get("x-letterboxd-type");
+    let lbxdType = lbxdIdRes.headers.get("x-letterboxd-type");
+    // watchlist
+    if (lbxdType === "Member" && endpoint === "member_watchlist") {
+      lbxdType = "member_watchlist";
+    }
 
     if (!lbxdId) {
       console.error(`Failed to get Letterboxd list ID for ${url}`);
@@ -169,19 +195,25 @@ export class LetterboxdSource implements ISource {
     if (opts.filmId) {
       searchParams.set("filmId", opts.filmId);
     }
+    if (opts.sort) {
+      searchParams.set("sort", opts.sort);
+    }
 
     // add types for contributor
     if (lbxdType === "Contributor" && contributorType) {
       searchParams.set("type", contributorType);
     }
 
-    const apiUrls = {
-      list: `${LETTERBOXD_API_BASE_URL}/${lbxdType.toLowerCase()}/list/${lbxdId}/entries?${searchParams.toString()}`,
-      contributor: `${LETTERBOXD_API_BASE_URL}/${lbxdType.toLowerCase()}/${lbxdId}/contributions?${searchParams.toString()}`,
+    const apiUrls: Record<string, string> = {
+      list: `/${lbxdType.toLowerCase()}/${lbxdId}/entries?${searchParams.toString()}`,
+      contributor: `/${lbxdType.toLowerCase()}/${lbxdId}/contributions?${searchParams.toString()}`,
+      member_watchlist: `/member/${lbxdId}/watchlist?${searchParams.toString()}`,
     };
-    const apiUrl = apiUrls[lbxdType.toLowerCase() as keyof typeof apiUrls];
+    const apiUrl =
+      LETTERBOXD_API_BASE_URL +
+      apiUrls[lbxdType.toLowerCase() as keyof typeof apiUrls];
     if (!apiUrl) {
-      console.error(`Unsupported Letterboxd type: ${lbxdType}`);
+      console.error(`Unknown API URL key: ${lbxdType}`);
       return [];
     }
     console.info(
@@ -201,7 +233,8 @@ export class LetterboxdSource implements ISource {
       return [];
     }
 
-    const [parseErr, parsed] = await to(lbxdRes.json());
+    // Parse to JSON
+    const [parseErr, parsed] = await to(lbxdRes.json() as Promise<unknown>);
     if (parseErr || !parsed) {
       console.error(
         `Failed to parse Letterboxd list data for ${url} (ID: ${lbxdId}): ${parseErr}`
@@ -209,12 +242,18 @@ export class LetterboxdSource implements ISource {
       return [];
     }
 
+    // Validate the API result
     const validated = (() => {
-      switch (lbxdType) {
-        case "List":
-          return parse(parsed, ListEntriesSchema);
-        case "Contributor":
-          return parse(parsed, ContributorContributionsSchema);
+      switch (lbxdType.toLowerCase()) {
+        case "list":
+          return parse(parsed, ListEntriesSchema)?.items.map((i) => i.film);
+        case "contributor":
+          return parse(parsed, ContributorContributionsSchema)?.items.map(
+            (i) => i.film
+          );
+        case "member_watchlist": {
+          return parse(parsed, MemberWatchlistSchema)?.items;
+        }
         default:
           console.error(`Unsupported Letterboxd type: ${lbxdType}`);
           return null;
@@ -228,16 +267,14 @@ export class LetterboxdSource implements ISource {
       `Fetched and validated Letterboxd data for ${url} (ID: ${lbxdId})`
     );
 
-    let listData: SourceResult[] = validated.items
-      .map((i) => i.film)
-      .map(toSourceResult);
+    let listData: SourceResult[] = validated.map(toSourceResult);
 
     listData = listData.map((item) => {
       // convert id to slug
       // find the item in the validated list
-      const validatedItem = validated.items.find((i) => i.film.id === item.id);
+      const validatedItem = validated.find((i) => i.id === item.id);
       if (validatedItem) {
-        const link = validatedItem.film.link;
+        const link = validatedItem.link;
         const slugMatch = link.match(/\/film\/([^/]+)/);
         if (slugMatch && slugMatch[1]) {
           return {

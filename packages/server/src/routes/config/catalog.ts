@@ -11,6 +11,7 @@ import { to } from "await-to-js";
 import type { SourceResult } from "@/sources/ISource.js";
 import { CacheSource } from "@/sources/CacheSource.js";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
+import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
 
 const SOURCES = [new LetterboxdSource(), new CacheSource()];
 
@@ -64,6 +65,9 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           config: c.var.config,
           configString: c.var.configString,
           skip: parsedExtras?.skip ? Number(parsedExtras.skip) : undefined,
+          sort: parsedExtras?.genre
+            ? FilmSortSchema.optional().parse(parsedExtras.genre)
+            : undefined,
         })
       );
 

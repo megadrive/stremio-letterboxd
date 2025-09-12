@@ -214,3 +214,42 @@ export const ContributorContributionsSchema = z.object({
     })
   ),
 });
+
+export const MemberWatchlistSchema = z.object({
+  next: z.string().optional(),
+  items: z.array(FilmSchema),
+});
+
+export const FilmSortSchema = z.enum([
+  "ListRanking",
+  "FilmPopularity",
+  "WhenAddedToList",
+  "WhenAddedToListEarliestFirst",
+  "Shuffle",
+  "FilmName",
+  // "OwnerRatingHighToLow",
+  // "OwnerRatingLowToHigh",
+  // "OwnerDiaryLatestFirst",
+  // "OwnerDiaryEarliestFirst",
+  // "AuthenticatedMemberRatingHighToLow",
+  // "AuthenticatedMemberRatingLowToHigh",
+  // "AuthenticatedMemberDiaryLatestFirst",
+  // "AuthenticatedMemberDiaryEarliestFirst",
+  // "AuthenticatedMemberBasedOnLiked",
+  // "AuthenticatedMemberRelatedToLiked",
+  // "MemberRatingHighToLow",
+  // "MemberRatingLowToHigh",
+  // "MemberDiaryLatestFirst",
+  // "MemberDiaryEarliestFirst",
+  "AverageRatingHighToLow",
+  "AverageRatingLowToHigh",
+  // "RatingHighToLow",
+  // "RatingLowToHigh",
+  "ReleaseDateLatestFirst",
+  "ReleaseDateEarliestFirst",
+  "FilmDurationShortestFirst",
+  "FilmDurationLongestFirst",
+  // "FilmPopularityThisWeek",
+  // "FilmPopularityThisMonth",
+  // "FilmPopularityThisYear",
+]);
