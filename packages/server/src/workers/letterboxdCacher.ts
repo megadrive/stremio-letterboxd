@@ -249,7 +249,16 @@ async function scrapeIDsFromFilmPage(initialMeta: BasicMetadata[]) {
             tmdb,
             imdb,
           },
-          update: { imdb, tmdb },
+          update: {
+            title: meta.name,
+            director: JSON.stringify(directors),
+            cast: JSON.stringify(cast),
+            description: `${tagline.toUpperCase()} - ${description}`,
+            genres: JSON.stringify(genres),
+            year: releaseyear ? +releaseyear : undefined,
+            tmdb,
+            imdb,
+          },
         });
       } catch (error) {
         logger.error(`Couldn't update film ${meta.id} with IDs, ${error}`);
@@ -293,7 +302,6 @@ export async function determineCatalogName(opts: {
 
       const urlPath = new URL(opts.url).pathname;
       for (const [path, name] of Object.entries(predefined)) {
-        console.debug({ urlPath, path, name });
         if (urlPath.startsWith(path)) {
           catalogName = name;
         }
