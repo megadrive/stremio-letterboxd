@@ -110,54 +110,64 @@ configAPIRoute.post("/:encodedConfigOrId", async (c) => {
       return c.json({ success: false });
     }
 
-    const metadata = await letterboxdCacher.scrapeList(conf);
-
     c.var.logger.info("Creating config flow");
     c.var.logger.info({
       encodedConfig,
       conf,
-      metadata: `${metadata?.length ? metadata.length : 0} items`,
     });
-    let record;
 
     try {
       // try to fetch the config, if it exists
       c.var.logger.info("Attempting to fetch config");
-      record = await prisma.config.findFirst({
+      const record = await prisma.config.findFirst({
         where: {
           config: encodedConfig,
         },
       });
+      if (record) {
+        c.var.logger.info("Found existing config", { recordId: record.id });
+        return c.json({ success: true, id: record.id });
+      }
     } catch (error) {
       c.var.logger.warn("Failed to fetch config", error);
     }
 
-    if (!record) {
-      try {
-        // try to create the config
-        c.var.logger.info("Attempting to create config");
-        record = await prisma.config.create({
-          data: {
-            config: encodedConfig,
-            metadata: JSON.stringify(metadata),
-          },
-        });
-        c.var.logger.info("Create config", {
-          newRecordId: record.id,
-          encodedConfig,
-          metadata: `${metadata?.length ? metadata.length : 0} items`,
-        });
-      } catch (error) {
-        c.var.logger.error("Failed to create config", error);
-      }
-    }
+    // create an initial empty record to reserve the config
+    const newRecord = await prisma.config.create({
+      data: {
+        config: encodedConfig,
+        metadata: JSON.stringify([]),
+      },
+    });
 
-    // if it STILL doesn't exist, we've failed
-    if (!record) {
-      return c.json({ success: false });
-    }
+    // fetch metadata for the list and update in the background
+    letterboxdCacher
+      .scrapeList(conf)
+      .then(async (metadata) => {
+        try {
+          // try to create the config
+          c.var.logger.info("Attempting to create config");
+          const record = await prisma.config.update({
+            where: { id: newRecord.id },
+            data: {
+              config: encodedConfig,
+              metadata: JSON.stringify(metadata),
+            },
+          });
+          c.var.logger.info("Create config", {
+            newRecordId: record.id,
+            encodedConfig,
+            metadata: `${metadata?.length ? metadata.length : 0} items`,
+          });
+        } catch (error) {
+          c.var.logger.error("Failed to create config", error);
+        }
+      })
+      .catch((error) => {
+        c.var.logger.error("Failed to scrape list", error);
+      });
 
-    const { id } = record;
+    const { id } = newRecord;
 
     return c.json({ success: true, id });
   } catch (error) {

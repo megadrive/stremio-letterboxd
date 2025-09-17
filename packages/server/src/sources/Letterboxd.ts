@@ -6,13 +6,14 @@ import { z } from "zod";
 import {
   ContributorContributionsSchema,
   ContributorTypeSchema,
-  FilmSchema,
+  FilmSummarySchema,
   FilmSortSchema,
   FilmsSchema,
   FilmGenresSchema,
   ListEntriesSchema,
   MemberWatchlistSchema,
   LetterboxdTypeSchema,
+  FilmSchema,
 } from "./Letterboxd.types.js";
 
 const {
@@ -22,6 +23,11 @@ const {
 } = serverEnv;
 
 const cache = createCache<z.infer<typeof ListEntriesSchema>>("letterboxd");
+
+// object to base64 string
+function convertObjectToBase64(obj: unknown): string {
+  return Buffer.from(JSON.stringify(obj)).toString("base64");
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const EndpointTypeSchema = z.enum([
@@ -48,7 +54,7 @@ if (!GENRES) {
 }
 
 const toSourceResult = (
-  item: z.infer<typeof FilmSchema>,
+  item: z.infer<typeof FilmSummarySchema>,
   additionalData: Partial<SourceResult> = {}
 ): SourceResult => {
   const imdb = item.links.find((link) => link.type === "imdb")?.id;
@@ -65,8 +71,8 @@ const toSourceResult = (
     poster: item.poster?.sizes.sort((a, b) => b.width - a.width)[0]?.url,
     imdb,
     tmdb,
-    director: item.directors.map((d) => d.name),
-    genres: item.genres.map((g) => g.name),
+    director: item.directors?.map((d) => d.name),
+    genres: item.genres?.map((g) => g.name),
   };
 
   const full: SourceResult = {
@@ -102,8 +108,13 @@ async function apiRequest(
       break;
   }
 
+  const obfuscatedKey = `${LETTERBOXD_API_KEY.slice(0, 4)}...${LETTERBOXD_API_KEY.slice(
+    -4
+  )}`;
+
   const url = LETTERBOXD_API_BASE_URL + endpoint;
   console.info(`Letterboxd API request: ${url}`);
+  console.info(`Authorization: ${obfuscatedKey}`);
 
   const [resErr, res] = await to(
     fetch(url, {
@@ -149,14 +160,65 @@ function parse<T>(data: unknown, schema: z.Schema<T>): T | null {
  * Fetches data from the Letterboxd API
  */
 export class LetterboxdSource implements ISource {
+  async getLetterboxdID(path: `/${string}`): Promise<string | null> {
+    if (!path) {
+      console.warn("No path provided to getLetterboxdID");
+      return null;
+    }
+
+    const [idErr, idRes] = await to(
+      fetch(`https://letterboxd.com${path}`, {
+        method: "HEAD",
+      })
+    );
+
+    if (idErr || !idRes?.ok) {
+      console.error(`HEAD request failed for ${path}`);
+      return null;
+    }
+
+    const lbxdId = idRes.headers.get("x-letterboxd-identifier");
+    if (!lbxdId) {
+      console.warn(`Failed to get Letterboxd ID for ${path}`);
+      return null;
+    }
+
+    return lbxdId;
+  }
+
+  async getFilm(id: string): Promise<z.infer<typeof FilmSchema> | null> {
+    if (!id) {
+      console.warn("No film ID provided to getFilm");
+      return null;
+    }
+
+    const [filmErr, filmRes] = await to(apiRequest(`/film/${id}`));
+    if (filmErr || !filmRes) {
+      console.error(`Failed to fetch Letterboxd film ${id}: ${filmErr}`);
+      return null;
+    }
+
+    const film = parse(filmRes, FilmSchema);
+    if (!film) {
+      console.error(`Failed to parse Letterboxd film ${id}`);
+      return null;
+    }
+
+    return film;
+  }
+
   async fetch(
     opts: SourceOptions &
       Required<Pick<SourceOptions, "url">> & {
         filmId?: string;
         shouldCache?: boolean;
         sort?: z.infer<typeof FilmSortSchema>;
+        skip?: number;
       }
-  ): Promise<SourceResult[]> {
+  ): Promise<{
+    shouldStop: boolean;
+    metas: SourceResult[];
+  }> {
     opts = {
       shouldCache: true,
       sort: "ListRanking",
@@ -167,7 +229,7 @@ export class LetterboxdSource implements ISource {
 
     if (LETTERBOXD_API_KEY.length === 0) {
       console.warn(`Letterboxd API key not set, moving along...`);
-      return [];
+      return { shouldStop: false, metas: [] };
     }
 
     // figure out what endpoint we're after
@@ -216,7 +278,7 @@ export class LetterboxdSource implements ISource {
 
     if (!endpoint) {
       console.warn(`Letterboxd endpoint not supported: ${url}`);
-      return [];
+      return { shouldStop: false, metas: [] };
     }
 
     const urlForId =
@@ -233,7 +295,7 @@ export class LetterboxdSource implements ISource {
 
     if (lbxdIdErr || !lbxdIdRes?.ok) {
       console.error(`HEAD request failed for ${url}`);
-      return [];
+      return { shouldStop: false, metas: [] };
     }
 
     const lbxdId = lbxdIdRes.headers.get("x-letterboxd-identifier");
@@ -249,7 +311,7 @@ export class LetterboxdSource implements ISource {
       console.warn(`Failed to get Letterboxd type for ${url}`);
     }
 
-    const cacheKey = `${endpoint}:${lbxdId}`;
+    const cacheKey = `${endpoint}:${lbxdId}:${convertObjectToBase64(opts)}`;
 
     console.info(`Got Letterboxd list ID ${lbxdId} for ${url}`);
 
@@ -258,9 +320,12 @@ export class LetterboxdSource implements ISource {
       if (cachedData) {
         console.info(`Using cached Letterboxd list data for ${url}`);
 
-        return cachedData.items
-          .map((i) => i.film)
-          .map((f) => toSourceResult(f));
+        return {
+          shouldStop: true,
+          metas: cachedData.items
+            .map((i) => i.film)
+            .map((f) => toSourceResult(f)),
+        };
       }
     }
 
@@ -271,7 +336,7 @@ export class LetterboxdSource implements ISource {
     // fetch the data
     console.info(`Fetching Letterboxd list data for ${url} (ID: ${lbxdId})`);
 
-    const PAGE_SIZE = 100;
+    const PAGE_SIZE = 30;
     const searchParams = new URLSearchParams();
     searchParams.set("perPage", PAGE_SIZE.toString());
     if (opts.skip) {
@@ -282,6 +347,9 @@ export class LetterboxdSource implements ISource {
     }
     if (opts.sort) {
       searchParams.set("sort", opts.sort);
+    }
+    if (opts.skip) {
+      searchParams.set("cursor", `start=${opts.skip}`);
     }
 
     // add types for contributor
@@ -342,7 +410,10 @@ export class LetterboxdSource implements ISource {
     const apiUrl = apiUrls[endpoint.toLowerCase() as keyof typeof apiUrls];
     if (!apiUrl) {
       console.error(`Unknown API URL key: ${lbxdType}`);
-      return [];
+      return {
+        shouldStop: false,
+        metas: [],
+      };
     }
     console.info(
       `Fetching Letterboxd data from ${apiUrl} for ${url} (ID: ${lbxdId})`
@@ -356,7 +427,7 @@ export class LetterboxdSource implements ISource {
       console.error(
         `Failed to fetch Letterboxd list data for ${url} (ID: ${lbxdId}): ${lbxdErr}`
       );
-      return [];
+      return { shouldStop: false, metas: [] };
     }
 
     // Validate the API result
@@ -379,7 +450,7 @@ export class LetterboxdSource implements ISource {
       }
     })();
     if (!validated) {
-      return [];
+      return { shouldStop: false, metas: [] };
     }
 
     console.info(
@@ -420,6 +491,9 @@ export class LetterboxdSource implements ISource {
       await cache.set(cacheKey, validated, 1000 * 60 * 60); // 1 hour
     }
 
-    return listData;
+    return {
+      shouldStop: listData.length === 0,
+      metas: listData,
+    };
   }
 }

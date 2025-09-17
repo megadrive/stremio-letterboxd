@@ -71,17 +71,32 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         })
       );
 
-      if (!sourceDataErr && sourceData.length > 0) {
-        c.var.logger.info(
-          `Fetched ${sourceData.length} items from source ${source.constructor.name}`
+      if (!sourceData) {
+        c.var.logger.error(
+          `No data returned from source ${source.constructor.name}`
         );
-        data = sourceData;
+        continue;
+      }
+
+      const { shouldStop, metas } = sourceData;
+
+      if (!sourceDataErr && metas.length > 0) {
+        c.var.logger.info(
+          `Fetched ${metas.length} items from source ${source.constructor.name}`
+        );
+        data = metas;
         successfulSource = source.constructor.name;
         break;
       }
       c.var.logger.error(
         `Error fetching data from source ${source.constructor.name}: ${sourceDataErr}`
       );
+      if (shouldStop) {
+        c.var.logger.info(
+          `Source ${source.constructor.name} indicated to stop further fetching.`
+        );
+        break;
+      }
     }
 
     if (!successfulSource) {
@@ -93,51 +108,53 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       `Using data from source ${successfulSource} for config ${encodedConfig}`
     );
 
-    if (c.var.config.url.includes("/by/shuffle/")) {
-      // if we are shuffling, get the seed from the database if it exists
-      c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
-      let seedRecord = await prisma.shuffleSeed.findFirst({
-        where: {
-          configId: cached.id,
-        },
-      });
-
-      if (seedRecord) {
-        c.var.logger.info(
-          `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
-        );
-      }
-
-      // if expired or not found, create a new seed
-      const ONE_HOUR = 60 * 60 * 1000;
-      if (
-        !seedRecord ||
-        Date.now() - seedRecord.updatedAt.getTime() > ONE_HOUR
-      ) {
-        // create a new seed
-        c.var.logger.info(
-          `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
-        );
-        const newSeed = Math.random() * 1000000;
-        const newSeedRecord = await prisma.shuffleSeed.upsert({
+    if (successfulSource !== "LetterboxdSource") {
+      if (c.var.config.url.includes("/by/shuffle/")) {
+        // if we are shuffling, get the seed from the database if it exists
+        c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
+        let seedRecord = await prisma.shuffleSeed.findFirst({
           where: {
             configId: cached.id,
           },
-          create: {
-            configId: cached.id,
-            seed: `${newSeed}`,
-          },
-          update: {
-            seed: `${newSeed}`,
-          },
         });
-        c.var.logger.info(`Created new shuffle seed: ${newSeedRecord.seed}`);
-        seedRecord = newSeedRecord;
-      }
 
-      // randomise the cached films with the seed
-      const seededShuffle = createShuffle(+seedRecord.seed);
-      data = seededShuffle(data);
+        if (seedRecord) {
+          c.var.logger.info(
+            `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
+          );
+        }
+
+        // if expired or not found, create a new seed
+        const ONE_HOUR = 60 * 60 * 1000;
+        if (
+          !seedRecord ||
+          Date.now() - seedRecord.updatedAt.getTime() > ONE_HOUR
+        ) {
+          // create a new seed
+          c.var.logger.info(
+            `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
+          );
+          const newSeed = Math.random() * 1000000;
+          const newSeedRecord = await prisma.shuffleSeed.upsert({
+            where: {
+              configId: cached.id,
+            },
+            create: {
+              configId: cached.id,
+              seed: `${newSeed}`,
+            },
+            update: {
+              seed: `${newSeed}`,
+            },
+          });
+          c.var.logger.info(`Created new shuffle seed: ${newSeedRecord.seed}`);
+          seedRecord = newSeedRecord;
+        }
+
+        // randomise the cached films with the seed
+        const seededShuffle = createShuffle(+seedRecord.seed);
+        data = seededShuffle(data);
+      }
     }
 
     // pagination
@@ -146,7 +163,9 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     if (end >= data.length) {
       end = data.length;
     }
-    const paginatedCachedFilms = data.slice(start, end);
+    // only paginate if not from Letterboxd source, as that is already paginated
+    const paginatedCachedFilms =
+      successfulSource !== "LetterboxdSource" ? data.slice(start, end) : data;
 
     const metas: MetaDetail[] = paginatedCachedFilms.map((film) => {
       const poster = (() => {
@@ -206,7 +225,8 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       })();
 
       return {
-        id: film.imdb ?? `letterboxd:${film.id}`,
+        id: `letterboxd:${film.id}`,
+        imdb_id: film.imdb,
         type: "movie",
         name: film.name,
         description: film.description ?? undefined,

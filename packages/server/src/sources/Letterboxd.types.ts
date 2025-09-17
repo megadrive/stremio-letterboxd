@@ -1,5 +1,40 @@
 import { z } from "zod";
 
+export const ContributorTypeSchema = z.enum([
+  "Director",
+  "CoDirector",
+  "Actor",
+  "Producer",
+  "Writer",
+  "OriginalWriter",
+  "Story",
+  "Casting",
+  "Editor",
+  "Cinematography",
+  "AssistantDirector",
+  "AdditionalDirecting",
+  "ExecutiveProducer",
+  "Lighting",
+  "CameraOperator",
+  "AdditionalPhotography",
+  "ProductionDesign",
+  "ArtDirection",
+  "SetDecoration",
+  "SpecialEffects",
+  "VisualEffects",
+  "TitleDesign",
+  "Stunts",
+  "Choreography",
+  "Composer",
+  "Songs",
+  "Sound",
+  "Costumes",
+  "Creator",
+  "MakeUp",
+  "Hairstyling",
+  "Studio",
+]);
+
 const TagSchema = z.object({
   tag: z.string({ description: "deprecated, use displayTag instead" }),
   code: z.string(),
@@ -84,42 +119,105 @@ const GenreSchema = z.object({
   name: z.string(),
 });
 
-export const FilmSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  originalName: z
-    .string({ description: "First party, Letterboxd internal." })
-    .optional(),
-  link: z.string().url(),
-  sortingName: z.string(),
+export const FilmSummarySchema = z.object({
+  adult: z.boolean(),
+  adultPoster: ImageSchema.optional(),
   alternativeNames: z
     .array(z.string({ description: "First party, Letterboxd internal." }))
     .optional(),
-  releaseYear: z.number().optional(),
-  runTime: z.number().optional(),
-  rating: z.number().optional(),
-  directors: z.array(ContributorSummarySchema),
-  poster: ImageSchema.optional(),
-  adultPoster: ImageSchema.optional(),
-  top250Position: z.number().nullable().optional(),
-  adult: z.boolean(),
-  reviewsHidden: z.boolean(),
-  posterCustomisable: z.boolean(),
   backdropCustomisable: z.boolean(),
-  filmCollectionId: z.string().optional(),
-  links: z.array(LinksSchema),
-  genres: z.array(GenreSchema),
-  posterPickerUrl: z
-    .string({ description: "first party, letterboxd internal." })
-    .optional(),
   backdropPickerUrl: z
     .string({ description: "first party, letterboxd internal." })
     .optional(),
+  directors: z.array(ContributorSummarySchema).optional(),
+  filmCollectionId: z.string().optional(),
+  genres: z.array(GenreSchema).optional(),
+  id: z.string(),
+  link: z.string().url(),
+  links: z.array(LinksSchema),
+  name: z.string(),
+  poster: ImageSchema.optional(),
+  posterCustomisable: z.boolean(),
+  posterPickerUrl: z
+    .string({ description: "first party, letterboxd internal." })
+    .optional(),
+  originalName: z
+    .string({ description: "First party, Letterboxd internal." })
+    .optional(),
+  rating: z.number().optional(),
+  releaseYear: z.number().optional(),
+  reviewsHidden: z.boolean(),
+  runTime: z.number().optional(),
+  sortingName: z.string(),
+  top250Position: z.number().nullable().optional(),
 });
+
+export const ReleaseSchema = z.object({
+  country: z.object({
+    code: z.string(),
+    name: z.string(),
+    flagUrl: z.string().url().optional(),
+  }),
+  releaseDate: z.string().optional(),
+  type: z.enum([
+    "Premiere",
+    "Theatrical",
+    "Theatrical_limited",
+    "Digital",
+    "Physical",
+    "TV",
+  ]),
+  certification: z.string().optional(),
+  language: z
+    .object({
+      code: z.string(),
+      name: z.string(),
+    })
+    .optional(),
+  note: z.string().optional(),
+});
+
+// zod merge two schemas
+export const FilmSchema = FilmSummarySchema.merge(
+  z.object({
+    backdrop: ImageSchema.optional(),
+    contributions: z
+      .array(
+        z.object({
+          type: ContributorTypeSchema,
+          contributors: z.array(ContributorSummarySchema),
+        })
+      )
+      .optional(),
+    countries: z.array(
+      z.object({
+        code: z.string(),
+        name: z.string(),
+        flagUrl: z.string().url().optional(),
+      })
+    ),
+    description: z.string().optional(),
+    primarySpokenLanguage: z
+      .object({
+        code: z.string(),
+        name: z.string(),
+      })
+      .nullable()
+      .optional(),
+    releases: z.array(ReleaseSchema).optional(),
+    similarTo: z.array(FilmSummarySchema).optional(),
+    tagline: z.string().nullable().optional(),
+    trailer: z.object({
+      url: z.string().url(),
+      type: z.string().optional(),
+      id: z.string().optional(),
+    }),
+  })
+);
 
 const ListEntrySummarySchema = z.object({
   rank: z.number().optional(),
-  film: FilmSchema,
+  film: FilmSummarySchema,
 });
 
 export const ListSchema = z.object({
@@ -147,7 +245,7 @@ export const ListEntriesSchema = z.object({
   items: z.array(
     z.object({
       entryId: z.string(),
-      film: FilmSchema,
+      film: FilmSummarySchema,
       whenAdded: z.coerce.date(),
       containsSpoilers: z.boolean().optional(),
       notes: z.string().optional(),
@@ -161,46 +259,12 @@ export const ListEntriesSchema = z.object({
   itemCount: z.number().optional(),
 });
 
-export const ContributorTypeSchema = z.enum([
-  "Director",
-  "CoDirector",
-  "Actor",
-  "Producer",
-  "Writer",
-  "OriginalWriter",
-  "Story",
-  "Casting",
-  "Editor",
-  "Cinematography",
-  "AssistantDirector",
-  "AdditionalDirecting",
-  "ExecutiveProducer",
-  "Lighting",
-  "CameraOperator",
-  "AdditionalPhotography",
-  "ProductionDesign",
-  "ArtDirection",
-  "SetDecoration",
-  "SpecialEffects",
-  "VisualEffects",
-  "TitleDesign",
-  "Stunts",
-  "Choreography",
-  "Composer",
-  "Songs",
-  "Sound",
-  "Costumes",
-  "Creator",
-  "MakeUp",
-  "Hairstyling",
-  "Studio",
-]);
 export const ContributorContributionsSchema = z.object({
   next: z.string().optional(),
   items: z.array(
     z.object({
       type: z.string(),
-      film: FilmSchema,
+      film: FilmSummarySchema,
       containsSpoilers: z.boolean().optional(),
     })
   ),
@@ -217,7 +281,7 @@ export const ContributorContributionsSchema = z.object({
 
 export const MemberWatchlistSchema = z.object({
   next: z.string().optional(),
-  items: z.array(FilmSchema),
+  items: z.array(FilmSummarySchema),
 });
 
 export const FilmSortSchema = z.enum([
@@ -256,7 +320,7 @@ export const FilmSortSchema = z.enum([
 
 export const FilmsSchema = z.object({
   next: z.string().optional(),
-  items: z.array(FilmSchema),
+  items: z.array(FilmSummarySchema),
 });
 
 /**

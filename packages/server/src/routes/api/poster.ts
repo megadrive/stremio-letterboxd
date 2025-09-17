@@ -80,7 +80,6 @@ async function handleRoute(c: Context<AppBindingsWithConfig>) {
     }
 
     // cache in the background
-    c.var.logger.debug({ href, slug, altId });
     if (!cached) {
       prisma.poster
         .create({

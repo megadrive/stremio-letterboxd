@@ -10,7 +10,7 @@ export class CacheSource implements ISource {
   async fetch(opts: {
     config: Config;
     configString: string;
-  }): Promise<SourceResult[]> {
+  }): Promise<{ shouldStop: boolean; metas: SourceResult[] }> {
     const { config, configString } = opts;
 
     const encodedConfig = configString;
@@ -23,7 +23,7 @@ export class CacheSource implements ISource {
     if (!cached) {
       console.error(`Failed to find cached metadata for ${encodedConfig}`);
 
-      return [];
+      return { shouldStop: false, metas: [] };
     }
 
     // if the cache is older than 24 hours, update it in the background
@@ -40,7 +40,7 @@ export class CacheSource implements ISource {
     if (cachedMetadata.success === false) {
       console.error(`Failed to parse cached metadata for ${encodedConfig}`);
 
-      return [];
+      return { shouldStop: false, metas: [] };
     }
 
     const slugs = cachedMetadata.data.items.map((item) => item.id);
@@ -69,6 +69,9 @@ export class CacheSource implements ISource {
       return slugs.indexOf(a.id) - slugs.indexOf(b.id);
     });
 
-    return filmsData;
+    return {
+      shouldStop: false,
+      metas: filmsData,
+    };
   }
 }

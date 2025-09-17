@@ -3,10 +3,13 @@ import { createRouter } from "@/util/createHono.js";
 import { getError } from "@/util/errors.js";
 import { prisma } from "@stremio-addon/database";
 import type { MetaDetail } from "stremio-addon-sdk";
+import { LetterboxdSource } from "@/sources/Letterboxd.js";
+const letterboxdSource = new LetterboxdSource();
 
 // should match: /:config/meta/:type/:id/:extras?.json
 // ex: /configexample/meta/movie/123456.json
 export const metaRouter = createRouter();
+const tmdbInstanceUrl = `https://94c8cb9f702d-tmdb-addon.baby-beamup.club`;
 
 metaRouter.get("/:type/:id.json", async (c) => {
   // redirect to tmdb-addon endpoint
@@ -30,6 +33,31 @@ metaRouter.get("/:type/:id.json", async (c) => {
   }
 
   try {
+    const lid = await letterboxdSource.getLetterboxdID(
+      `/film/${idWithoutPrefix}`
+    );
+    if (!lid) {
+      c.var.logger.error(`Failed to find Letterboxd ID for ${idWithoutPrefix}`);
+      return c.text("Error fetching meta data", 500);
+    }
+
+    const lbxdMeta = await letterboxdSource.getFilm(lid);
+    if (lbxdMeta) {
+      c.var.logger.info("Found Letterboxd meta", lbxdMeta);
+
+      const ids = {
+        tmdb: lbxdMeta.links?.find((link) => link.type === "tmdb")?.id,
+        imdb: lbxdMeta.links?.find((link) => link.type === "imdb")?.id,
+      };
+
+      if (!ids.imdb && ids.tmdb) {
+        return c.redirect(
+          `${tmdbInstanceUrl}/meta/${type}/tmdb:${ids.tmdb}.json`
+        );
+      }
+    }
+
+    // find the config in the database
     const cached = await prisma.film.findFirst({
       where: {
         id: idWithoutPrefix,
@@ -37,11 +65,14 @@ metaRouter.get("/:type/:id.json", async (c) => {
     });
 
     if (!cached) {
-      return c.json({ meta: {} }, 404);
+      c.var.logger.error(
+        `Failed to find cached metadata for ${idWithoutPrefix}`
+      );
+      return c.text("Error fetching meta data", 500);
     }
 
     // check if it's available
-    const tmdbUrl = `https://94c8cb9f702d-tmdb-addon.baby-beamup.club/meta/${type}/tmdb:${cached.tmdb}.json`;
+    const tmdbUrl = `${tmdbInstanceUrl}/meta/${type}/tmdb:${cached.tmdb}.json`;
     const available = await fetch(tmdbUrl);
     if (!available.ok) {
       c.var.logger.info("Not available on TMDB", available.status);
