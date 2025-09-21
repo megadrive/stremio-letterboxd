@@ -336,7 +336,7 @@ export class LetterboxdSource implements ISource {
     // fetch the data
     console.info(`Fetching Letterboxd list data for ${url} (ID: ${lbxdId})`);
 
-    const PAGE_SIZE = 30;
+    const PAGE_SIZE = 100;
     const searchParams = new URLSearchParams();
     searchParams.set("perPage", PAGE_SIZE.toString());
     if (opts.skip) {
