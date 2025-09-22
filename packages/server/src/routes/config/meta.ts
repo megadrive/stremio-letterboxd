@@ -4,7 +4,14 @@ import { getError } from "@/util/errors.js";
 import { prisma } from "@stremio-addon/database";
 import type { MetaDetail } from "stremio-addon-sdk";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
+import { createCache } from "@/lib/sqliteCache.js";
+
 const letterboxdSource = new LetterboxdSource();
+const cache = createCache<{
+  lid: string;
+  imdb?: string;
+  tmdb?: string;
+}>("lbxd-id", 1000 * 60 * 60 * 24 * 30); // 30 days
 
 // should match: /:config/meta/:type/:id/:extras?.json
 // ex: /configexample/meta/movie/123456.json
@@ -33,6 +40,24 @@ metaRouter.get("/:type/:id.json", async (c) => {
     return c.json({ meta: getError(errorCode, c.var.config) });
   }
 
+  const cacheKey = idWithoutPrefix;
+  const cached = await cache.get(cacheKey);
+  if (cached) {
+    c.var.logger.info("Found cached Letterboxd ID", cached);
+
+    if (cached.imdb) {
+      return c.redirect(
+        `https://v3-cinemeta.strem.io/meta/${type}/${cached.imdb}.json`
+      );
+    }
+
+    if (cached.tmdb) {
+      return c.redirect(
+        `${tmdbInstanceUrl}/meta/${type}/tmdb:${cached.tmdb}.json`
+      );
+    }
+  }
+
   try {
     let lid: string | null = idWithoutPrefix.split("-")[1];
     if (!lid) {
@@ -53,15 +78,17 @@ metaRouter.get("/:type/:id.json", async (c) => {
         imdb: lbxdMeta.links?.find((link) => link.type === "imdb")?.id,
       };
 
-      if (!ids.imdb && ids.tmdb) {
-        return c.redirect(
-          `${tmdbInstanceUrl}/meta/${type}/tmdb:${ids.tmdb}.json`
-        );
-      }
+      await cache.set(cacheKey, { lid, ...ids });
 
       if (ids.imdb) {
         return c.redirect(
           `https://v3-cinemeta.strem.io/meta/${type}/${ids.imdb}.json`
+        );
+      }
+
+      if (ids.tmdb) {
+        return c.redirect(
+          `${tmdbInstanceUrl}/meta/${type}/tmdb:${ids.tmdb}.json`
         );
       }
     }
