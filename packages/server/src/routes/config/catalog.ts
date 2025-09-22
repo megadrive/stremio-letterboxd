@@ -12,6 +12,7 @@ import type { SourceResult } from "@/sources/ISource.js";
 import { CacheSource } from "@/sources/CacheSource.js";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
 import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
+import type { z } from "astro:content";
 
 const SOURCES = [new LetterboxdSource(), new CacheSource()];
 
@@ -56,6 +57,40 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       return c.json({ metas: [] }, INTERNAL_SERVER_ERROR);
     }
 
+    const sort = (() => {
+      const typesOfSort = new Map<string, z.infer<typeof FilmSortSchema>>([
+        ["", "ListRanking"],
+        ["reverse", "ListRanking"],
+        ["name", "FilmName"],
+        ["popular", "FilmPopularity"],
+        ["shuffle", "Shuffle"],
+        ["added", "WhenAddedToList"],
+        ["added-earliest", "WhenAddedToListEarliestFirst"],
+        ["release", "ReleaseDateLatestFirst"],
+        ["release-earliest", "ReleaseDateEarliestFirst"],
+        ["rating", "AverageRatingHighToLow"],
+        ["rating-lowest", "AverageRatingLowToHigh"],
+        ["owner-diary", "OwnerDiaryLatestFirst"],
+        ["owner-diary-earliest", "OwnerDiaryEarliestFirst"],
+        ["owner-rating", "OwnerRatingHighToLow"],
+        ["owner-rating-lowest", "OwnerRatingLowToHigh"],
+        ["shortest", "FilmDurationShortestFirst"],
+        ["longest", "FilmDurationLongestFirst"],
+      ]);
+
+      // /almosteffective/watchlist/by/shuffle/
+      const howToSort = id.split("/by/")[1];
+      if (!howToSort) {
+        return undefined;
+      }
+
+      if (howToSort === "") {
+        return "ListRanking";
+      }
+
+      return typesOfSort.get(howToSort) ?? undefined;
+    })();
+
     let data: SourceResult[] = [];
     let successfulSource: string | null = null;
     for (const source of SOURCES) {
@@ -65,9 +100,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           config: c.var.config,
           configString: c.var.configString,
           skip: parsedExtras?.skip ? Number(parsedExtras.skip) : undefined,
-          sort: parsedExtras?.genre
-            ? FilmSortSchema.optional().parse(parsedExtras.genre)
-            : undefined,
+          sort,
         })
       );
 

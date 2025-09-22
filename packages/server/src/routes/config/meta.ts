@@ -23,6 +23,7 @@ metaRouter.get("/:type/:id.json", async (c) => {
 
   id = id.replace(/\.json$/, "");
 
+  // letterboxd:[id:]slugOrLid
   const [, idWithoutPrefix, errorCode] = id.split(":");
 
   c.var.logger.debug(`meta ${type} ${idWithoutPrefix}`);
@@ -53,6 +54,12 @@ metaRouter.get("/:type/:id.json", async (c) => {
       if (!ids.imdb && ids.tmdb) {
         return c.redirect(
           `${tmdbInstanceUrl}/meta/${type}/tmdb:${ids.tmdb}.json`
+        );
+      }
+
+      if (ids.imdb) {
+        return c.redirect(
+          `https://v3-cinemeta.strem.io/meta/${type}/${ids.imdb}.json`
         );
       }
     }

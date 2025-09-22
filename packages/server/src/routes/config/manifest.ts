@@ -3,7 +3,6 @@ import { addonManifest, createManifest } from "@/util/manifest.js";
 import { determineCatalogName } from "@/workers/letterboxdCacher.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 import { to } from "await-to-js";
-import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
 
 export const manifestRouter = createRouter();
 
@@ -87,11 +86,6 @@ manifestRouter.get("/", async (c) => {
           {
             name: "skip",
             isRequired: false,
-          },
-          {
-            name: "genre",
-            isRequired: false,
-            options: FilmSortSchema.options,
           },
         ],
       },
