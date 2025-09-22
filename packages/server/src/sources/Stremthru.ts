@@ -16,7 +16,7 @@ const STREMTHRU_URLS = {
 
 export class StremthruSource implements ISource {
   async fetch(
-    opts: Required<Pick<SourceOptions, "url">>
+    opts: Required<Pick<SourceOptions, "url">> & SourceOptions
   ): Promise<{ shouldStop: boolean; metas: SourceResult[] }> {
     if (!opts.url) {
       return {
@@ -124,6 +124,47 @@ export class StremthruSource implements ISource {
         shouldStop: false,
         metas: [],
       };
+    }
+
+    // as stremthru doesn't have sorting, we sort ourselves
+    // get the sort from the url. it will be the final part after /by/
+    const sort = (() => {
+      // https://letterboxd.com/username/list/list-name/by/rating/
+      const howToSort = opts.url.split("/by/")[1];
+      if (!howToSort) {
+        return undefined;
+      }
+
+      if (howToSort === "") {
+        return undefined;
+      }
+
+      return howToSort;
+    })();
+
+    switch (sort) {
+      case "reversed":
+        listData.items.reverse();
+        break;
+      case "name":
+        listData.items.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "added":
+        listData.items.sort(
+          (a, b) => a.updated_at.getTime() - b.updated_at.getTime()
+        );
+        break;
+      case "added-earliest":
+        listData.items.sort(
+          (a, b) => b.updated_at.getTime() - a.updated_at.getTime()
+        );
+        break;
+      case "release":
+        listData.items.sort((a, b) => (b.year || 0) - (a.year || 0));
+        break;
+      case "release-earliest":
+        listData.items.sort((a, b) => (a.year || 0) - (b.year || 0));
+        break;
     }
 
     const metas: SourceResult[] = listData.items.map((item) => ({
