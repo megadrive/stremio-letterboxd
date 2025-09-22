@@ -23,7 +23,7 @@ metaRouter.get("/:type/:id.json", async (c) => {
 
   id = id.replace(/\.json$/, "");
 
-  // letterboxd:[id:]slugOrLid
+  // letterboxd:[id-]slugOrLid
   const [, idWithoutPrefix, errorCode] = id.split(":");
 
   c.var.logger.debug(`meta ${type} ${idWithoutPrefix}`);
@@ -34,9 +34,11 @@ metaRouter.get("/:type/:id.json", async (c) => {
   }
 
   try {
-    const lid = await letterboxdSource.getLetterboxdID(
-      `/film/${idWithoutPrefix}`
-    );
+    let lid: string | null = idWithoutPrefix.split("-")[1];
+    if (!lid) {
+      lid = await letterboxdSource.getLetterboxdID(`/film/${idWithoutPrefix}`);
+    }
+
     if (!lid) {
       c.var.logger.error(`Failed to find Letterboxd ID for ${idWithoutPrefix}`);
       return c.text("Error fetching meta data", 500);

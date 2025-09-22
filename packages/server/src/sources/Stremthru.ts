@@ -1,6 +1,12 @@
 import { to } from "await-to-js";
-import type { ISource, SourceOptions, SourceResult } from "./ISource.js";
+import {
+  createCache,
+  type ISource,
+  type SourceOptions,
+  type SourceResult,
+} from "./ISource.js";
 import { StremthruResponseSchema } from "./Stremtru.types.js";
+const cache = createCache<SourceResult[]>("stremthru");
 
 const STREMTHRU_API_BASE = "https://stremthru.13377001.xyz/v0";
 const STREMTHRU_URLS = {
@@ -16,6 +22,15 @@ export class StremthruSource implements ISource {
       return {
         shouldStop: false,
         metas: [],
+      };
+    }
+
+    // fetch cache and serve if available
+    const cached = await cache.get(opts.url);
+    if (cached) {
+      return {
+        shouldStop: true,
+        metas: cached,
       };
     }
 
@@ -120,6 +135,9 @@ export class StremthruSource implements ISource {
       imdb: item.id_map.imdb,
       tmdb: item.id_map.tmdb ?? "",
     }));
+
+    // cache data
+    await cache.set(opts.url, metas, 60 * 60); // 1 hour
 
     return {
       shouldStop: true,
