@@ -11,10 +11,15 @@ import { to } from "await-to-js";
 import type { SourceResult } from "@/sources/ISource.js";
 import { CacheSource } from "@/sources/CacheSource.js";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
+import { StremthruSource } from "@/sources/Stremthru.js";
 import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
-import type { z } from "astro:content";
+import type { z } from "zod";
 
-const SOURCES = [new LetterboxdSource(), new CacheSource()];
+const SOURCES = [
+  new StremthruSource(),
+  new LetterboxdSource(),
+  new CacheSource(),
+];
 
 export const catalogRouter = createRouter();
 
@@ -92,7 +97,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     })();
 
     let data: SourceResult[] = [];
-    let successfulSource: string | null = null;
+    let successfulSource: string | undefined = undefined;
     for (const source of SOURCES) {
       const [sourceDataErr, sourceData] = await to(
         source.fetch({
@@ -202,6 +207,13 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
 
     const metas: MetaDetail[] = paginatedCachedFilms.map((film) => {
       const poster = (() => {
+        if (successfulSource === "StremthruSource") {
+          c.var.logger.info(
+            "Using Stremthru poster as it doesn't provide slugs."
+          );
+          return film.poster;
+        }
+
         const cachedConfigFilmMetadata = data.find(
           (item) => item.id === film.id
         );

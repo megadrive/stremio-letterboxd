@@ -59,6 +59,20 @@ manifestRouter.get("/", async (c) => {
       break;
   }
 
+  // figure out the sort
+  let sort = "Default";
+  console.info("Config URL:", conf.url);
+  const splitUrl = conf.url.split("/").filter((part) => part.length > 0);
+  const byIndex = splitUrl.indexOf("by");
+  if (byIndex !== -1 && byIndex < splitUrl.length - 1) {
+    sort = splitUrl[byIndex + 1];
+    // convert hyphens to spaces and capitalize each word
+    sort = sort
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
   const manifest = createManifest({
     ...addonManifest,
     behaviorHints: {
@@ -86,6 +100,11 @@ manifestRouter.get("/", async (c) => {
           {
             name: "skip",
             isRequired: false,
+          },
+          {
+            name: "genre",
+            isRequired: true,
+            options: [sort],
           },
         ],
       },
