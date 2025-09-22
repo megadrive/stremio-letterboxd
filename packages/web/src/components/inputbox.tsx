@@ -18,6 +18,29 @@ function SortOption(props: { name: string; url: string }) {
   );
 }
 
+const NamePlaceholders = [
+  "Movies I Pretend to Have Seen",
+  "Films That Made Me Ugly Cry",
+  "My Netflix Queue of Eternal Shame",
+  "Movies I Started but Never Finished",
+  "Films I Love but Can't Admit Publicly",
+  "Movies That Are Definitely Not Rom-Coms",
+  "Films I Watch When I Need to Feel Smart",
+  "My 'It's So Bad It's Good' Collection",
+  "Movies I Quote Way Too Often",
+  "Films That Ruined My Sleep Schedule",
+  "Movies I Watch to Procrastinate Adulting",
+  "Films That Made Me Question Reality",
+  "My 'Watch This When Sick' Collection",
+  "Movies I Judge People For Not Liking",
+  "Films I'll Never Admit Scared Me",
+  "My Comfort Food Cinema Selection",
+  "Movies That Broke My Heart (And I Liked It)",
+  "Films I Use to Test New Speakers",
+  "My 'Background Noise While Cleaning' List",
+  "Movies That Made Me Google the Ending",
+];
+
 /**
  * Resolves a Boxt.it URL to the final destination.
  * @param url A Boxt.it URL
@@ -206,7 +229,7 @@ export default function Inputbox() {
           <div className="flex flex-col gap-1 sm:flex-row">
             <input
               type="text"
-              placeholder="https://letterboxd.com/almosteffective/watchlist"
+              placeholder="https://letterboxd.com/almosteffective/watchlist/"
               {...register("url")}
               disabled={formDisabled}
               onBlur={() => {
@@ -261,12 +284,16 @@ export default function Inputbox() {
             </button>
           </div>
           <div className="text-base">
-            Set a custom list if you'd like (leave empty to auto-generate):
+            Set a custom name if you'd like (leave empty to auto-generate):
           </div>
           <div>
             <input
               type="text"
-              placeholder="Probably Hugh Jackman's Watchlist"
+              placeholder={
+                NamePlaceholders[
+                  Math.floor(Math.random() * NamePlaceholders.length)
+                ]
+              }
               {...register("catalogName")}
               className="w-full border border-black bg-white text-[#202830] rounded text-xl px-2 py-1"
             />
