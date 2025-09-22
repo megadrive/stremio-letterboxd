@@ -1,11 +1,11 @@
 import { to } from "await-to-js";
 import {
-  createCache,
   type ISource,
   type SourceOptions,
   type SourceResult,
 } from "./ISource.js";
 import { StremthruResponseSchema } from "./Stremtru.types.js";
+import { createCache } from "@/lib/sqliteCache.js";
 const cache = createCache<SourceResult[]>("stremthru");
 
 const STREMTHRU_API_BASE = "https://stremthru.13377001.xyz/v0";
@@ -41,7 +41,7 @@ export class StremthruSource implements ISource {
     */
     const url = new URL(opts.url);
     let apiUrl = "";
-    if (url.pathname.endsWith("/watchlist/")) {
+    if (url.pathname.includes("/watchlist/")) {
       apiUrl =
         STREMTHRU_API_BASE +
         STREMTHRU_URLS.watchlist.replace(/watchlist\/$/, "");
@@ -50,7 +50,7 @@ export class StremthruSource implements ISource {
       apiUrl = STREMTHRU_API_BASE + STREMTHRU_URLS.list;
     } else {
       return {
-        shouldStop: true,
+        shouldStop: false,
         metas: [],
       };
     }
@@ -69,7 +69,7 @@ export class StremthruSource implements ISource {
     if (idErr || !idRes?.ok) {
       console.warn(`Error fetching ID from ${apiUrl}`, idErr, idRes?.status);
       return {
-        shouldStop: true,
+        shouldStop: false,
         metas: [],
       };
     }
@@ -79,7 +79,7 @@ export class StremthruSource implements ISource {
     if (!id) {
       console.warn("No ID found in headers");
       return {
-        shouldStop: true,
+        shouldStop: false,
         metas: [],
       };
     }

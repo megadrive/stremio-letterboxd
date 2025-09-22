@@ -1,6 +1,6 @@
 import { to } from "await-to-js";
 import type { ISource, SourceOptions, SourceResult } from "./ISource.js";
-import { createCache } from "./ISource.js";
+import { createCache } from "@/lib/sqliteCache.js";
 import { serverEnv } from "@stremio-addon/env";
 import { z } from "zod";
 import {
