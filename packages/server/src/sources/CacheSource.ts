@@ -1,5 +1,5 @@
 import { prisma } from "@stremio-addon/database";
-import type { ISource, SourceResult } from "./ISource.js";
+import type { FetchReturn, ISource, SourceResult } from "./ISource.js";
 import {
   CatalogMetadataSchema,
   letterboxdCacher,
@@ -7,10 +7,7 @@ import {
 import type { Config } from "@stremio-addon/config";
 
 export class CacheSource implements ISource {
-  async fetch(opts: {
-    config: Config;
-    configString: string;
-  }): Promise<{ shouldStop: boolean; metas: SourceResult[] }> {
+  async fetch(opts: { config: Config; configString: string }): FetchReturn {
     const { config, configString } = opts;
 
     const encodedConfig = configString;

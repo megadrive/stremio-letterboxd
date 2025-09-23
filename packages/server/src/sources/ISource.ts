@@ -19,6 +19,11 @@ export interface SourceResult {
   tmdb: string;
 }
 
+export type FetchReturn = Promise<{
+  shouldStop?: boolean;
+  metas: SourceResult[];
+}>;
+
 export interface ISource<TOptions extends SourceOptions = SourceOptions> {
   /**
    * A fetch function that retrieves metadata from the source.
@@ -29,7 +34,5 @@ export interface ISource<TOptions extends SourceOptions = SourceOptions> {
    *
    * @param opts - Options for fetching data, including URL, config string, and pagination skip value.
    */
-  fetch(
-    opts: TOptions
-  ): Promise<{ shouldStop: boolean; metas: SourceResult[] }>;
+  fetch(opts: TOptions): FetchReturn;
 }

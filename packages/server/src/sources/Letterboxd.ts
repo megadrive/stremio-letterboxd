@@ -1,5 +1,10 @@
 import { to } from "await-to-js";
-import type { ISource, SourceOptions, SourceResult } from "./ISource.js";
+import type {
+  FetchReturn,
+  ISource,
+  SourceOptions,
+  SourceResult,
+} from "./ISource.js";
 import { createCache } from "@/lib/sqliteCache.js";
 import { serverEnv } from "@stremio-addon/env";
 import { z } from "zod";
@@ -215,10 +220,7 @@ export class LetterboxdSource implements ISource {
         sort?: z.infer<typeof FilmSortSchema>;
         skip?: number;
       }
-  ): Promise<{
-    shouldStop: boolean;
-    metas: SourceResult[];
-  }> {
+  ): FetchReturn {
     opts = {
       shouldCache: true,
       sort: "ListRanking",

@@ -1,5 +1,6 @@
 import { to } from "await-to-js";
 import {
+  type FetchReturn,
   type ISource,
   type SourceOptions,
   type SourceResult,
@@ -17,7 +18,7 @@ const STREMTHRU_URLS = {
 export class StremthruSource implements ISource {
   async fetch(
     opts: Required<Pick<SourceOptions, "url">> & SourceOptions
-  ): Promise<{ shouldStop: boolean; metas: SourceResult[] }> {
+  ): FetchReturn {
     if (!opts.url) {
       return {
         shouldStop: false,
