@@ -1,8 +1,5 @@
-import { tmdb } from "@/lib/tmdb.js";
 import { createRouter } from "@/util/createHono.js";
 import { getError } from "@/util/errors.js";
-import { prisma } from "@stremio-addon/database";
-import type { MetaDetail } from "stremio-addon-sdk";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
 import { createCache } from "@/lib/sqliteCache.js";
 
@@ -30,17 +27,20 @@ metaRouter.get("/:type/:id.json", async (c) => {
 
   id = id.replace(/\.json$/, "");
 
-  // letterboxd:[id-]slugOrLid
-  const [, idWithoutPrefix, errorCode] = id.split(":");
+  /*
+  - letterboxd:slug
+  - letterboxd:id-lid
+  */
+  const [, slugOrLid, errorCode] = id.split(":");
 
-  c.var.logger.debug(`meta ${type} ${idWithoutPrefix}`);
+  c.var.logger.debug(`meta ${type} ${slugOrLid}`);
 
   // handle error metas
-  if (idWithoutPrefix === "error") {
+  if (slugOrLid === "error") {
     return c.json({ meta: getError(errorCode, c.var.config) });
   }
 
-  const cacheKey = idWithoutPrefix;
+  const cacheKey = slugOrLid;
   const cached = await cache.get(cacheKey);
   if (cached) {
     c.var.logger.info("Found cached Letterboxd ID", cached);
@@ -59,13 +59,14 @@ metaRouter.get("/:type/:id.json", async (c) => {
   }
 
   try {
-    let lid: string | null = idWithoutPrefix.split("-")[1];
+    let lid: string | null =
+      slugOrLid[0] === "id" ? slugOrLid.split("-")[1] : null;
     if (!lid) {
-      lid = await letterboxdSource.getLetterboxdID(`/film/${idWithoutPrefix}`);
+      lid = await letterboxdSource.getLetterboxdID(`/film/${slugOrLid}`);
     }
 
     if (!lid) {
-      c.var.logger.error(`Failed to find Letterboxd ID for ${idWithoutPrefix}`);
+      c.var.logger.error(`Failed to find Letterboxd ID for ${slugOrLid}`);
       return c.text("Error fetching meta data", 500);
     }
 
@@ -78,6 +79,7 @@ metaRouter.get("/:type/:id.json", async (c) => {
         imdb: lbxdMeta.links?.find((link) => link.type === "imdb")?.id,
       };
 
+      console.info("Storing Letterboxd ID mapping in cache", { lid, ...ids });
       await cache.set(cacheKey, { lid, ...ids });
 
       if (ids.imdb) {
@@ -92,44 +94,6 @@ metaRouter.get("/:type/:id.json", async (c) => {
         );
       }
     }
-
-    // find the config in the database
-    const cached = await prisma.film.findFirst({
-      where: {
-        id: idWithoutPrefix,
-      },
-    });
-
-    if (!cached) {
-      c.var.logger.error(
-        `Failed to find cached metadata for ${idWithoutPrefix}`
-      );
-      return c.text("Error fetching meta data", 500);
-    }
-
-    // check if it's available
-    const tmdbUrl = `${tmdbInstanceUrl}/meta/${type}/tmdb:${cached.tmdb}.json`;
-    const available = await fetch(tmdbUrl);
-    if (!available.ok) {
-      c.var.logger.info("Not available on TMDB", available.status);
-
-      try {
-        const tmdbMeta = await tmdb().getMovieDetails(+cached.tmdb);
-
-        const meta: MetaDetail = {
-          id: `tmdb:${tmdbMeta.id}`,
-          type: "movie",
-          name: tmdbMeta.title,
-        };
-
-        return c.json({ meta });
-      } catch (error) {
-        c.var.logger.error("Error fetching meta data", error);
-        return c.json({ meta: {} }, 500);
-      }
-    }
-
-    return c.redirect(tmdbUrl);
   } catch (error) {
     c.var.logger.error("Error fetching meta data", error);
   }
