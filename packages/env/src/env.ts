@@ -53,6 +53,11 @@ export const serverEnv = cleanEnv(process.env, {
     default: "bearer",
     desc: "The auth type to use for the Letterboxd API. Usually bearer.",
   }),
+  METADATA_LEVEL: str({
+    default: "basic",
+    choices: ["basic", "full"],
+    desc: "How much metadata to include in the catalog. basic = IDs, titles, and posters, full = everything (default: basic).",
+  }),
 });
 
 export const HOST_LOCAL = `http://localhost:${serverEnv.PORT}`;

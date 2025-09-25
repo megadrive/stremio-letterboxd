@@ -1,5 +1,5 @@
 import { createRouter, type AppBindingsWithConfig } from "@/util/createHono.js";
-import type { MetaDetail } from "stremio-addon-sdk";
+import type { MetaDetail, MetaPreview } from "stremio-addon-sdk";
 import { parseExtras } from "@/util/parseExtras.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 import { prisma } from "@stremio-addon/database";
@@ -274,7 +274,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         return "";
       })();
 
-      return {
+      let meta: (MetaPreview | MetaDetail) & { imdb_id?: string } = {
         id: `letterboxd:${film.id}`,
         imdb_id: film.imdb,
         type: "movie",
@@ -286,6 +286,19 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         genres: film.genres,
         poster,
       };
+
+      // restrict metadata unless configured otherwise
+      if (serverEnv.METADATA_LEVEL === "basic") {
+        meta = {
+          id: meta.id,
+          imdb_id: meta.imdb_id,
+          type: meta.type,
+          name: meta.name,
+          poster: meta.poster,
+        };
+      }
+
+      return meta;
     });
 
     c.header("Cache-Control", "public, max-age=3600");
