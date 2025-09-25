@@ -237,51 +237,79 @@ export class LetterboxdSource implements ISource {
     // figure out what endpoint we're after
     const urlObj = new URL(url);
 
-    // list is only supported for now
-    let endpoint: EndpointType | null = null;
-    let contributorType: string | null = null;
-
-    // remove extra slashes
-    const pathname = urlObj.pathname.replace(/\/+/g, "/");
-
-    const regex_list = /^\/([^/]+)\/(list)\/([^/]+)\/?/;
-    const list_match = pathname.match(regex_list);
-    if (list_match) {
-      endpoint = "list";
-    }
-
-    const contributorTypes = ContributorTypeSchema.options.map((o) =>
-      o.toLowerCase()
-    );
-    if (
-      contributorTypes.some((type, i) => {
-        if (pathname.startsWith(`/${type}/`)) {
-          contributorType = ContributorTypeSchema.options[i];
-          return true;
+    const urlParsed = (():
+      | {
+          endpoint: EndpointType;
+          contributorType?: string;
+          username?: string;
         }
-      })
-    ) {
-      endpoint = "contributor";
-    }
+      | undefined => {
+      // remove extra slashes
+      const pathname = urlObj.pathname.replace(/\/+/g, "/");
+      // /username/list/list-name/
+      // /actor/john-doe/
+      // /username/watchlist/
+      // /films/popular/
+      // /films/popular/this/week
+      const [usernameOrType, listOrWatchlist] = pathname
+        .split("/")
+        .filter((p) => p.length > 0);
 
-    // /username/watchlist
-    const regex_watchlist = /^\/([^/]+)\/(watchlist)\/?$/;
-    const watchlist_match = pathname.match(regex_watchlist);
-    let username: string | null = null;
-    if (watchlist_match) {
-      endpoint = "member_watchlist";
-      username = watchlist_match[1];
-    }
+      if (listOrWatchlist === "list") {
+        return {
+          endpoint: "list",
+        };
+      }
 
-    // /films/popular
-    if (pathname.startsWith("/films/popular")) {
-      endpoint = "film_popular";
-    }
+      // function for SpecialEffects and similar should become special-effects
+      const toKebabCase = (str: string) =>
+        str
+          .replace(/([a-z])([A-Z])/g, "$1-$2")
+          .replace(/[\s_]+/g, "-")
+          .toLowerCase();
 
-    if (!endpoint) {
+      const contributorTypes = ContributorTypeSchema.options.map((o) =>
+        toKebabCase(o)
+      );
+      let contributorType: string | undefined = undefined;
+      if (
+        contributorTypes.some((type, i) => {
+          if (pathname.startsWith(`/${type}/`)) {
+            contributorType = ContributorTypeSchema.options[i];
+            return true;
+          }
+        })
+      ) {
+        return {
+          endpoint: "contributor",
+          contributorType,
+        };
+      }
+
+      // /username/watchlist/
+      if (usernameOrType && listOrWatchlist === "watchlist") {
+        return {
+          endpoint: "member_watchlist",
+          username: usernameOrType,
+        };
+      }
+
+      // /films/popular
+      if (pathname.startsWith("/films/popular")) {
+        return {
+          endpoint: "film_popular",
+        };
+      }
+
+      return undefined;
+    })();
+
+    if (!urlParsed) {
       console.warn(`Letterboxd endpoint not supported: ${url}`);
       return { shouldStop: false, metas: [] };
     }
+
+    const { endpoint, contributorType, username } = urlParsed;
 
     const urlForId =
       endpoint === "member_watchlist" && username
@@ -317,19 +345,19 @@ export class LetterboxdSource implements ISource {
 
     console.info(`Got Letterboxd list ID ${lbxdId} for ${url}`);
 
-    if (opts.shouldCache) {
-      const cachedData = await cache.get(cacheKey);
-      if (cachedData) {
-        console.info(`Using cached Letterboxd list data for ${url}`);
+    // if (opts.shouldCache) {
+    //   const cachedData = await cache.get(cacheKey);
+    //   if (cachedData) {
+    //     console.info(`Using cached Letterboxd list data for ${url}`);
 
-        return {
-          shouldStop: true,
-          metas: cachedData.items
-            .map((i) => i.film)
-            .map((f) => toSourceResult(f)),
-        };
-      }
-    }
+    //     return {
+    //       shouldStop: true,
+    //       metas: cachedData.items
+    //         .map((i) => i.film)
+    //         .map((f) => toSourceResult(f)),
+    //     };
+    //   }
+    // }
 
     console.info(
       `No cached Letterboxd ${cacheKey} data for ${url}, fetching...`
@@ -338,12 +366,10 @@ export class LetterboxdSource implements ISource {
     // fetch the data
     console.info(`Fetching Letterboxd list data for ${url} (ID: ${lbxdId})`);
 
+    console.debug({ opts, sort: opts.sort });
     const PAGE_SIZE = 100;
     const searchParams = new URLSearchParams();
     searchParams.set("perPage", PAGE_SIZE.toString());
-    if (opts.skip) {
-      searchParams.set("cursor", `skip=${opts.skip}`);
-    }
     if (opts.filmId) {
       searchParams.set("filmId", opts.filmId);
     }
@@ -363,7 +389,9 @@ export class LetterboxdSource implements ISource {
       // /films/popular/this/all-time/decade/2020s/genre/action/on/apple-itunes-au/
       const filmsOptions = ["this", "decade", "genre", "on", "by"];
       // pull out any films options from the URL
-      const pathParts = pathname.split("/").filter((p) => p.length > 0);
+      const pathParts = new URL(url).pathname
+        .split("/")
+        .filter((p) => p.length > 0);
       for (let i = 1; i < pathParts.length; i++) {
         if (filmsOptions.includes(pathParts[i])) {
           const key = pathParts[i];

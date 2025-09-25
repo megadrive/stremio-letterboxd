@@ -84,7 +84,12 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       ]);
 
       // /almosteffective/watchlist/by/shuffle/
-      const howToSort = id.split("/by/")[1];
+      let howToSort = c.var.config.url.split("/by/")[1];
+      if (howToSort) {
+        // remove trailing slashes
+        howToSort = howToSort.trim().replace(/\/+$/, "");
+      }
+      console.trace({ howToSort });
       if (!howToSort) {
         return undefined;
       }

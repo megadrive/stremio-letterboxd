@@ -30,8 +30,6 @@ export class CacheSource implements ISource {
       letterboxdCacher.addList(config);
     }
 
-    console.debug({ ...cached, metadata: undefined });
-    console.debug(cached.metadata);
     const cachedMetadata = CatalogMetadataSchema.safeParse(
       JSON.parse(cached.metadata)
     );

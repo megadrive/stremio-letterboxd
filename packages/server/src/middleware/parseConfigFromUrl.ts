@@ -24,7 +24,7 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
     try {
       if (configId && configId.length) {
         if (configId === "api") {
-          throw new ConfigWarn(`API config not supported`);
+          throw new ConfigWarn(`API config not supported, ignoring...`);
         }
 
         const cachedConfig = await prisma.config.findFirst({
