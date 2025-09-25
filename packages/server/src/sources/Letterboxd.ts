@@ -345,19 +345,19 @@ export class LetterboxdSource implements ISource {
 
     console.info(`Got Letterboxd list ID ${lbxdId} for ${url}`);
 
-    // if (opts.shouldCache) {
-    //   const cachedData = await cache.get(cacheKey);
-    //   if (cachedData) {
-    //     console.info(`Using cached Letterboxd list data for ${url}`);
+    if (opts.shouldCache) {
+      const cachedData = await cache.get(cacheKey);
+      if (cachedData) {
+        console.info(`Using cached Letterboxd list data for ${url}`);
 
-    //     return {
-    //       shouldStop: true,
-    //       metas: cachedData.items
-    //         .map((i) => i.film)
-    //         .map((f) => toSourceResult(f)),
-    //     };
-    //   }
-    // }
+        return {
+          shouldStop: true,
+          metas: cachedData.items
+            .map((i) => i.film)
+            .map((f) => toSourceResult(f)),
+        };
+      }
+    }
 
     console.info(
       `No cached Letterboxd ${cacheKey} data for ${url}, fetching...`
