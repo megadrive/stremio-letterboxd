@@ -1,11 +1,10 @@
 import { prisma } from "@stremio-addon/database";
 import type { FetchReturn, ISource, SourceResult } from "./ISource.js";
 import {
-  BasicMetadataSchema,
+  CatalogMetadataSchema,
   letterboxdCacher,
 } from "@/workers/letterboxdCacher.js";
 import type { Config } from "@stremio-addon/config";
-import { z } from "zod";
 
 export class CacheSource implements ISource {
   async fetch(opts: { config: Config; configString: string }): FetchReturn {
@@ -31,11 +30,11 @@ export class CacheSource implements ISource {
       letterboxdCacher.addList(config);
     }
 
-    console.debug({ ...cached, metadata: "[REDACTED]" });
+    console.debug({ ...cached, metadata: undefined });
     console.debug(cached.metadata);
-    const cachedMetadata = z
-      .array(BasicMetadataSchema)
-      .safeParse(JSON.parse(cached.metadata));
+    const cachedMetadata = CatalogMetadataSchema.safeParse(
+      JSON.parse(cached.metadata)
+    );
 
     if (cachedMetadata.success === false) {
       console.error(`Failed to parse cached metadata for ${encodedConfig}`);
@@ -43,7 +42,7 @@ export class CacheSource implements ISource {
       return { shouldStop: false, metas: [] };
     }
 
-    const slugs = cachedMetadata.data.map((item) => item.id);
+    const slugs = cachedMetadata.data.items.map((item) => item.id);
     const cachedFilms = await prisma.film.findMany({
       where: {
         id: {

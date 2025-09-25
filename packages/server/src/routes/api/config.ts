@@ -141,31 +141,10 @@ configAPIRoute.post("/:encodedConfigOrId", async (c) => {
     });
 
     // fetch metadata for the list and update in the background
-    letterboxdCacher
-      .scrapeList(conf)
-      .then(async (metadata) => {
-        try {
-          // try to create the config
-          c.var.logger.info("Attempting to create config");
-          const record = await prisma.config.update({
-            where: { id: newRecord.id },
-            data: {
-              config: encodedConfig,
-              metadata: JSON.stringify(metadata),
-            },
-          });
-          c.var.logger.info("Create config", {
-            newRecordId: record.id,
-            encodedConfig,
-            metadata: `${metadata?.length ? metadata.length : 0} items`,
-          });
-        } catch (error) {
-          c.var.logger.error("Failed to create config", error);
-        }
-      })
-      .catch((error) => {
-        c.var.logger.error("Failed to scrape list", error);
-      });
+    letterboxdCacher.addList(conf);
+
+    // should never change, set to immutable
+    c.header("Cache-Control", "max-age=31536000, immutable, public");
 
     const { id } = newRecord;
 

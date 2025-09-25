@@ -3,6 +3,7 @@ lockfileVersion: "9.0"
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
+  injectWorkspacePackages: true
 
 catalogs:
   prisma:
@@ -91,7 +92,7 @@ importers:
         version: link:../database
       "@stremio-addon/env":
         specifier: workspace:*
-        version: link:../env
+        version: file:packages/env
       await-to-js:
         specifier: ^3.0.0
         version: 3.0.0
@@ -158,7 +159,7 @@ importers:
         version: link:../config
       "@stremio-addon/env":
         specifier: workspace:*
-        version: link:../env
+        version: file:packages/env
       "@tailwindcss/vite":
         specifier: ^4.0.14
         version: 4.0.14(vite@6.2.2(@types/node@22.13.5)(jiti@2.4.2)(lightningcss@1.29.2)(tsx@4.20.3)(yaml@2.7.0))
@@ -1365,6 +1366,9 @@ packages:
       {
         integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==,
       }
+
+  "@stremio-addon/env@file:packages/env":
+    resolution: { directory: packages/env, type: directory }
 
   "@tailwindcss/node@4.0.14":
     resolution:
@@ -6803,6 +6807,11 @@ snapshots:
   "@sindresorhus/merge-streams@2.3.0": {}
 
   "@standard-schema/spec@1.0.0": {}
+
+  "@stremio-addon/env@file:packages/env":
+    dependencies:
+      dotenv: 16.6.1
+      envalid: 8.0.0
 
   "@tailwindcss/node@4.0.14":
     dependencies:
