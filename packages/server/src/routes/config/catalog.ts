@@ -11,12 +11,12 @@ import { to } from "await-to-js";
 import type { SourceResult } from "@/sources/ISource.js";
 import { CacheSource } from "@/sources/CacheSource.js";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
-// import { StremthruSource } from "@/sources/Stremthru.js";
+import { StremthruSource } from "@/sources/Stremthru.js";
 import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
 import type { z } from "zod";
 
 const SOURCES = [
-  // new StremthruSource(),
+  new StremthruSource(),
   new LetterboxdSource(),
   new CacheSource(),
 ];
@@ -89,7 +89,6 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         // remove trailing slashes
         howToSort = howToSort.trim().replace(/\/+$/, "");
       }
-      console.trace({ howToSort });
       if (!howToSort) {
         return undefined;
       }
@@ -273,6 +272,11 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         c.var.logger.error(`!!! No poster found for film ID ${film.id}`);
         return "";
       })();
+
+      // normalise titles, removing year from the end if present
+      if (/\(\d{4}\)$/.test(film.name)) {
+        film.name = film.name.replace(/\s*\(\d{4}\)$/, "").trim();
+      }
 
       let meta: (MetaPreview | MetaDetail) & { imdb_id?: string } = {
         id: `letterboxd:${film.id}`,
