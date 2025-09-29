@@ -59,8 +59,9 @@ metaRouter.get("/:type/:id.json", async (c) => {
   }
 
   try {
-    let lid: string | null =
-      slugOrLid[0] === "id" ? slugOrLid.split("-")[1] : null;
+    const split = slugOrLid.split("-");
+    let lid: string | null = split[0] === "id" ? split[1] : null;
+    console.info({ lid, slugOrLid, split: slugOrLid.split("-") });
     if (!lid) {
       lid = await letterboxdSource.getLetterboxdID(`/film/${slugOrLid}`);
     }

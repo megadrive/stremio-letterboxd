@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const TypeSchema = z.enum(["movie", "show"]);
+const TypeSchema = z.enum(["", "movie", "show"]);
 
 const ItemSchema = z.object({
   type: TypeSchema,
