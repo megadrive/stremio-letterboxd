@@ -3,9 +3,9 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
+ARG DATABASE_URL
+
 ENV NODE_ENV=production
-# dummy for Prisma
-ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
 
 RUN apt-get update && apt-get install -y git build-essential
 
@@ -22,6 +22,9 @@ RUN pnpm --filter @stremio-addon/database prisma generate
 
 # Build all packages
 RUN pnpm -r build
+
+# run migrations
+RUN pnpm run db:deploy
 
 # Start server
 CMD ["pnpm", "start"]

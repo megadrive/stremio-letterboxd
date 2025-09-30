@@ -13,6 +13,7 @@
     "prepare": "pnpm format && husky",
     "db:seed": "pnpm --filter @stremio-addon/server db:seed",
     "db:push": "pnpm --filter @stremio-addon/database db:push",
+    "db:deploy": "pnpm --filter @stremio-addon/database db:deploy",
     "prisma:generate": "pnpm --filter @stremio-addon/database prisma generate"
   },
   "keywords": [],
