@@ -2,11 +2,16 @@
 
 NOTE: Self-hosting will work but it'll slightly more work than the previous iteration. See [Configuration](#configuration).
 
+## Docker
+
+Docker is currently not recommended. It will work but you'll need a separate detached Postgres DB or be happy to reconfigure your lists every time you update. I'm in the process of creating a docker-compose.yml file.
+
 ## Prerequisites
 
 - Node.js
 - PNPM - for workspaces
 - A database (anything that Prisma supports, see [Prisma docs](https://www.prisma.io/docs/orm/overview/databases)), SQLite is recommended for self-hosting. (Honestly SQLite is great in production as well, but my service uses docker containers, so every push I would lose all the data. Otherwise I'd be using SQLite. :))
+- NOTE: I am now using Prisma Migrations, so you will need to use `pnpm db:push: to create your database if you are using anything other than Postgres.
 
 ## Installation
 
@@ -23,18 +28,18 @@ If you ever need to start fresh, run `node clean.js` then run `pnpm install` aga
 1. Run `git pull` to update to the latest codebase
 2. Run `node clean.js` to clean all working directories.
 3. Run `pnpm build` to re-build the project
-4. Run `pnpm start` to start the addon, it will then be available at `http://localhost:3000`
+4. Run `pnpm db:deploy` if using Postgres, or `pnpm db:push` if using anything else.
+5. Run `pnpm start` to start the addon, it will then be available at `http://localhost:3000`
 
 ## Configuration
 
-You'll need to creat multiple .env files (unless setting the variables globally). If an entry has a "!" next to it, only change it if you're sure, it will change how the addon works.
+Create an `.env` file in the root directory check out the [env package](/packages/env/src/env.ts) for variables.
 
-- `packages/database`: `DATABASE_URL`
-- `packages/server`:
-  - `TMDB_APIKEY`
-  - `PORT`!
-  - `QUEUE_CONCURRENCY`!
-  - `CATALOG_PAGE_SIZE`!
+Notes:
+
+- TMDB_APIKEY, current required. Just chuck a "" in there, I'm pretty sure it's unused but haven't checked thoroughly.
+- NODE_ENV, is "development" by default for ease of self-hosting. If this is set to "production", you'll need to change the below.
+- BASE_URL, not required unless setting NODE_ENV to "production". This should point to your instance. If running in production set this to "http://localhost:3000" or your instance's base URL: https://letterboxd.almosteffective.com
 
 ### Databases
 

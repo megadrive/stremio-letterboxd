@@ -21,11 +21,9 @@ app.use(
   })
 );
 
-if (serverEnv.isProduction) {
-  app.get("/", (c) => {
-    return c.redirect("/configure");
-  });
-}
+app.get("/", (c) => {
+  return c.redirect("/configure");
+});
 
 app.get("/manifest.json", (c) => {
   const manifest = createManifest({ ...addonManifest });
