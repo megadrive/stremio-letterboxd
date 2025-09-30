@@ -23,8 +23,5 @@ RUN pnpm --filter @stremio-addon/database prisma generate
 # Build all packages
 RUN pnpm -r build
 
-# run migrations
-RUN pnpm run db:deploy
-
 # Start server
 CMD ["pnpm", "start"]
