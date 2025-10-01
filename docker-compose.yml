@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        DATABASE_URL: postgresql://postgres:postgres@db:5432/stremio_letterboxd
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/stremio_letterboxd
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: stremio_letterboxd
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrations:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/stremio_letterboxd
+    depends_on:
+      db:
+        condition: service_healthy
+    command: pnpm --filter @stremio-addon/database prisma migrate deploy
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
