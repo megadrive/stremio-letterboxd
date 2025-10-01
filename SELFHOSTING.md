@@ -4,7 +4,9 @@ NOTE: Self-hosting will work but it'll slightly more work than the previous iter
 
 ## Docker
 
-Docker is currently not recommended. It will work but you'll need a separate detached Postgres DB or be happy to reconfigure your lists every time you update. I'm in the process of creating a docker-compose.yml file.
+We now fully support Docker! You can use a Dockerfile and BYO database, or use Docker Compose to provision the app and a Postgres DB by running the following command in the root directory to start the app and apply migrations:
+
+`docker compose --profile tools up -d`
 
 ## Prerequisites
 
@@ -26,10 +28,27 @@ If you ever need to start fresh, run `node clean.js` then run `pnpm install` aga
 ## Upgrading
 
 1. Run `git pull` to update to the latest codebase
-2. Run `node clean.js` to clean all working directories.
-3. Run `pnpm build` to re-build the project
-4. Run `pnpm db:deploy` if using Postgres, or `pnpm db:push` if using anything else.
-5. Run `pnpm start` to start the addon, it will then be available at `http://localhost:3000`
+2. If using Docker Compose:
+   ```bash
+   # Stop the current services
+   docker compose down
+
+   # Pull latest images (if using prebuilt ones)
+   docker compose pull
+
+   # Rebuild the containers and apply migrations
+   docker compose --profile tools up -d --build
+   ```
+
+   This will:
+   - Rebuild the app with the latest code
+   - Start all services
+   - Run any pending migrations
+3. If not using Docker:
+   - Run `node clean.js` to clean all working directories
+   - Run `pnpm build` to re-build the project
+   - Run `pnpm db:deploy` if using Postgres, or `pnpm db:push` if using anything else
+   - Run `pnpm start` to start the addon, it will then be available at `http://localhost:3000`
 
 ## Configuration
 
