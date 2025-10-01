@@ -114,6 +114,7 @@ export default function Inputbox() {
     });
   const watchedPosterChoice = watch("posterChoice");
   const watchedUrl = watch("url");
+  const [configId, setConfigId] = useState<string>();
 
   // initial load if the URL has an ID in it, load that config
   useEffect(() => {
@@ -121,6 +122,7 @@ export default function Inputbox() {
     if (configId) {
       getConfigFromId(configId).then((conf) => {
         if (conf) {
+          setConfigId(configId);
           // set the form values
           setValue("url", conf.url);
           setValue("catalogName", conf.catalogName ?? "");
@@ -280,6 +282,17 @@ export default function Inputbox() {
   return (
     <div>
       <Toaster />
+      {configId && (
+        <div className="text-center">
+          Your Config ID:{" "}
+          <code
+            className="p-1 border border-white hover:cursor-pointer"
+            onClick={() => navigator.clipboard.writeText(configId)}
+          >
+            {configId}
+          </code>
+        </div>
+      )}
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 gap-2">
           <div className="text-base">
