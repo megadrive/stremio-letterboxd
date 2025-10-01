@@ -101,11 +101,12 @@ manifestRouter.get("/", async (c) => {
             name: "skip",
             isRequired: false,
           },
-          {
-            name: "genre",
-            isRequired: true,
-            options: [sort],
-          },
+          // NOTE: adding this back in causes it to not show up on the main page
+          // {
+          //   name: "genre",
+          //   isRequired: true,
+          //   options: [sort],
+          // },
         ],
       },
     ],
