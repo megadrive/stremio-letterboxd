@@ -78,6 +78,7 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
       }
     }
 
+    c.set("configId", configId);
     await next().catch(() => {});
   }
 );

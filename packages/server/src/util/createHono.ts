@@ -14,6 +14,7 @@ type AppBindings = {
 
 export type AppBindingsWithConfig = AppBindings & {
   Variables: {
+    configId?: string;
     config: Config;
     configString: string;
     isLegacyConfig: boolean;

@@ -35,7 +35,10 @@ configRouter.route("/manifest.json", manifestRouter);
 configRouter.route("/catalog", catalogRouter);
 configRouter.route("/meta", metaRouter);
 configRouter.get("/configure", (c) => {
-  // NOTE: Stremio doesn't support changing the config for a lot of what we do, so just ignore it.
+  const configId = c.var.configId;
+  if (configId) {
+    return c.redirect(`/configure?id=${configId}`);
+  }
   return c.redirect(`/configure`);
 });
 app.route("/:config", configRouter);

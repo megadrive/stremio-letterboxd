@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,6 +60,50 @@ async function resolveUrl(url: string) {
   }
 }
 
+async function getConfigFromId(id: string): ReturnType<typeof config.decode> {
+  try {
+    const res = await fetch(`/api/config/${id}`, {
+      headers: { "cache-control": "max-age: 600" },
+    });
+    if (res.ok) {
+      const json = await res.json();
+
+      const parsed = z
+        .object({
+          success: z.boolean(),
+          config: z.object({
+            url: z.string().url(),
+            catalogName: z.string(),
+            posterChoice: z.enum([
+              "letterboxd",
+              "cinemeta",
+              "letterboxd-ratings",
+              "letterboxd-custom-from-list",
+              "rpdb",
+            ]),
+            rpdbApiKey: z.string(),
+            origin: z.string().url(),
+          }),
+        })
+        .parse(json);
+
+      if (parsed.success && parsed.config) {
+        return parsed.config;
+      } else {
+        console.warn("Failed to fetch config from ID", parsed);
+      }
+    } else {
+      console.warn("Failed to fetch config from ID", res.statusText);
+
+      window.location.href = "/configure";
+    }
+  } catch (error) {
+    console.warn("Failed to fetch config from ID", error);
+  }
+
+  return undefined;
+}
+
 export default function Inputbox() {
   const [formDisabled, setFormDisabled] = useState(false);
   const [manifestUrl, setManifestUrl] = useState("");
@@ -70,6 +114,22 @@ export default function Inputbox() {
     });
   const watchedPosterChoice = watch("posterChoice");
   const watchedUrl = watch("url");
+
+  // initial load if the URL has an ID in it, load that config
+  useEffect(() => {
+    const configId = new URLSearchParams(window.location.search).get("id");
+    if (configId) {
+      getConfigFromId(configId).then((conf) => {
+        if (conf) {
+          // set the form values
+          setValue("url", conf.url);
+          setValue("catalogName", conf.catalogName ?? "");
+          setValue("posterChoice", conf.posterChoice ?? "letterboxd");
+          setValue("rpdbApiKey", conf.rpdbApiKey ?? "");
+        }
+      });
+    }
+  }, []);
 
   /**
    * Fetches a recommendation from the server and sets the URL field.
