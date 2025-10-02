@@ -8,6 +8,7 @@ import type {
 import { createCache } from "@/lib/sqliteCache.js";
 import { serverEnv } from "@stremio-addon/env";
 import { z } from "zod";
+import { zodParse as parse } from "@/utils/zodParse.js";
 import {
   ContributorContributionsSchema,
   ContributorTypeSchema,
@@ -141,22 +142,6 @@ async function apiRequest(
   }
 
   return parsed;
-}
-
-/**
- * Parse a JSON object with a Zod schema, logging any errors
- * @param data JSON
- * @param schema Zod schema
- * @returns Parsed data or null if parsing failed
- */
-function parse<T>(data: unknown, schema: z.Schema<T>): T | null {
-  const parsed = schema.safeParse(data);
-  if (!parsed.success) {
-    console.warn(`Failed to parse Letterboxd list data`);
-    console.warn(parsed.error);
-    return null;
-  }
-  return parsed.data;
 }
 
 /**
