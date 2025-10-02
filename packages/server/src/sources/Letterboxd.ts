@@ -396,7 +396,7 @@ export class LetterboxdSource implements ISource {
                   searchParams.set("sort", "FilmPopularityThisMonth");
                   break;
                 case "year":
-                  searchParams.set("sort", "filmPopularityThisYear");
+                  searchParams.set("sort", "FilmPopularityThisYear");
                   break;
                 case "all-time":
                   searchParams.set("sort", "FilmPopularity");
