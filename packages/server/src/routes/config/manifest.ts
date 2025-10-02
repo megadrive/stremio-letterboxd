@@ -67,6 +67,7 @@ manifestRouter.get("/", async (c) => {
   if (byIndex !== -1 && byIndex < splitUrl.length - 1) {
     sort = splitUrl[byIndex + 1];
     // convert hyphens to spaces and capitalize each word
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sort = sort
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -80,7 +81,7 @@ manifestRouter.get("/", async (c) => {
       configurable: true,
       configurationRequired: false,
     },
-    id: `${addonManifest.id}:${c.var.configString}`,
+    id: `${addonManifest.id}:${c.var.configId ?? c.var.configString}`,
     name: `Letterboxd - ${catalogName}`,
     description: `Adds ${catalogName} as a catalog. Using ${posterChoice} posters.`,
     resources: [
