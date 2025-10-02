@@ -28,7 +28,7 @@ const {
   LETTERBOXD_API_AUTH_TYPE,
 } = serverEnv;
 
-const cache = createCache<z.infer<typeof ListEntriesSchema>>("letterboxd");
+const cache = createCache<SourceResult[]>("letterboxd");
 
 // object to base64 string
 function convertObjectToBase64(obj: unknown): string {
@@ -337,9 +337,7 @@ export class LetterboxdSource implements ISource {
 
         return {
           shouldStop: true,
-          metas: cachedData.items
-            .map((i) => i.film)
-            .map((f) => toSourceResult(f)),
+          metas: cachedData,
         };
       }
     }
@@ -445,20 +443,28 @@ export class LetterboxdSource implements ISource {
       return { shouldStop: false, metas: [] };
     }
 
+    let metadata;
+
     // Validate the API result
     const validated = (() => {
+      let v;
       switch (endpoint.toLowerCase()) {
         case "list":
-          return parse(lbxdRes, ListEntriesSchema)?.items.map((i) => i.film);
+          v = parse(lbxdRes, ListEntriesSchema);
+          metadata = v?.metadata;
+          return v?.items.map((i) => i.film);
         case "contributor":
-          return parse(lbxdRes, ContributorContributionsSchema)?.items.map(
-            (i) => i.film
-          );
+          v = parse(lbxdRes, ContributorContributionsSchema);
+          metadata = v?.metadata.find((m) => m.type === contributorType)?.data;
+          return v?.items.map((i) => i.film);
         case "member_watchlist": {
+          v = parse(lbxdRes, MemberWatchlistSchema);
+          metadata = { totalFilmCount: v?.items.length || 0 };
           return parse(lbxdRes, MemberWatchlistSchema)?.items;
         }
         case "film_popular":
-          return parse(lbxdRes, FilmsSchema)?.items;
+          v = parse(lbxdRes, FilmsSchema);
+          return v?.items;
         default:
           console.error(`Unsupported Letterboxd type: ${lbxdType}`);
           return null;
@@ -496,14 +502,14 @@ export class LetterboxdSource implements ISource {
     });
 
     console.info(
-      `Letterboxd list ${lbxdId}: fetched ${listData.length} items, total ${listData.length} items`
+      `Letterboxd list ${lbxdId}: fetched ${listData.length}${metadata ? `/${metadata?.filteredFilmCount || ""}` : ``} items`
     );
 
     if (opts.shouldCache && listData.length > 0) {
       console.info(
         `Caching Letterboxd ${cacheKey} data for ${url} (ID: ${lbxdId})`
       );
-      await cache.set(cacheKey, validated, 1000 * 60 * 60); // 1 hour
+      await cache.set(cacheKey, listData, 1000 * 60 * 60); // 1 hour
     }
 
     return {
