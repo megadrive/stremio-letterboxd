@@ -64,23 +64,26 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
 
     const sort = (() => {
       const typesOfSort = new Map<string, z.infer<typeof FilmSortSchema>>([
-        ["", "ListRanking"],
-        ["reverse", "ListRanking"],
+        ["", "MemberRatingHighToLow"],
+        ["reverse", "MemberRatingLowToHigh"],
         ["name", "FilmName"],
         ["popular", "FilmPopularity"],
+        ["popular-this-month", "FilmPopularityThisMonth"],
+        ["popular-this-week", "FilmPopularityThisWeek"],
+        ["popular-this-year", "FilmPopularityThisYear"],
         ["shuffle", "Shuffle"],
-        ["added", "WhenAddedToList"],
-        ["added-earliest", "WhenAddedToListEarliestFirst"],
+        ["added", "Added"],
+        ["added-earliest", "Added"],
         ["release", "ReleaseDateLatestFirst"],
         ["release-earliest", "ReleaseDateEarliestFirst"],
         ["rating", "AverageRatingHighToLow"],
         ["rating-lowest", "AverageRatingLowToHigh"],
-        ["owner-diary", "OwnerDiaryLatestFirst"],
-        ["owner-diary-earliest", "OwnerDiaryEarliestFirst"],
         ["owner-rating", "OwnerRatingHighToLow"],
         ["owner-rating-lowest", "OwnerRatingLowToHigh"],
         ["shortest", "FilmDurationShortestFirst"],
         ["longest", "FilmDurationLongestFirst"],
+        ["date", "DateLatestFirst"],
+        ["date-earliest", "DateEarliestFirst"],
       ]);
 
       // /almosteffective/watchlist/by/shuffle/
@@ -94,7 +97,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       }
 
       if (howToSort === "") {
-        return "ListRanking";
+        return "MemberRatingHighToLow" satisfies z.infer<typeof FilmSortSchema>;
       }
 
       return typesOfSort.get(howToSort) ?? undefined;

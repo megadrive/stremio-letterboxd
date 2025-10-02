@@ -208,7 +208,7 @@ export class LetterboxdSource implements ISource {
   ): FetchReturn {
     opts = {
       shouldCache: true,
-      sort: "ListRanking",
+      sort: "MemberRatingHighToLow",
       ...opts,
     };
 
