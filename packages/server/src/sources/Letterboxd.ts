@@ -152,8 +152,8 @@ async function apiRequest(
 function parse<T>(data: unknown, schema: z.Schema<T>): T | null {
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
-    console.error(`Failed to parse Letterboxd list data`);
-    console.error(parsed.error);
+    console.warn(`Failed to parse Letterboxd list data`);
+    console.warn(parsed.error);
     return null;
   }
   return parsed.data;
