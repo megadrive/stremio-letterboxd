@@ -73,7 +73,6 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         ["popular-this-year", "FilmPopularityThisYear"],
         ["shuffle", "Shuffle"],
         ["added", "Added"],
-        ["added-earliest", "Added"],
         ["release", "ReleaseDateLatestFirst"],
         ["release-earliest", "ReleaseDateEarliestFirst"],
         ["rating", "AverageRatingHighToLow"],
