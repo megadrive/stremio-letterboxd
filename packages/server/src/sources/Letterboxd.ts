@@ -8,7 +8,7 @@ import type {
 import { createCache } from "@/lib/sqliteCache.js";
 import { serverEnv } from "@stremio-addon/env";
 import { z } from "zod";
-import { zodParse as parse } from "@/utils/zodParse.js";
+import { zodParse as parse } from "@/util/zodParse.js";
 import {
   ContributorContributionsSchema,
   ContributorTypeSchema,
