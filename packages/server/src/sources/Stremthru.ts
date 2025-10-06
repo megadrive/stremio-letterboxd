@@ -169,7 +169,7 @@ export class StremthruSource implements ISource {
     }
 
     const metas: SourceResult[] = listData.items.map((item) => ({
-      id: `id-${item.id}`,
+      id: `id:${item.id}`,
       name: item.title,
       poster: item.poster,
       type: item.type === "movie" ? "movie" : "series",
