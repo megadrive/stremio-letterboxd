@@ -17,14 +17,18 @@ class ConfigWarn extends Error {
   }
 }
 
+const RESERVED = ["meta", "stream", "subtitles", "catalog", "api"];
+
 export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
   async (c, next) => {
     const configId = c.req.param("config");
 
     try {
       if (configId && configId.length) {
-        if (configId === "api") {
-          throw new ConfigWarn(`API config not supported, ignoring...`);
+        if (RESERVED.includes(configId.toLowerCase())) {
+          throw new ConfigWarn(
+            `Config is reserved word, ignoring... (${configId} | ${RESERVED})`
+          );
         }
 
         const cachedConfig = await prisma.config.findFirst({
