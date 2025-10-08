@@ -101,7 +101,7 @@ metaRouter.get("/:type/:id.json", async (c) => {
 
   // handle error metas
   if (slugOrType === "error") {
-    return c.json({ meta: getError(lidOrErrorCode, c.var.config) });
+    return c.json({ meta: getError(lidOrErrorCode, c.var.configs[0].config) });
   }
 
   // determine if is a slug or a lbxdId

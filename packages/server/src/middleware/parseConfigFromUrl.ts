@@ -17,6 +17,12 @@ class ConfigWarn extends Error {
   }
 }
 
+function isUUID(uuid: string) {
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 const RESERVED = ["meta", "stream", "subtitles", "catalog", "api"];
 
 export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
@@ -31,45 +37,85 @@ export const parseConfigFromUrl = createMiddleware<AppBindingsWithConfig>(
           );
         }
 
-        const cachedConfig = await prisma.config.findFirst({
+        if (!isUUID(configId)) {
+          throw new ConfigWarn(`Config is not a valid UUID, ignoring...`);
+        }
+
+        let multiConfig = await prisma.multiConfig.findUnique({
           where: {
-            OR: [
-              {
-                // could be a uuid
-                id: configId,
-              },
-              {
-                // could be a base64 encoded config
-                config: configId,
-              },
-            ],
+            id: configId,
+          },
+          include: {
+            configs: true,
           },
         });
 
-        if (!cachedConfig) {
-          c.var.logger.warn(`Config not found for id: ${configId}`);
+        if (!multiConfig) {
+          // In the transition period, create a MultiConfig for single configs
+          const singleConfig = await prisma.config.findUnique({
+            where: {
+              id: configId,
+            },
+            include: {
+              parentConfig: true,
+            },
+          });
 
-          // try to decode the configId as base64
-          const decodedConfig = await config.decode(configId);
-          if (decodedConfig) {
-            c.set("config", decodedConfig);
-            c.set("configString", configId);
+          /*
+           * Create a MultiConfig if we found a single config and it doesn't already belong to a MultiConfig
+           * This is to ensure backward compatibility with existing single configs
+           * and to avoid breaking existing links
+           * Once we are sure everyone has moved to MultiConfig, we can remove this code
+           */
+          if (singleConfig && singleConfig.parentConfig === null) {
+            const newMultiConfig = await prisma.multiConfig.create({
+              data: {
+                id: configId,
+                configs: {
+                  create: [
+                    {
+                      config: singleConfig.config,
+                      metadata: singleConfig.metadata,
+                    },
+                  ],
+                },
+              },
+              include: {
+                configs: true,
+              },
+            });
 
-            c.var.logger.info(`Parsed config from base64: ${configId}`);
-            throw new ConfigWarn(`Parsed config from base64: ${configId}`);
+            multiConfig = newMultiConfig;
+
+            c.var.logger.info(
+              `Created MultiConfig for single config: ${configId}`
+            );
           }
 
-          throw new ConfigError(`Config not found for id: ${configId}`);
+          if (!multiConfig) {
+            throw new ConfigError(`Config not found for id: ${configId}`);
+          }
         }
 
-        const conf = await config.decode(cachedConfig.config);
+        const discoveredConfigs: AppBindingsWithConfig["Variables"]["configs"] =
+          [];
+        for (const cfg of multiConfig.configs) {
+          const conf = config.parse(JSON.parse(cfg.config));
+          if (!conf) {
+            // ignore invalid config
+            c.var.logger.error("Failed to decode config, no config returned.", {
+              cfg,
+            });
+            continue;
+          }
 
-        if (conf) {
-          c.set("config", conf);
-          c.set("configString", cachedConfig.config);
-
-          c.var.logger.info(`Parsed config from URL: ${configId}`);
+          discoveredConfigs.push({ config: conf, configString: cfg.config });
         }
+
+        c.set("configId", configId);
+        c.set("configs", discoveredConfigs);
+
+        c.var.logger.info(`Parsed config from URL: ${configId}`);
       }
     } catch (error) {
       if (error instanceof ConfigError) {

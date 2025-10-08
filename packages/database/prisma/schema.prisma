@@ -12,6 +12,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model MultiConfig {
+  id        String   @id @default(uuid())
+  configs   Config[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Config {
   id            String       @id @default(uuid())
   config        String       @unique // JSON
@@ -21,6 +28,8 @@ model Config {
   updatedAt     DateTime     @updatedAt
   shuffleSeedId String?      @unique
   shuffleSeed   ShuffleSeed?
+  parentConfig  MultiConfig  @relation(fields: [multiConfigId], references: [id])
+  multiConfigId String
 
   @@index([config])
 }

@@ -3,11 +3,16 @@ import { pinoLogger } from "hono-pino";
 import pretty from "pino-pretty";
 import { serverEnv } from "@stremio-addon/env";
 
-export function pinoLoggerMiddleware() {
+export function pinoLoggerMiddleware(configId?: string) {
   return pinoLogger({
     pino: pino(
       {
         level: serverEnv.isDevelopment ? "debug" : "info",
+        mixin() {
+          return {
+            configId,
+          };
+        },
       },
       serverEnv.isDevelopment ? pretty() : undefined
     ),

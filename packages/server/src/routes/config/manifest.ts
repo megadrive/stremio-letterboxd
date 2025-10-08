@@ -3,6 +3,8 @@ import { addonManifest, createManifest } from "@/util/manifest.js";
 import { determineCatalogName } from "@/workers/letterboxdCacher.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 import { to } from "await-to-js";
+import type { ManifestCatalog } from "stremio-addon-sdk";
+import { config as addonConfig } from "@stremio-addon/config";
 
 export const manifestRouter = createRouter();
 
@@ -16,62 +18,94 @@ export const manifestRouter = createRouter();
  * Search: @configuration in packages/config to change the configuration.
  */
 manifestRouter.get("/", async (c) => {
-  const conf = c.var.config;
+  const catalogs: ManifestCatalog[] = [];
+  const posterChoices: string[] = [];
 
-  let catalogName = conf.catalogName;
-  if (!catalogName) {
-    // if the catalog name is not provided, determine it from the letterboxd page
-    const [nameErr, name] = await to(
-      determineCatalogName({
-        url: conf.url,
-      })
-    );
+  c.var.logger.debug({ configs: c.var.configs });
 
-    if (nameErr) {
-      c.var.logger.error("Failed to determine catalog name.");
-      return c.text(nameErr.message, INTERNAL_SERVER_ERROR);
+  for (const { config } of c.var.configs) {
+    const conf = config;
+
+    let catalogName = conf.catalogName;
+    if (!catalogName) {
+      // if the catalog name is not provided, determine it from the letterboxd page
+      const [nameErr, name] = await to(
+        determineCatalogName({
+          url: conf.url,
+        })
+      );
+
+      if (nameErr) {
+        c.var.logger.error("Failed to determine catalog name.");
+        return c.text(nameErr.message, INTERNAL_SERVER_ERROR);
+      }
+
+      if (!name) {
+        c.var.logger.error("Failed to determine catalog name.");
+        return c.text(
+          "Failed to determine catalog name.",
+          INTERNAL_SERVER_ERROR
+        );
+      }
+
+      catalogName = name;
     }
 
-    if (!name) {
-      c.var.logger.error("Failed to determine catalog name.");
-      return c.text("Failed to determine catalog name.", INTERNAL_SERVER_ERROR);
+    switch (conf.posterChoice) {
+      case "cinemeta":
+        posterChoices.push("Cinemeta");
+        break;
+      case "letterboxd":
+        posterChoices.push("Letterboxd");
+        break;
+      case "letterboxd-ratings":
+        posterChoices.push("Letterboxd Ratings");
+        break;
+      case "letterboxd-custom-from-list":
+        posterChoices.push("List");
+        break;
+      case "rpdb":
+        posterChoices.push(`RPDb (${conf.rpdbApiKey ? "paid" : "free"})`);
+        break;
     }
 
-    catalogName = name;
-  }
+    // figure out the sort
+    let sort = "Default";
+    console.info("Config URL:", conf.url);
+    const splitUrl = conf.url.split("/").filter((part) => part.length > 0);
+    const byIndex = splitUrl.indexOf("by");
+    if (byIndex !== -1 && byIndex < splitUrl.length - 1) {
+      sort = splitUrl[byIndex + 1];
+      // convert hyphens to spaces and capitalize each word
+      sort = sort
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
 
-  let posterChoice = "";
-  switch (conf.posterChoice) {
-    case "cinemeta":
-      posterChoice = "Cinemeta";
-      break;
-    case "letterboxd":
-      posterChoice = "Letterboxd";
-      break;
-    case "letterboxd-ratings":
-      posterChoice = "Letterboxd Ratings";
-      break;
-    case "letterboxd-custom-from-list":
-      posterChoice = "List";
-      break;
-    case "rpdb":
-      posterChoice = `RPDb (${conf.rpdbApiKey ? "paid" : "free"})`;
-      break;
-  }
+    // base64 encode the config to use as the id
+    // const id = Buffer.from(JSON.stringify(conf)).toString("base64");
+    const id = await addonConfig.encode(conf);
 
-  // figure out the sort
-  let sort = "Default";
-  console.info("Config URL:", conf.url);
-  const splitUrl = conf.url.split("/").filter((part) => part.length > 0);
-  const byIndex = splitUrl.indexOf("by");
-  if (byIndex !== -1 && byIndex < splitUrl.length - 1) {
-    sort = splitUrl[byIndex + 1];
-    // convert hyphens to spaces and capitalize each word
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    sort = sort
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+    catalogs.push({
+      // use the config id if available, otherwise generate one from the URL
+      id,
+      name: catalogName,
+      // @ts-expect-error Custom Type
+      type: "letterboxd",
+      extra: [
+        {
+          name: "skip",
+          isRequired: false,
+        },
+        // NOTE: adding this back in causes it to not show up on the main page
+        // {
+        //   name: "genre",
+        //   isRequired: true,
+        //   options: [sort],
+        // },
+      ],
+    });
   }
 
   const manifest = createManifest({
@@ -81,9 +115,11 @@ manifestRouter.get("/", async (c) => {
       configurable: true,
       configurationRequired: false,
     },
-    id: `${addonManifest.id}:${c.var.configId ?? c.var.configString}`,
-    name: `Letterboxd - ${catalogName}`,
-    description: `Adds ${catalogName} as a catalog. Using ${posterChoice} posters.`,
+    id: `${addonManifest.id}:${c.var.configId}`,
+    name: "Letterboxd",
+    description: `Adds Letterboxd pages and lists as catalogs! Using ${posterChoices.join(
+      ", "
+    )} for posters.`,
     resources: [
       {
         name: "meta",
@@ -91,26 +127,7 @@ manifestRouter.get("/", async (c) => {
         idPrefixes: ["letterboxd:"],
       },
     ],
-    catalogs: [
-      {
-        id: c.var.configString,
-        name: catalogName,
-        // @ts-expect-error Custom Type
-        type: "letterboxd",
-        extra: [
-          {
-            name: "skip",
-            isRequired: false,
-          },
-          // NOTE: adding this back in causes it to not show up on the main page
-          // {
-          //   name: "genre",
-          //   isRequired: true,
-          //   options: [sort],
-          // },
-        ],
-      },
-    ],
+    catalogs,
   });
 
   return c.json(manifest);

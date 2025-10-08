@@ -14,6 +14,7 @@ import { LetterboxdSource } from "@/sources/Letterboxd.js";
 import { StremthruSource } from "@/sources/Stremthru.js";
 import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
 import type { z } from "zod";
+import { config } from "@stremio-addon/config";
 
 const SOURCES = [
   new StremthruSource(),
@@ -49,16 +50,25 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
   );
 
   try {
-    const encodedConfig = c.var.configString;
+    const decodedConfig = JSON.stringify(await config.decode(id));
     const cached = await prisma.config.findFirst({
       where: {
-        config: encodedConfig,
+        config: decodedConfig,
       },
     });
 
     if (!cached) {
-      c.var.logger.error(`Failed to find cached metadata for ${encodedConfig}`);
+      c.var.logger.error(
+        `Failed to find cached metadata for ${c.var.configId}:${id}`
+      );
 
+      return c.json({ metas: [] }, INTERNAL_SERVER_ERROR);
+    }
+
+    const conf = config.parse(JSON.parse(cached.config));
+
+    if (!conf) {
+      c.var.logger.error(`Failed to decode config for ${c.var.configId}:${id}`);
       return c.json({ metas: [] }, INTERNAL_SERVER_ERROR);
     }
 
@@ -86,7 +96,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       ]);
 
       // /almosteffective/watchlist/by/shuffle/
-      let howToSort = c.var.config.url.split("/by/")[1];
+      let howToSort = conf.url.split("/by/")[1];
       if (howToSort) {
         // remove trailing slashes
         howToSort = howToSort.trim().replace(/\/+$/, "");
@@ -107,9 +117,9 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     for (const source of SOURCES) {
       const [sourceDataErr, sourceData] = await to(
         source.fetch({
-          url: c.var.config.url,
-          config: c.var.config,
-          configString: c.var.configString,
+          url: conf.url,
+          config: conf,
+          configString: id,
           skip: parsedExtras?.skip ? Number(parsedExtras.skip) : undefined,
           sort,
         })
@@ -144,18 +154,18 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     }
 
     if (!successfulSource) {
-      c.var.logger.error(`All sources failed for config ${encodedConfig}`);
+      c.var.logger.error(`All sources failed for config ${id}`);
       return c.json({ metas: [] }, INTERNAL_SERVER_ERROR);
     }
 
     c.var.logger.info(
-      `Using data from source ${successfulSource} for config ${encodedConfig}`
+      `Using data from source ${successfulSource} for config ${id}`
     );
 
     if (successfulSource !== "LetterboxdSource") {
-      if (c.var.config.url.includes("/by/shuffle/")) {
+      if (conf.url.includes("/by/shuffle/")) {
         // if we are shuffling, get the seed from the database if it exists
-        c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
+        c.var.logger.info(`Shuffling films for ${conf.url}`);
         let seedRecord = await prisma.shuffleSeed.findFirst({
           where: {
             configId: cached.id,
@@ -164,7 +174,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
 
         if (seedRecord) {
           c.var.logger.info(
-            `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
+            `Found shuffle seed for ${conf.url}: ${JSON.stringify(seedRecord, null, 2)}`
           );
         }
 
@@ -176,7 +186,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         ) {
           // create a new seed
           c.var.logger.info(
-            `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
+            `No shuffle seed found or stale for ${conf.url}, creating a new one with configId: ${cached.id}`
           );
           const newSeed = Math.random() * 1000000;
           const newSeedRecord = await prisma.shuffleSeed.upsert({
@@ -229,7 +239,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           return "";
         }
 
-        if (c.var.config.posterChoice === "letterboxd") {
+        if (conf.posterChoice === "letterboxd") {
           if (successfulSource === "LetterboxdSource") {
             const filmPoster = paginatedCachedFilms.find(
               (f) => f.id === film.id
@@ -240,10 +250,10 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
             }
           }
 
-          return `${c.var.config.origin}/api/poster/${film.id}`;
+          return `${conf.origin}/api/poster/${film.id}`;
         }
 
-        if (c.var.config.posterChoice === "letterboxd-custom-from-list") {
+        if (conf.posterChoice === "letterboxd-custom-from-list") {
           if (successfulSource === "LetterboxdSource") {
             const filmPoster = paginatedCachedFilms.find(
               (f) => f.id === film.id
@@ -256,21 +266,21 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
 
           const altId = data.find((item) => item.id === film.id)?.altPoster;
           // if altId is not found, use the default letterboxd poster
-          return `${c.var.config.origin}/api/poster/${film.id}${altId ? `/${altId}` : ""}`;
+          return `${conf.origin}/api/poster/${film.id}${altId ? `/${altId}` : ""}`;
         }
 
-        if (c.var.config.posterChoice === "letterboxd-ratings") {
+        if (conf.posterChoice === "letterboxd-ratings") {
           return `https://letterboxd-posters-with-ratings.almosteffective.com/${film.id}`;
         }
 
         if (film.imdb) {
-          if (c.var.config.posterChoice === "rpdb") {
-            return `https://api.ratingposterdb.com/${c.var.config.rpdbApiKey?.length ? c.var.config.rpdbApiKey : "t0-free-rpdb"}/imdb/poster-default/${film.imdb}.jpg`;
+          if (conf.posterChoice === "rpdb") {
+            return `https://api.ratingposterdb.com/${conf.rpdbApiKey?.length ? conf.rpdbApiKey : "t0-free-rpdb"}/imdb/poster-default/${film.imdb}.jpg`;
           }
           return `https://images.metahub.space/poster/small/${film.imdb}/img`;
         }
 
-        c.var.logger.error({ config: c.var.config, film });
+        c.var.logger.error({ config: conf, film });
         c.var.logger.error(`!!! No poster found for film ID ${film.id}`);
         return "";
       })();

@@ -33,7 +33,21 @@ export type Config = z.infer<typeof ConfigSchema>;
 export const ConfigFormInputSchema = ConfigSchema.omit({ origin: true });
 export type ConfigFormInput = z.infer<typeof ConfigFormInputSchema>;
 
+function parse(data: unknown): Config | undefined {
+  const parsed = ConfigSchema.safeParse(data);
+  if (!parsed.success) {
+    console.error("Failed to parse config", parsed.error.issues);
+    return undefined;
+  }
+
+  return parsed.data;
+}
+
 export const config = {
+  /**
+   * Parses a config from a JSON object.
+   */
+  parse,
   /**
    * Decodes the config from a string.
    * @param data Datastring from a URL
@@ -42,13 +56,13 @@ export const config = {
   decode: async (data: string): Promise<Config | undefined> => {
     try {
       const decoded = JSON.parse(atob(data));
-      const parsed = ConfigSchema.safeParse(decoded);
-      if (!parsed.success) {
-        console.error("Failed to parse config", parsed.error.issues);
-        return undefined;
+      const parsed = parse(decoded);
+
+      if (!parsed) {
+        throw new Error("Failed to parse config");
       }
 
-      return parsed.data;
+      return parsed;
     } catch (e: unknown) {
       // @ts-expect-error Message exists on a parsing error.
       console.error("Could not decode config", e?.message);

@@ -97,54 +97,51 @@ configAPIRoute.put("/:id", async (c) => {
 });
 
 configAPIRoute.post("/:encodedConfigOrId", async (c) => {
-  const encodedConfig = c.req.param("encodedConfigOrId");
-  if (!encodedConfig) {
-    logger.error("No encoded config provided");
+  const encodedConfigString = c.req.param("encodedConfigOrId");
+  const encodedConfigs = encodedConfigString.split("|");
+
+  if (!encodedConfigString || encodedConfigs.length === 0) {
+    logger.error("No encoded configs provided");
     return c.json({ success: false });
   }
 
-  try {
+  let providedConfigs: Awaited<ReturnType<typeof config.decode>>[] = [];
+  for (const encodedConfig of encodedConfigs) {
     const conf = await config.decode(encodedConfig);
     if (!conf) {
       logger.error("Failed to decode config", encodedConfig);
-      return c.json({ success: false });
+      continue;
     }
+    providedConfigs.push(conf);
+  }
+  // filter out any falsy configs
+  providedConfigs = providedConfigs.filter((c) => !!c);
 
-    c.var.logger.info("Creating config flow");
-    c.var.logger.info({
-      encodedConfig,
-      conf,
-    });
+  if (providedConfigs.length === 0) {
+    logger.error("No valid configs provided");
+    return c.json({ success: false, message: "No valid configs provided" });
+  }
 
-    try {
-      // try to fetch the config, if it exists
-      c.var.logger.info("Attempting to fetch config");
-      const record = await prisma.config.findFirst({
-        where: {
-          config: encodedConfig,
-        },
-      });
-      if (record) {
-        c.var.logger.info("Found existing config", { recordId: record.id });
-        return c.json({ success: true, id: record.id });
-      }
-    } catch (error) {
-      c.var.logger.warn("Failed to fetch config", error);
-    }
+  c.var.logger.info("Creating config flow");
 
-    // create an initial empty record to reserve the config
-    const newRecord = await prisma.config.create({
+  try {
+    const newRecord = await prisma.multiConfig.create({
       data: {
-        config: encodedConfig,
-        metadata: JSON.stringify([]),
+        configs: {
+          createMany: {
+            data: providedConfigs.map((conf) => ({
+              config: JSON.stringify(conf),
+              metadata: JSON.stringify([]),
+            })),
+          },
+        },
       },
     });
 
-    // fetch metadata for the list and update in the background
-    letterboxdCacher.addList(conf);
-
-    // should never change, set to immutable
-    c.header("Cache-Control", "max-age=31536000, immutable, public");
+    // fetch metadata for the lists and update in the background
+    providedConfigs
+      .filter((c) => !!c)
+      .forEach((c) => letterboxdCacher.addList(c));
 
     const { id } = newRecord;
 
