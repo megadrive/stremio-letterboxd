@@ -13,7 +13,7 @@ We now fully support Docker! You can use a Dockerfile and BYO database, or use D
 - Node.js
 - PNPM - for workspaces
 - A database (anything that Prisma supports, see [Prisma docs](https://www.prisma.io/docs/orm/overview/databases)), SQLite is recommended for self-hosting. (Honestly SQLite is great in production as well, but my service uses docker containers, so every push I would lose all the data. Otherwise I'd be using SQLite. :))
-- NOTE: I am now using Prisma Migrations, so you will need to use `pnpm db:push: to create your database if you are using anything other than Postgres.
+- NOTE: I am now using Prisma Migrations, so you will need to use `pnpm db:push` to create your database if you are using anything other than Postgres.
 
 ## Installation
 
