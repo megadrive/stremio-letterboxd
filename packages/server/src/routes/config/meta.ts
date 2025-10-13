@@ -9,7 +9,7 @@ type LbxdMeta = {
   imdb?: string;
   tmdb?: string;
 };
-const cache = createCache<LbxdMeta>("lbxd-id", 1000 * 60 * 60 * 24 * 30); // 30 days
+const cache = createCache<LbxdMeta>("lbxd-id", 1000 * 60 * 60 * 24); // 1 day cache
 
 // should match: /:config/meta/:type/:id/:extras?.json
 // ex: /configexample/meta/movie/123456.json
@@ -43,7 +43,9 @@ async function resolve(
 
   // if we have a slug, we need to resolve it to a Letterboxd ID first
   const [fetchedErr, fetchedLid] = await to(
-    fetch(`https://lbxd-id.up.railway.app/letterboxd/${type}/${opts[type]}`)
+    fetch(
+      `https://lbxd-id.almosteffective.com/letterboxd/${type}/${opts[type]}`
+    )
   );
 
   if (fetchedErr || !fetchedLid?.ok) {
@@ -109,18 +111,6 @@ metaRouter.get("/:type/:id.json", async (c) => {
     lbxd = lidOrErrorCode;
   } else {
     slug = slugOrType;
-  }
-
-  // check cache
-  const cacheKey = lbxd ? `id:${lbxd}` : `slug:${slug}`;
-  const cached = await cache.get(cacheKey);
-  if (cached?.imdb) {
-    return c.redirect(`${cinemetaInstance}/meta/${type}/${cached.imdb}.json`);
-  }
-  if (cached?.tmdb) {
-    return c.redirect(
-      `${tmdbInstanceUrl}/meta/${type}/tmdb:${cached.tmdb}.json`
-    );
   }
 
   // resolve slug to letterboxdId
