@@ -3,6 +3,7 @@ import { getError } from "@/util/errors.js";
 import { createCache } from "@/lib/sqliteCache.js";
 import { to } from "await-to-js";
 import { z } from "zod";
+import { PERMANENT_REDIRECT } from "stoker/http-status-codes";
 
 type LbxdMeta = {
   lbxd: string;
@@ -122,12 +123,16 @@ metaRouter.get("/:type/:id.json", async (c) => {
   }
 
   if (resolved.imdb) {
-    return c.redirect(`${cinemetaInstance}/meta/${type}/${resolved.imdb}.json`);
+    return c.redirect(
+      `${cinemetaInstance}/meta/${type}/${resolved.imdb}.json`,
+      PERMANENT_REDIRECT
+    );
   }
 
   if (resolved.tmdb) {
     return c.redirect(
-      `${tmdbInstanceUrl}/meta/${type}/tmdb:${resolved.tmdb}.json`
+      `${tmdbInstanceUrl}/meta/${type}/tmdb:${resolved.tmdb}.json`,
+      PERMANENT_REDIRECT
     );
   }
 
