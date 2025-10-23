@@ -384,6 +384,10 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     });
 
     c.header("Cache-Control", "public, max-age=3600");
+
+    // Serve some additional headers to assist with debugging/source tracking
+    c.header("X-Source-Used", successfulSource);
+    c.header("X-Metadata-Level", shouldFetchFullMetadata ? "full" : "basic");
     return c.json({ metas });
   } catch (error) {
     c.var.logger.error(error);
