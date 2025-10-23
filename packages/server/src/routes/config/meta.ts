@@ -55,18 +55,26 @@ async function resolve(
 
   // resolve json
   const resolvedInfo = z
-    .object({
-      slug: z.string(),
-      lbxd: z.string(),
-      tmdb: z.coerce.string(),
-      imdb: z.string(),
-    })
+    .array(
+      z.object({
+        slug: z.string(),
+        lbxd: z.string(),
+        tmdb: z.coerce.string(),
+        imdb: z.string(),
+      })
+    )
     .parse(await fetchedLid.json());
 
+  if (resolvedInfo.length === 0) {
+    throw new Error("No data found for the provided Letterboxd identifier");
+  }
+
+  const { lbxd, imdb, tmdb } = resolvedInfo[0];
+
   const rv: LbxdMeta = {
-    lbxd: resolvedInfo.lbxd,
-    imdb: resolvedInfo.imdb,
-    tmdb: resolvedInfo.tmdb,
+    lbxd,
+    imdb,
+    tmdb,
   };
 
   // cache resolved info
