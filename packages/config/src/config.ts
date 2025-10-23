@@ -23,6 +23,7 @@ export const ConfigSchema = z.object({
       "rpdb",
     ])
     .default("letterboxd-custom-from-list"),
+  fullMetadata: z.boolean().default(false),
   rpdbApiKey: z.string().optional(),
   /** origin, provided by the frontend for absolute urls */
   origin: z.string(),

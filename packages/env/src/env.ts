@@ -58,6 +58,10 @@ export const serverEnv = cleanEnv(process.env, {
     choices: ["basic", "full"],
     desc: "How much metadata to include in the catalog. basic = IDs, titles, and posters, full = everything (default: basic).",
   }),
+  METADATA_PROVIDER_URL: url({
+    default: "https://lbxd-id.almosteffective.com",
+    desc: "Base URL for the metadata provider addon. No trailing slash.",
+  }),
 });
 
 export const HOST_LOCAL = `http://localhost:${serverEnv.PORT}`;

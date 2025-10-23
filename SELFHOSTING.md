@@ -29,6 +29,7 @@ If you ever need to start fresh, run `node clean.js` then run `pnpm install` aga
 
 1. Run `git pull` to update to the latest codebase
 2. If using Docker Compose:
+
    ```bash
    # Stop the current services
    docker compose down
@@ -41,9 +42,11 @@ If you ever need to start fresh, run `node clean.js` then run `pnpm install` aga
    ```
 
    This will:
+
    - Rebuild the app with the latest code
    - Start all services
    - Run any pending migrations
+
 3. If not using Docker:
    - Run `node clean.js` to clean all working directories
    - Run `pnpm build` to re-build the project

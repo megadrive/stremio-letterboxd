@@ -1,5 +1,5 @@
 import { createRouter, type AppBindingsWithConfig } from "@/util/createHono.js";
-import type { MetaDetail, MetaPreview } from "stremio-addon-sdk";
+import type { MetaDetail } from "stremio-addon-sdk";
 import { parseExtras } from "@/util/parseExtras.js";
 import { INTERNAL_SERVER_ERROR } from "stoker/http-status-codes";
 import { prisma } from "@stremio-addon/database";
@@ -13,7 +13,8 @@ import { CacheSource } from "@/sources/CacheSource.js";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
 import { StremthruSource } from "@/sources/Stremthru.js";
 import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
-import type { z } from "zod";
+import { z } from "zod";
+import { FullLetterboxdMetadataSchema } from "@/lib/consts.js";
 
 const SOURCES = [
   new StremthruSource(),
@@ -211,12 +212,57 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
     const paginatedCachedFilms =
       successfulSource !== "LetterboxdSource" ? data.slice(start, end) : data;
 
+    //** Fetch full metadata if configured
+    const shouldFetchFullMetadata =
+      serverEnv.METADATA_LEVEL === "full" || c.var.config.fullMetadata;
+
+    let fullMetadata:
+      | z.SafeParseSuccess<{
+          data: z.infer<typeof FullLetterboxdMetadataSchema>;
+        }>
+      | z.SafeParseError<{
+          data: z.infer<typeof FullLetterboxdMetadataSchema>;
+        }>
+      | undefined = undefined;
+
+    c.var.logger.info(`Should fetch full metadata? ${shouldFetchFullMetadata}`);
+    if (shouldFetchFullMetadata) {
+      // fetch full metadata for the paginated films
+      const [fullMetadataErr, fullMetadataRes] = await to(
+        fetch(
+          `${serverEnv.METADATA_PROVIDER_URL}/letterboxd/details/${paginatedCachedFilms.map((film) => film.id.split(":")[1]).join(",")}`
+        ).then((res) => res.json())
+      );
+
+      if (fullMetadataErr) {
+        c.var.logger.warn(
+          `Error fetching full metadata from provider: ${fullMetadataErr}`
+        );
+      }
+
+      fullMetadata = z
+        .object({
+          data: FullLetterboxdMetadataSchema,
+        })
+        .safeParse(fullMetadataRes);
+      c.var.logger.info(
+        `Fetched full metadata from provider? ${fullMetadata.success}`
+      );
+      if (!fullMetadata.success) {
+        c.var.logger.warn(
+          `Invalid full metadata received from provider: ${JSON.stringify(
+            fullMetadata.error.format(),
+            null,
+            2
+          )}`
+        );
+      }
+    }
+
+    c.var.logger.info(`Preparing final metadata response.`);
     const metas: MetaDetail[] = paginatedCachedFilms.map((film) => {
       const poster = (() => {
         if (successfulSource === "StremthruSource") {
-          c.var.logger.info(
-            "Using Stremthru poster as it doesn't provide slugs."
-          );
           return film.poster;
         }
 
@@ -280,7 +326,8 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         film.name = film.name.replace(/\s*\(\d{4}\)$/, "").trim();
       }
 
-      let meta: (MetaPreview | MetaDetail) & { imdb_id?: string } = {
+      c.var.logger.info(`Preparing metadata for film ID ${film.id}`);
+      let meta: MetaDetail & { imdb_id?: string } = {
         id: `letterboxd:${film.id}`,
         imdb_id: film.imdb,
         type: "movie",
@@ -294,7 +341,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       };
 
       // restrict metadata unless configured otherwise
-      if (serverEnv.METADATA_LEVEL === "basic") {
+      if (!c.var.config.fullMetadata) {
         meta = {
           id: meta.id,
           imdb_id: meta.imdb_id,
@@ -302,6 +349,35 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           name: meta.name,
           poster: meta.poster,
         };
+      }
+
+      // if we have full metadata, merge it in
+      c.var.logger.info(
+        `Checking for full metadata merge for film ID ${film.id}`
+      );
+
+      if (
+        serverEnv.METADATA_LEVEL === "full" &&
+        fullMetadata &&
+        fullMetadata.success &&
+        fullMetadata.data.data.length > 0
+      ) {
+        c.var.logger.info(`Merging full metadata for film ID ${film.id}`);
+        const fullMetaForFilm = fullMetadata.data.data.find(
+          (m) => m.lbxd === film.id.split(":")[1]
+        );
+        c.var.logger.info(
+          `Found full metadata for film ID ${film.id}? ${!!fullMetaForFilm}`
+        );
+        if (fullMetaForFilm) {
+          meta.description = `${fullMetaForFilm.tagline ? fullMetaForFilm.tagline + " - " : ""}${fullMetaForFilm.synopsis}`;
+          // override poster only if not already set
+          if (!meta.poster) {
+            meta.poster = fullMetaForFilm.poster;
+          }
+          meta.genres = fullMetaForFilm.genres.map((g) => g.trim());
+          meta.background = fullMetaForFilm.backdrop;
+        }
       }
 
       return meta;
