@@ -82,6 +82,7 @@ async function getConfigFromId(id: string): ReturnType<typeof config.decode> {
               "rpdb",
             ]),
             rpdbApiKey: z.string(),
+            fullMetadata: z.boolean().default(false),
             origin: z.string().url(),
           }),
         })

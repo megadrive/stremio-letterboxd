@@ -70,12 +70,14 @@ export default function Popular() {
           origin={location.origin}
           catalogName="Popular This Week"
           url="https://letterboxd.com/films/popular/this/week/"
+          fullMetadata
           posterChoice="letterboxd"
         />
         <List
           origin={location.origin}
           catalogName="Popular This Month"
           url="https://letterboxd.com/films/popular/this/month/"
+          fullMetadata
           posterChoice="letterboxd"
         />
       </div>
