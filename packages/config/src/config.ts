@@ -95,6 +95,7 @@ export const config = {
       origin: "",
       url: `https://letterboxd.com${path}`,
       catalogName,
+      fullMetadata: false,
       posterChoice: parsedPosterChoice.data.posterChoice,
     };
   },
