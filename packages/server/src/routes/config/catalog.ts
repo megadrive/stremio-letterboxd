@@ -327,29 +327,13 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       }
 
       c.var.logger.info(`Preparing metadata for film ID ${film.id}`);
-      let meta: MetaDetail & { imdb_id?: string } = {
+      const meta: MetaDetail & { imdb_id?: string } = {
         id: `letterboxd:${film.id}`,
         imdb_id: film.imdb,
         type: "movie",
         name: film.name,
-        description: film.description ?? undefined,
-        cast: film.cast,
-        director: film.director,
-        // NOTE: change this as it will just be the ids
-        genres: film.genres,
         poster,
       };
-
-      // restrict metadata unless configured otherwise
-      if (!c.var.config.fullMetadata) {
-        meta = {
-          id: meta.id,
-          imdb_id: meta.imdb_id,
-          type: meta.type,
-          name: meta.name,
-          poster: meta.poster,
-        };
-      }
 
       // if we have full metadata, merge it in
       c.var.logger.info(
@@ -377,6 +361,36 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           }
           meta.genres = fullMetaForFilm.genres.map((g) => g.trim());
           meta.background = fullMetaForFilm.backdrop;
+
+          meta.director =
+            fullMetaForFilm.crew
+              .slice(0, 10)
+              .filter((c) => c.role === "Director")[0]?.people ?? undefined;
+          meta.cast = fullMetaForFilm.cast.slice(0, 10).map((c) => c);
+
+          const cast: MetaDetail["links"] = fullMetaForFilm.cast
+            .slice(0, 10)
+            .map((c) => ({
+              name: c,
+              category: "Cast",
+              url: `stremio:///search?search=${c}`,
+            }));
+          const crew: MetaDetail["links"] = [];
+          fullMetaForFilm.crew.forEach((c) => {
+            const RolesToInclude = ["Director", "Writers"];
+            if (!RolesToInclude.includes(c.role)) {
+              return;
+            }
+
+            c.people.forEach((p) => {
+              crew.push({
+                name: p,
+                category: `${c.role}${c.role.endsWith("s") ? "" : "s"}`,
+                url: `stremio:///search?search=${p}`,
+              });
+            });
+          });
+          meta.links = [...cast, ...crew];
         }
       }
 
