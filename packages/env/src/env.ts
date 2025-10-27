@@ -65,7 +65,8 @@ export const serverEnv = cleanEnv(process.env, {
   ELASTICSEARCH_URL: url({
     desc: "The URL for Elasticsearch. If this is a 0 length, the Elasticsearch source will be skipped.",
     example: "http://localhost:9200",
-    default: "",
+    // purpusefully used a nonsense port
+    default: "http://localhost:0000",
   }),
 });
 

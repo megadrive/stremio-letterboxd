@@ -3,12 +3,15 @@ import { pinoLogger } from "hono-pino";
 import pretty from "pino-pretty";
 import { serverEnv } from "@stremio-addon/env";
 
+const isElasticSearchEnabledAndValid =
+  new URL(serverEnv.ELASTICSEARCH_URL).port === "0000";
+
 const transports = pino.transport({
   targets: [
     {
       target: "pino/file",
     },
-    ...(serverEnv.ELASTICSEARCH_URL.length
+    ...(isElasticSearchEnabledAndValid
       ? [
           {
             target: "pino-elasticsearch",
