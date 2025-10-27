@@ -9,6 +9,8 @@ import type { Context } from "hono";
 import { INTERNAL_SERVER_ERROR, NOT_FOUND } from "stoker/http-status-codes";
 import { z } from "zod";
 
+const POSTER_NOT_FOUND_URL =
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRoWcWg0E8pSjBNi0TtiZsqu8uD2PAr_K11DA&s";
 const POSTER_TTL = 1000 * 60 * 60 * 24 * 7; // 1 week
 
 /** Fetch a Letterboxd poster on demand and cache. */
@@ -29,8 +31,8 @@ async function fetchPoster(
   logger.warn(`Fetching poster from ${POSTER_URL}`);
 
   const shape = z.object({
-    url: z.string().url(),
-    url2x: z.string().url(),
+    url: z.string().url().nullish(),
+    url2x: z.string().url().nullish(),
   });
 
   const [resErr, res] = await to(fetch(POSTER_URL));
@@ -50,6 +52,11 @@ async function fetchPoster(
   if (!parsed.success) {
     logger.error(`Error parsing poster JSON for ${slug}:`);
     logger.error(parsed.error);
+    return;
+  }
+
+  if (!parsed.data.url2x) {
+    logger.error(`No poster found for ${slug}`);
     return;
   }
 
@@ -76,7 +83,9 @@ async function handleRoute(c: Context<AppBindingsWithConfig>) {
     const href = await fetchPoster(slug, altId);
 
     if (!href) {
-      return c.text("", NOT_FOUND);
+      // only use browser caching here so we can attempt to fetch again later
+      c.header("Cache-Control", "max-age: 3600");
+      return c.redirect(POSTER_NOT_FOUND_URL);
     }
 
     // cache in the background
@@ -123,7 +132,7 @@ async function handleRoute(c: Context<AppBindingsWithConfig>) {
     logger.error(error);
   }
 
-  return c.text("", INTERNAL_SERVER_ERROR);
+  return c.redirect(POSTER_NOT_FOUND_URL);
 }
 
 posterAPIRouter.get("/:slug", handleRoute);
