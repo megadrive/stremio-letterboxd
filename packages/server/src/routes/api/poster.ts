@@ -6,7 +6,6 @@ import {
 import { prisma } from "@stremio-addon/database";
 import { to } from "await-to-js";
 import type { Context } from "hono";
-import { INTERNAL_SERVER_ERROR, NOT_FOUND } from "stoker/http-status-codes";
 import { z } from "zod";
 
 const POSTER_NOT_FOUND_URL =

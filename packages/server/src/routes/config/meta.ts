@@ -3,7 +3,6 @@ import { getError } from "@/util/errors.js";
 import { createCache } from "@/lib/sqliteCache.js";
 import { to } from "await-to-js";
 import { z } from "zod";
-import { PERMANENT_REDIRECT } from "stoker/http-status-codes";
 import { pinoLoggerStandalone } from "@/lib/pinoLogger.js";
 
 type LbxdMeta = {
