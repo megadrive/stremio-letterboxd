@@ -4,6 +4,7 @@ import { createCache } from "@/lib/sqliteCache.js";
 import { to } from "await-to-js";
 import { z } from "zod";
 import { PERMANENT_REDIRECT } from "stoker/http-status-codes";
+import { pinoLoggerStandalone } from "@/lib/pinoLogger.js";
 
 type LbxdMeta = {
   lbxd: string;
@@ -62,27 +63,52 @@ async function resolve(
   }
 
   // if we have a slug, we need to resolve it to a Letterboxd ID first
+  pinoLoggerStandalone.debug(
+    `Resolving ${type} ${opts[type]} to Letterboxd ID`
+  );
   const [fetchedErr, fetchedLid] = await to(
     fetch(
       `https://lbxd-id.almosteffective.com/letterboxd/${type}/${opts[type]}`
     )
   );
 
+  pinoLoggerStandalone.debug(
+    `Fetched Letterboxd ID for ${type} ${opts[type]}: ${fetchedLid?.status}`
+  );
+
   if (fetchedErr || !fetchedLid?.ok) {
+    pinoLoggerStandalone.error(
+      `Error fetching Letterboxd ID for ${type} ${opts[type]}: ${fetchedErr?.message}`
+    );
     throw new Error("Error fetching Letterboxd ID");
   }
 
+  const json = await fetchedLid.json();
   // resolve json
-  const resolvedInfo = z
+  const parsedInfo = z
     .array(
       z.object({
         slug: z.string(),
         lbxd: z.string(),
         tmdb: z.coerce.string(),
-        imdb: z.string(),
+        imdb: z.string().optional(),
       })
     )
-    .parse(await fetchedLid.json());
+    .safeParse(json);
+
+  if (!parsedInfo.success) {
+    pinoLoggerStandalone.error(
+      `Error parsing Letterboxd ID response for ${type} ${opts[type]}: ${parsedInfo.error.message}`
+    );
+    console.warn({ json });
+    throw new Error("Error parsing Letterboxd ID response");
+  }
+
+  const resolvedInfo = parsedInfo.data;
+
+  pinoLoggerStandalone.debug(
+    `Resolved ${type} ${opts[type]} to Letterboxd ID ${resolvedInfo[0].lbxd}`
+  );
 
   if (resolvedInfo.length === 0) {
     throw new Error("No data found for the provided Letterboxd identifier");
