@@ -18,6 +18,25 @@ export const metaRouter = createRouter();
 const tmdbInstanceUrl = `https://94c8cb9f702d-tmdb-addon.baby-beamup.club`;
 const cinemetaInstance = `https://v3-cinemeta.strem.io`;
 
+/** Fetch a JSON response from a URL */
+async function fetchJsonResponse(url: string) {
+  const [err, res] = await to(fetch(url));
+  if (err) {
+    throw new Error(`Error fetching ${url}: ${err.message}`);
+  }
+  if (!res.ok) {
+    throw new Error(`Error fetching ${url}: ${res.status} ${res.statusText}`);
+  }
+  const json = await res.json();
+
+  // ensure it is a json object
+  if (typeof json !== "object" || json === null) {
+    throw new Error(`Invalid JSON response from ${url}`);
+  }
+
+  return json;
+}
+
 // resolves a Letterboxd slug to its Letterboxd ID, TMDB ID, and IMDB ID
 async function resolve(
   opts: Partial<{
@@ -130,18 +149,23 @@ metaRouter.get("/:type/:id.json", async (c) => {
     return c.text("Error resolving Letterboxd slug", 500);
   }
 
+  const CACHE = `max-age=2592000`; // Cache for 30 days
   if (resolved.imdb) {
-    return c.redirect(
-      `${cinemetaInstance}/meta/${type}/${resolved.imdb}.json`,
-      PERMANENT_REDIRECT
+    const imdbRes = await fetchJsonResponse(
+      `${cinemetaInstance}/meta/${type}/${resolved.imdb}.json`
     );
+
+    c.header("Cache-Control", CACHE);
+    return c.json(imdbRes);
   }
 
   if (resolved.tmdb) {
-    return c.redirect(
-      `${tmdbInstanceUrl}/meta/${type}/tmdb:${resolved.tmdb}.json`,
-      PERMANENT_REDIRECT
+    const tmdbRs = await fetchJsonResponse(
+      `${tmdbInstanceUrl}/meta/${type}/tmdb:${resolved.tmdb}.json`
     );
+
+    c.header("Cache-Control", CACHE);
+    return c.json(tmdbRs);
   }
 
   return c.text(`Error fetching metadata for ${id}`, 500);

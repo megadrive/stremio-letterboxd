@@ -328,7 +328,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
 
       c.var.logger.info(`Preparing metadata for film ID ${film.id}`);
       const meta: MetaDetail & { imdb_id?: string } = {
-        id: `letterboxd:${film.id}`,
+        id: film.imdb ?? `letterboxd:${film.id}`,
         imdb_id: film.imdb,
         type: "movie",
         name: film.name,
