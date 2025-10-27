@@ -62,6 +62,11 @@ export const serverEnv = cleanEnv(process.env, {
     default: "https://lbxd-id.almosteffective.com",
     desc: "Base URL for the metadata provider addon. No trailing slash.",
   }),
+  ELASTICSEARCH_URL: url({
+    desc: "The URL for Elasticsearch. If this is a 0 length, the Elasticsearch source will be skipped.",
+    example: "http://localhost:9200",
+    default: "",
+  }),
 });
 
 export const HOST_LOCAL = `http://localhost:${serverEnv.PORT}`;
