@@ -7,6 +7,7 @@ import {
 } from "./ISource.js";
 import { StremthruResponseSchema } from "./Stremtru.types.js";
 import { createCache } from "@/lib/sqliteCache.js";
+import { pinoLoggerStandalone as logger } from "@/lib/pinoLogger.js";
 const cache = createCache<SourceResult[]>("stremthru");
 
 const STREMTHRU_API_BASE = "https://stremthru.13377001.xyz/v0";
@@ -56,9 +57,9 @@ export class StremthruSource implements ISource {
       };
     }
 
-    console.log("Stremthru API URL:", apiUrl);
+    logger.info("Stremthru API URL:", apiUrl);
 
-    console.log(`Getting ID from ${url.pathname}`);
+    logger.info(`Getting ID from ${url.pathname}`);
     const [idErr, idRes] = await to(
       fetch(opts.url, {
         headers: {
@@ -68,7 +69,7 @@ export class StremthruSource implements ISource {
     );
 
     if (idErr || !idRes?.ok) {
-      console.warn(`Error fetching ID from ${apiUrl}`, idErr, idRes?.status);
+      logger.warn(`Error fetching ID from ${apiUrl}`, idErr, idRes?.status);
       return {
         shouldStop: false,
         metas: [],
@@ -78,7 +79,7 @@ export class StremthruSource implements ISource {
     const id = idRes.headers.get("x-letterboxd-identifier");
 
     if (!id) {
-      console.warn("No ID found in headers");
+      logger.warn("No ID found in headers");
       return {
         shouldStop: false,
         metas: [],
@@ -86,7 +87,7 @@ export class StremthruSource implements ISource {
     }
 
     const apiUrlWithId = apiUrl.replace("{id}", id);
-    console.log(`Fetching list data for ID ${id} from ${apiUrlWithId}`);
+    logger.info(`Fetching list data for ID ${id} from ${apiUrlWithId}`);
     const [dataErr, dataRes] = await to(
       fetch(apiUrlWithId, {
         headers: {
@@ -96,7 +97,7 @@ export class StremthruSource implements ISource {
     );
 
     if (dataErr || !dataRes?.ok) {
-      console.warn("Error fetching list data", dataErr, dataRes?.status);
+      logger.warn("Error fetching list data", dataErr, dataRes?.status);
       return {
         shouldStop: false,
         metas: [],
@@ -107,7 +108,7 @@ export class StremthruSource implements ISource {
       await dataRes.json()
     );
     if (!validatedData.success) {
-      console.warn("Error validating list data", validatedData.error);
+      logger.warn("Error validating list data", validatedData.error);
       return {
         shouldStop: false,
         metas: [],
@@ -116,15 +117,34 @@ export class StremthruSource implements ISource {
 
     const { data: listData } = validatedData.data;
 
-    // if we get less items than what is expected, move along
-    if (listData.item_count !== listData.items.length) {
-      console.warn(
-        `List item count mismatch: expected ${listData.item_count}, got ${listData.items.length}`
-      );
-      return {
-        shouldStop: false,
-        metas: [],
-      };
+    const reasonsToSkip: {
+      evaluation: () => boolean;
+      errorMessage: string;
+    }[] = [
+      {
+        evaluation: () =>
+          listData.updated_at &&
+          Date.now() - listData.updated_at.getTime() > 7 * 24 * 60 * 60 * 1000,
+        errorMessage: "List is stale, skipping",
+      },
+      {
+        evaluation: () => listData.items.length === 0,
+        errorMessage: "List is empty, skipping",
+      },
+      {
+        evaluation: () => listData.item_count !== listData.items.length,
+        errorMessage: "List item count mismatch, skipping",
+      },
+    ];
+
+    for (const reason of reasonsToSkip) {
+      if (reason.evaluation()) {
+        logger.warn(reason.errorMessage);
+        return {
+          shouldStop: false,
+          metas: [],
+        };
+      }
     }
 
     // as stremthru doesn't have sorting, we sort ourselves
