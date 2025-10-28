@@ -6,12 +6,36 @@ function List(conf: Config) {
   const [installUrl, setInstallUrl] = React.useState<string>("");
 
   React.useEffect(() => {
-    config.encode(conf).then((encoded) => {
-      const url = new URL(window.location.href);
-      const newOrigin = url.origin.replace(/^https/, "stremio");
-      setInstallUrl(`${newOrigin}/${encoded}/manifest.json`);
-    });
-  }, [config]);
+    async function generateManifestURL() {
+      try {
+        const encodedConfig = await config.encode(conf);
+
+        const url = new URL(window.location.href);
+        const newOrigin = url.origin.replace(/^https/, "stremio");
+
+        const res = await fetch(`/api/config/${encodedConfig}`, {
+          method: "POST",
+          headers: { "cache-control": "no-cache" },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to generate manifest: ${res.statusText}`);
+        }
+
+        const json = await res.json();
+        if (!json.success || !json.id) {
+          throw new Error("Failed to generate manifest");
+        }
+
+        setInstallUrl(`${newOrigin}/${json.id}/manifest.json`);
+      } catch (error) {
+        console.error("Failed to generate manifest URL:", error);
+        toast.error("Failed to generate install URL");
+      }
+    }
+
+    generateManifestURL();
+  }, [conf]);
 
   function installList() {
     window.location.href = installUrl;
