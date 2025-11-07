@@ -1,7 +1,11 @@
+import { type Config } from "@stremio-addon/config";
+
 export interface SourceOptions {
   url?: string;
+  config?: Config;
   configString?: string;
   skip?: number;
+  sort?: string;
 }
 
 export interface SourceResult {

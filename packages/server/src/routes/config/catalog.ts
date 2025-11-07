@@ -8,19 +8,26 @@ import { serverEnv } from "@stremio-addon/env";
 import { createShuffle } from "fast-shuffle";
 import { to } from "await-to-js";
 
-import type { SourceResult } from "@/sources/ISource.js";
+import type { SourceResult, ISource } from "@/sources/ISource.js";
 import { CacheSource } from "@/sources/CacheSource.js";
 import { LetterboxdSource } from "@/sources/Letterboxd.js";
 import { StremthruSource } from "@/sources/Stremthru.js";
 import { FilmSortSchema } from "@/sources/Letterboxd.types.js";
 import { z } from "zod";
 import { FullLetterboxdMetadataSchema } from "@/lib/consts.js";
+import { pinoLoggerStandalone as logger } from "@/lib/pinoLogger.js";
 
-const SOURCES = [
-  new StremthruSource(),
-  new LetterboxdSource(),
-  new CacheSource(),
+// Prioritise the sources based on env
+const SourceList: { name: string; source: ISource }[] = [
+  { name: "stremthru", source: new StremthruSource() },
+  { name: "letterboxd", source: new LetterboxdSource() },
+  { name: "cache", source: new CacheSource() },
 ];
+// default: "stremthru,letterboxd,cache"
+const SOURCES = serverEnv.SOURCE_PRIORITY.split(",")
+  .map((name) => SourceList.find((s) => s.name === name)?.source)
+  .filter((e) => !!e);
+logger.info(`Source order: ${serverEnv.SOURCE_PRIORITY}`);
 
 export const catalogRouter = createRouter();
 
