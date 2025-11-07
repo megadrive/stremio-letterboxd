@@ -68,6 +68,10 @@ export const serverEnv = cleanEnv(process.env, {
     // purpusefully used a nonsense port
     default: "http://localhost:0000",
   }),
+  SOURCE_PRIORITY: str({
+    default: "stremthru,cache,letterboxd",
+    desc: "The priority order of sources to use. The first source that returns a result will be used.",
+  }),
 });
 
 export const HOST_LOCAL = `http://localhost:${serverEnv.PORT}`;
