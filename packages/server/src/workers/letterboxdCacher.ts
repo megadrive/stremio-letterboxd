@@ -373,6 +373,9 @@ async function fetchHtml(
   url: string,
   headers?: Record<string, string>
 ): Promise<string> {
+  // early return if undefined for some reason
+  if (!url) return "";
+
   logger.info(`Scraping HTML from ${url}`);
   try {
     const [resFinalUrlErr, resFinalUrl] = await to(resolveFinalUrl(url));
