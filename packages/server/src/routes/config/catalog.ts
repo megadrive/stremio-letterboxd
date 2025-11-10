@@ -104,7 +104,9 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       }
 
       if (howToSort === "") {
-        return "MemberRatingHighToLow" satisfies z.infer<typeof FilmSortSchema>;
+        return "AverageRatingHighToLow" satisfies z.infer<
+          typeof FilmSortSchema
+        >;
       }
 
       return typesOfSort.get(howToSort) ?? undefined;
