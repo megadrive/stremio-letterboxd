@@ -1,7 +1,7 @@
 {
   "name": "@stremio-addon/server",
   "type": "module",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",

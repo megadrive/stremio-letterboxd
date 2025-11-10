@@ -1,5 +1,11 @@
 # @stremio-addon/server
 
+## 1.1.2
+
+### Patch Changes
+
+- 860ff38: removed 'member' prefixed sorts to their non-member equivalents
+
 ## 1.1.1
 
 ### Patch Changes
