@@ -70,9 +70,9 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       return c.json({ metas: [] }, INTERNAL_SERVER_ERROR);
     }
 
-    const sort = (() => {
+    const sort = ((): z.infer<typeof FilmSortSchema> | undefined => {
       const typesOfSort = new Map<string, z.infer<typeof FilmSortSchema>>([
-        ["", "MemberRatingHighToLow"],
+        ["", "AverageRatingHighToLow"], // default
         ["reverse", "MemberRatingLowToHigh"],
         ["name", "FilmName"],
         ["popular", "FilmPopularity"],
@@ -104,9 +104,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       }
 
       if (howToSort === "") {
-        return "AverageRatingHighToLow" satisfies z.infer<
-          typeof FilmSortSchema
-        >;
+        return "AverageRatingHighToLow";
       }
 
       return typesOfSort.get(howToSort) ?? undefined;
@@ -162,53 +160,52 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
       `Using data from source ${successfulSource} for config ${encodedConfig}`
     );
 
-    if (successfulSource !== "LetterboxdSource") {
-      if (c.var.config.url.includes("/by/shuffle/")) {
-        // if we are shuffling, get the seed from the database if it exists
-        c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
-        let seedRecord = await prisma.shuffleSeed.findFirst({
+    // shuffle
+    if (sort === "Shuffle") {
+      // if we are shuffling, get the seed from the database if it exists
+      c.var.logger.info(`Shuffling films for ${c.var.config.url}`);
+      let seedRecord = await prisma.shuffleSeed.findFirst({
+        where: {
+          configId: cached.id,
+        },
+      });
+
+      if (seedRecord) {
+        c.var.logger.info(
+          `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
+        );
+      }
+
+      // if expired or not found, create a new seed
+      const ONE_HOUR = 60 * 60 * 1000;
+      if (
+        !seedRecord ||
+        Date.now() - seedRecord.updatedAt.getTime() > ONE_HOUR
+      ) {
+        // create a new seed
+        c.var.logger.info(
+          `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
+        );
+        const newSeed = Math.random() * 1000000;
+        const newSeedRecord = await prisma.shuffleSeed.upsert({
           where: {
             configId: cached.id,
           },
+          create: {
+            configId: cached.id,
+            seed: `${newSeed}`,
+          },
+          update: {
+            seed: `${newSeed}`,
+          },
         });
-
-        if (seedRecord) {
-          c.var.logger.info(
-            `Found shuffle seed for ${c.var.config.url}: ${JSON.stringify(seedRecord, null, 2)}`
-          );
-        }
-
-        // if expired or not found, create a new seed
-        const ONE_HOUR = 60 * 60 * 1000;
-        if (
-          !seedRecord ||
-          Date.now() - seedRecord.updatedAt.getTime() > ONE_HOUR
-        ) {
-          // create a new seed
-          c.var.logger.info(
-            `No shuffle seed found or stale for ${c.var.config.url}, creating a new one with configId: ${cached.id}`
-          );
-          const newSeed = Math.random() * 1000000;
-          const newSeedRecord = await prisma.shuffleSeed.upsert({
-            where: {
-              configId: cached.id,
-            },
-            create: {
-              configId: cached.id,
-              seed: `${newSeed}`,
-            },
-            update: {
-              seed: `${newSeed}`,
-            },
-          });
-          c.var.logger.info(`Created new shuffle seed: ${newSeedRecord.seed}`);
-          seedRecord = newSeedRecord;
-        }
-
-        // randomise the cached films with the seed
-        const seededShuffle = createShuffle(+seedRecord.seed);
-        data = seededShuffle(data);
+        c.var.logger.info(`Created new shuffle seed: ${newSeedRecord.seed}`);
+        seedRecord = newSeedRecord;
       }
+
+      // randomise the cached films with the seed
+      const seededShuffle = createShuffle(+seedRecord.seed);
+      data = seededShuffle(data);
     }
 
     // pagination

@@ -124,7 +124,8 @@ export class StremthruSource implements ISource {
       {
         evaluation: () =>
           listData.updated_at &&
-          Date.now() - listData.updated_at.getTime() > 7 * 24 * 60 * 60 * 1000,
+          // if older than 12 hours, it's stale and should refetch
+          Date.now() - listData.updated_at.getTime() > 12 * 60 * 60 * 1000,
         errorMessage: "List is stale, skipping",
       },
       {
