@@ -136,7 +136,12 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
         c.var.logger.info(
           `Fetched ${metas.length} items from source ${source.constructor.name}`
         );
-        data = metas;
+        data = metas.filter(
+          // filter out possible undefined films.
+          // this will kill the "undefined" short film though, but
+          // as of 08-01-2026, it has zero user activity so i think it's fine.
+          (meta) => meta.id.includes("undefined")
+        );
         successfulSource = source.constructor.name;
         break;
       }
@@ -402,7 +407,6 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
 
       return meta;
     });
-
     c.header("Cache-Control", "public, max-age=3600");
 
     // Serve some additional headers to assist with debugging/source tracking
