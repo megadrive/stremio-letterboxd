@@ -140,7 +140,7 @@ async function handleCatalogRoute(c: Context<AppBindingsWithConfig>) {
           // filter out possible undefined films.
           // this will kill the "undefined" short film though, but
           // as of 08-01-2026, it has zero user activity so i think it's fine.
-          (meta) => meta.id.includes("undefined")
+          (meta) => !meta.id.includes("undefined")
         );
         successfulSource = source.constructor.name;
         break;
