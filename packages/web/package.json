@@ -17,7 +17,7 @@
     "@stremio-addon/env": "workspace:*",
     "@tailwindcss/vite": "^4.0.14",
     "@types/react": "^19.0.10",
-    "astro": "^5.5.3",
+    "astro": "^5.16.10",
     "clsx": "^2.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
