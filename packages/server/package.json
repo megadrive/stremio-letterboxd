@@ -16,7 +16,7 @@
     "await-to-js": "^3.0.0",
     "cheerio": "^1.0.0",
     "fast-shuffle": "^6.1.1",
-    "hono": "^4.7.4",
+    "hono": "^4.11.7",
     "hono-pino": "^0.8.0",
     "keyv": "^5.5.1",
     "neverthrow": "^8.2.0",
