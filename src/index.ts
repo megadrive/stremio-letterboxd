@@ -2,6 +2,10 @@ import "dotenv/config";
 import express from "express";
 const app = express();
 
+app.all("/", (req, res) => {
+  return res.redirect("https://stremboxd.com");
+});
+
 app.all("/*path", (req, res) => {
   return res.redirect("https://stremboxd.com");
 });
