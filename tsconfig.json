@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "incremental": true,
     "declaration": true,
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "outDir": "./build"
   },
   "include": [".syncpackrc.js", "eslint.config.mjs", "src/**/*"],
   "exclude": ["node_modules"],

@@ -8,8 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "lint": "eslint .",
     "format": "prettier ./src --write .",
-    "build": "cd .",
-    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node build/index.js",
     "prepare": "pnpm format && husky"
   },
   "keywords": [],
@@ -37,6 +37,7 @@
     "typescript-eslint": "^8.24.1"
   },
   "dependencies": {
+    "dotenv": "^17.3.1",
     "express": "^5.2.1"
   }
 }
