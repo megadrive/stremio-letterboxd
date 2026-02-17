@@ -42,7 +42,6 @@ If you ever need to start fresh, run `node clean.js` then run `pnpm install` aga
    ```
 
    This will:
-
    - Rebuild the app with the latest code
    - Start all services
    - Run any pending migrations
